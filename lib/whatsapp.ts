@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/lib/utils";
-import type { QuoteItem } from "@/lib/types";
+import type { PricingBreakdown } from "@/lib/pricing";
 
 /** Deja solo dígitos: wa.me exige el número en formato E.164 sin "+" ni espacios. */
 function sanitizePhone(phone: string) {
@@ -9,30 +9,36 @@ function sanitizePhone(phone: string) {
 type BuildWhatsAppMessageArgs = {
   tenantName: string;
   clientName: string;
-  items: QuoteItem[];
-  totalAmount: number;
+  propertyTitle: string;
+  propertyUnitNumber: string;
+  breakdown: PricingBreakdown;
+  installmentsCount: number;
   pdfUrl: string;
 };
 
 export function buildWhatsAppMessage({
   tenantName,
   clientName,
-  items,
-  totalAmount,
+  propertyTitle,
+  propertyUnitNumber,
+  breakdown,
+  installmentsCount,
   pdfUrl,
 }: BuildWhatsAppMessageArgs) {
   const lines = [
-    `Hola ${clientName}, aquí tu cotización de *${tenantName}*:`,
+    `Hola ${clientName}, aquí el desglose ejecutivo de tu cotización con *${tenantName}*:`,
     "",
-    ...items.map(
-      (item) =>
-        `• ${item.quantity} x ${item.name} — ${formatCurrency(item.unit_price * item.quantity)}`,
-    ),
+    `🏠 ${propertyTitle} · Unidad ${propertyUnitNumber}`,
     "",
-    `*Total: ${formatCurrency(totalAmount)}*`,
+    `Precio: ${formatCurrency(breakdown.effectivePrice)}`,
+    `Enganche: ${formatCurrency(breakdown.downPaymentAmount)}`,
+    `Mensualidad: ${formatCurrency(breakdown.monthlyPaymentAmount)} x ${installmentsCount} meses`,
+    breakdown.finalPaymentAmount > 0.009
+      ? `Saldo a escrituración: ${formatCurrency(breakdown.finalPaymentAmount)}`
+      : null,
     "",
     `Descarga tu cotización en PDF: ${pdfUrl}`,
-  ];
+  ].filter((line): line is string => line !== null);
 
   return lines.join("\n");
 }

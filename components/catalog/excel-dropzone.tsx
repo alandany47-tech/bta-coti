@@ -5,7 +5,7 @@ import * as XLSX from "xlsx";
 import { UploadCloud, FileSpreadsheet, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { ProductImportRow } from "@/lib/types";
+import type { PropertyImportRow } from "@/lib/types";
 
 function normalizeHeader(header: string) {
   return header
@@ -13,44 +13,70 @@ function normalizeHeader(header: string) {
     .trim()
     .toLowerCase()
     .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "");
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]/g, "");
 }
 
-/** Columnas esperadas: SKU, Nombre, Descripcion, Precio, Categoria (orden libre, sin acentos obligatorios). */
-function parseWorkbook(buffer: ArrayBuffer): ProductImportRow[] {
+/**
+ * Columnas esperadas (orden libre, sin acentos obligatorios):
+ * Unidad, Titulo, M2 Interior, M2 Exterior, M2 Total (opcional, se calcula
+ * si falta), Estacionamientos, Precio de Lista.
+ */
+function parseWorkbook(buffer: ArrayBuffer): PropertyImportRow[] {
   const workbook = XLSX.read(buffer, { type: "array" });
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
     defval: "",
   });
 
-  return rawRows.map((raw): ProductImportRow => {
-    const row: ProductImportRow = {
-      sku: "",
-      name: "",
-      description: null,
-      price: 0,
-      category: null,
+  return rawRows.map((raw): PropertyImportRow => {
+    const row: PropertyImportRow = {
+      unit_number: "",
+      title: "",
+      m2_interior: 0,
+      m2_exterior: 0,
+      m2_total: 0,
+      parking_spaces: 0,
+      list_price: 0,
     };
 
     for (const [key, value] of Object.entries(raw)) {
       switch (normalizeHeader(key)) {
-        case "sku":
-          row.sku = String(value ?? "").trim();
+        case "unidad":
+        case "nounidad":
+        case "unitnumber":
+          row.unit_number = String(value ?? "").trim();
           break;
+        case "titulo":
         case "nombre":
-          row.name = String(value ?? "").trim();
+          row.title = String(value ?? "").trim();
           break;
-        case "descripcion":
-          row.description = String(value ?? "").trim() || null;
+        case "m2interior":
+        case "m2interiores":
+          row.m2_interior = Number(value) || 0;
           break;
+        case "m2exterior":
+        case "m2exteriores":
+          row.m2_exterior = Number(value) || 0;
+          break;
+        case "m2total":
+        case "m2totales":
+          row.m2_total = Number(value) || 0;
+          break;
+        case "estacionamientos":
+        case "cajones":
+          row.parking_spaces = Math.floor(Number(value)) || 0;
+          break;
+        case "preciodelista":
         case "precio":
-          row.price = Number(value) || 0;
-          break;
-        case "categoria":
-          row.category = String(value ?? "").trim() || null;
+        case "listprice":
+          row.list_price = Number(value) || 0;
           break;
       }
+    }
+
+    if (!row.m2_total) {
+      row.m2_total = row.m2_interior + row.m2_exterior;
     }
 
     return row;
@@ -74,7 +100,7 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
       try {
         const buffer = await file.arrayBuffer();
         const rows = parseWorkbook(buffer).filter(
-          (row) => row.sku && row.name,
+          (row) => row.unit_number && row.title,
         );
 
         if (rows.length === 0) {
@@ -82,14 +108,14 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
             status: "error",
             fileName: file.name,
             message:
-              "No se encontraron filas válidas. Verifica las columnas: SKU, Nombre, Descripcion, Precio, Categoria.",
+              "No se encontraron filas válidas. Verifica las columnas: Unidad, Titulo, M2 Interior, M2 Exterior, Estacionamientos, Precio de Lista.",
           });
           return;
         }
 
         setState({ status: "uploading", fileName: file.name, rows: rows.length });
 
-        const res = await fetch(`/api/${tenantSlug}/products/import`, {
+        const res = await fetch(`/api/${tenantSlug}/properties/import`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ rows }),
@@ -100,7 +126,7 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
           setState({
             status: "error",
             fileName: file.name,
-            message: data.error ?? "Error al importar el catálogo.",
+            message: data.error ?? "Error al importar la cartera.",
           });
           return;
         }
@@ -161,7 +187,8 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
         </label>
       </div>
       <p className="text-xs text-muted">
-        Columnas esperadas: SKU, Nombre, Descripcion, Precio, Categoria
+        Columnas esperadas: Unidad, Titulo, M2 Interior, M2 Exterior, M2 Total
+        (opcional), Estacionamientos, Precio de Lista
       </p>
 
       {state.status !== "idle" && (
@@ -175,7 +202,7 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
           {state.status === "success" && (
             <span className="flex items-center gap-1 text-emerald-400">
               <CheckCircle2 className="h-3.5 w-3.5" />
-              {state.imported} productos importados
+              {state.imported} propiedades importadas
             </span>
           )}
           {state.status === "error" && (

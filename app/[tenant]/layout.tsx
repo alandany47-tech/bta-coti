@@ -44,8 +44,11 @@ export default async function TenantLayout({
           <Link href={`/${slug}`} className="hover:text-foreground">
             Cotizador
           </Link>
+          <Link href={`/${slug}/properties`} className="hover:text-foreground">
+            Propiedades
+          </Link>
           <Link href={`/${slug}/catalog`} className="hover:text-foreground">
-            Catálogo
+            Importar cartera
           </Link>
         </nav>
       </header>
