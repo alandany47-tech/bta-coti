@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
 import type { PropertyImportRow } from "@/lib/types";
 
 export async function POST(
@@ -22,7 +23,7 @@ export async function POST(
     .from("tenants")
     .select("id")
     .eq("slug", slug)
-    .eq("status", "active")
+    .in("status", OPERABLE_TENANT_STATUSES)
     .maybeSingle();
 
   if (tenantError || !tenant) {

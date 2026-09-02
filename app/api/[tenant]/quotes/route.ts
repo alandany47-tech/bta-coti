@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
 import { QuoteDocument } from "@/pdf/QuoteDocument";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { calculatePricing } from "@/lib/pricing";
@@ -41,7 +42,7 @@ export async function POST(
     .from("tenants")
     .select("*")
     .eq("slug", slug)
-    .eq("status", "active")
+    .in("status", OPERABLE_TENANT_STATUSES)
     .maybeSingle();
 
   if (tenantError || !tenant) {

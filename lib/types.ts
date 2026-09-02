@@ -1,4 +1,9 @@
-export type TenantStatus = "active" | "inactive";
+export type TenantStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "suspended"
+  | "canceled";
 
 export type Tenant = {
   id: string;
@@ -7,7 +12,27 @@ export type Tenant = {
   logo_url: string | null;
   brand_color: string;
   status: TenantStatus;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  trial_ends_at: string | null;
+  notes: string | null;
   created_at: string;
+};
+
+/**
+ * Vista pública de un tenant: lo que la anon key puede leer. notes/stripe_*
+ * están recortados por GRANT de columna (ver migración 0003) porque son
+ * datos internos del admin — nunca deben llegar al storefront público.
+ */
+export type PublicTenant = Omit<
+  Tenant,
+  "stripe_customer_id" | "stripe_subscription_id" | "notes"
+>;
+
+/** Fila de tenants.status + conteos que arma el Panel de Administración Master. */
+export type AdminTenantRow = Tenant & {
+  properties_count: number;
+  quotes_count: number;
 };
 
 export type PropertyStatus = "available" | "reserved" | "sold";

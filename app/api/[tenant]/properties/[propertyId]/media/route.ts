@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
 import { MAX_PROPERTY_IMAGES, MAX_UPLOAD_BYTES } from "@/lib/uploads";
 
 export const runtime = "nodejs";
@@ -16,7 +17,7 @@ async function resolveProperty(
     .from("tenants")
     .select("id")
     .eq("slug", slug)
-    .eq("status", "active")
+    .in("status", OPERABLE_TENANT_STATUSES)
     .maybeSingle();
 
   if (!tenant) return { error: "Tenant no encontrado." as const };

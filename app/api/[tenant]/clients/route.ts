@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
 
 /** clients tiene PII: nunca se lee/escribe desde el cliente con la anon key. */
 async function resolveActiveTenant(
@@ -10,7 +11,7 @@ async function resolveActiveTenant(
     .from("tenants")
     .select("id")
     .eq("slug", slug)
-    .eq("status", "active")
+    .in("status", OPERABLE_TENANT_STATUSES)
     .maybeSingle();
 
   return tenant;
