@@ -34,6 +34,11 @@ completa y cómo levantar el proyecto.
 
 - Variables en `.env.local` (ver [.env.example](./.env.example)): 3 keys de
   Supabase + `NEXT_PUBLIC_ROOT_DOMAIN`.
+- Las keys de Supabase de este proyecto usan el formato nuevo
+  (`sb_publishable_...` para `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `sb_secret_...` para `SUPABASE_SERVICE_ROLE_KEY`), no el JWT legacy
+  (`eyJ...`) que muestra `.env.example` como placeholder. Ambos formatos
+  funcionan igual con el SDK, no asumas que una key sin prefijo `eyJ` está mal.
 - Si trabajas en esta máquina junto con el proyecto `admin-inmobiliario`, ese
   repo también usa el puerto 3000 por defecto — arranca este con
   `PORT=<otro-puerto> npm run dev` si ambos corren a la vez.
