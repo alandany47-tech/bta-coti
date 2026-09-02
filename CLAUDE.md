@@ -42,5 +42,10 @@ completa y cómo levantar el proyecto.
 - Si trabajas en esta máquina junto con el proyecto `admin-inmobiliario`, ese
   repo también usa el puerto 3000 por defecto — arranca este con
   `PORT=<otro-puerto> npm run dev` si ambos corren a la vez.
+- En esta máquina suele quedar un `next dev` de este proyecto corriendo en
+  segundo plano en el puerto **4000** (fuera de `.claude/launch.json`, que
+  usa 3100). Si al levantar el dev server ves "Another next dev server is
+  already running" con PID y puerto 4000, no es un error: no mates ese
+  proceso, apuntá el navegador directo a `http://localhost:4000`.
 - `xlsx` (SheetJS) tiene un advisory de seguridad conocido sin fix oficial;
   ver README para el detalle antes de ir a producción.
