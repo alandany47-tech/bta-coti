@@ -15,11 +15,13 @@ export default async function CatalogPage({
     <div className="flex flex-1 flex-col gap-6 p-6">
       <div>
         <h1 className="text-lg font-semibold text-foreground">
-          Importar catálogo
+          Importar cartera
         </h1>
         <p className="text-sm text-muted">
-          Sube un Excel (.xlsx) con tu catálogo de productos. Los SKU
-          existentes se actualizan; los nuevos se agregan.
+          Sube un Excel (.xlsx) con tu cartera de propiedades. Las unidades
+          existentes se actualizan; las nuevas se agregan. Luego ve a{" "}
+          <span className="text-foreground">Propiedades</span> para cargar
+          fotos y plano de cada una.
         </p>
       </div>
 

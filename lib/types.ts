@@ -1,4 +1,9 @@
-export type TenantStatus = "active" | "inactive";
+export type TenantStatus =
+  | "trialing"
+  | "active"
+  | "past_due"
+  | "suspended"
+  | "canceled";
 
 export type Tenant = {
   id: string;
@@ -7,27 +12,55 @@ export type Tenant = {
   logo_url: string | null;
   brand_color: string;
   status: TenantStatus;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  trial_ends_at: string | null;
+  notes: string | null;
   created_at: string;
 };
 
-export type Product = {
-  id: string;
-  tenant_id: string;
-  sku: string;
-  name: string;
-  description: string | null;
-  price: number;
-  category: string | null;
-  is_custom_price: boolean;
+/**
+ * Vista pública de un tenant: lo que la anon key puede leer. notes/stripe_*
+ * están recortados por GRANT de columna (ver migración 0003) porque son
+ * datos internos del admin — nunca deben llegar al storefront público.
+ */
+export type PublicTenant = Omit<
+  Tenant,
+  "stripe_customer_id" | "stripe_subscription_id" | "notes"
+>;
+
+/** Fila de tenants.status + conteos que arma el Panel de Administración Master. */
+export type AdminTenantRow = Tenant & {
+  properties_count: number;
+  quotes_count: number;
 };
 
-export type QuoteItem = {
-  product_id: string;
-  sku: string;
-  name: string;
-  unit_price: number;
-  quantity: number;
-  is_custom_price: boolean;
+export type PropertyStatus = "available" | "reserved" | "sold";
+
+export type Property = {
+  id: string;
+  tenant_id: string;
+  title: string;
+  unit_number: string;
+  m2_interior: number;
+  m2_exterior: number;
+  m2_total: number;
+  parking_spaces: number;
+  list_price: number;
+  images: string[];
+  floor_plan_url: string | null;
+  status: PropertyStatus;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Client = {
+  id: string;
+  tenant_id: string;
+  full_name: string;
+  phone: string;
+  email: string | null;
+  created_at: string;
 };
 
 export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected";
@@ -35,19 +68,30 @@ export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected";
 export type Quote = {
   id: string;
   tenant_id: string;
+  property_id: string | null;
+  client_id: string | null;
   client_name: string;
   client_phone: string;
-  items: QuoteItem[];
+  discount_pct: number;
+  down_payment_pct: number;
+  down_payment_amount: number;
+  installments_count: number;
+  monthly_payment_amount: number;
+  final_payment_amount: number;
   total_amount: number;
+  notes: string | null;
   pdf_url: string | null;
   status: QuoteStatus;
   created_at: string;
 };
 
-export type ProductImportRow = {
-  sku: string;
-  name: string;
-  description: string | null;
-  price: number;
-  category: string | null;
+/** Fila esperada del Excel de importación masiva de cartera. */
+export type PropertyImportRow = {
+  unit_number: string;
+  title: string;
+  m2_interior: number;
+  m2_exterior: number;
+  m2_total: number;
+  parking_spaces: number;
+  list_price: number;
 };
