@@ -2,17 +2,24 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
 import { QuoteDocument } from "@/pdf/QuoteDocument";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
-import type { QuoteItem } from "@/lib/types";
+import { calculatePricing } from "@/lib/pricing";
+import type { Property } from "@/lib/types";
 
 // @react-pdf/renderer necesita APIs de Node (Buffer, fs) — no corre en Edge.
 export const runtime = "nodejs";
 
 type QuoteRequestBody = {
-  clientName: string;
-  clientPhone: string;
-  items: { product_id: string; quantity: number; unit_price: number }[];
+  propertyId: string;
+  clientId: string;
+  advisorName?: string;
+  discountPct: number;
+  downPaymentPct: number;
+  installmentsCount: number;
+  finalPaymentPct: number;
+  notes?: string;
 };
 
 export async function POST(
@@ -22,14 +29,9 @@ export async function POST(
   const { tenant: slug } = await params;
   const body = (await request.json()) as Partial<QuoteRequestBody>;
 
-  if (
-    !body.clientName?.trim() ||
-    !body.clientPhone?.trim() ||
-    !Array.isArray(body.items) ||
-    body.items.length === 0
-  ) {
+  if (!body.propertyId || !body.clientId) {
     return NextResponse.json(
-      { error: "Faltan datos del cliente o no hay ítems en la cotización." },
+      { error: "Falta seleccionar una propiedad y un cliente." },
       { status: 400 },
     );
   }
@@ -40,52 +42,54 @@ export async function POST(
     .from("tenants")
     .select("*")
     .eq("slug", slug)
-    .eq("status", "active")
+    .in("status", OPERABLE_TENANT_STATUSES)
     .maybeSingle();
 
   if (tenantError || !tenant) {
     return NextResponse.json({ error: "Tenant no encontrado." }, { status: 404 });
   }
 
-  const productIds = body.items.map((item) => item.product_id);
-  const { data: products, error: productsError } = await supabase
-    .from("products")
+  const { data: property, error: propertyError } = await supabase
+    .from("properties")
     .select("*")
+    .eq("id", body.propertyId)
     .eq("tenant_id", tenant.id)
-    .in("id", productIds);
+    .maybeSingle<Property>();
 
-  if (productsError || !products || products.length !== productIds.length) {
+  if (propertyError || !property) {
     return NextResponse.json(
-      { error: "Uno o más productos ya no existen en el catálogo." },
+      { error: "La propiedad seleccionada ya no existe en la cartera." },
       { status: 400 },
     );
   }
 
-  const productById = new Map(products.map((p) => [p.id, p]));
+  const { data: client, error: clientError } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("id", body.clientId)
+    .eq("tenant_id", tenant.id)
+    .maybeSingle();
 
-  // Los precios fijos siempre se recalculan contra la BD; solo los productos
-  // marcados is_custom_price aceptan el override enviado por el cliente.
-  const items: QuoteItem[] = body.items.map((raw) => {
-    const product = productById.get(raw.product_id)!;
-    const quantity = Math.max(1, Math.floor(raw.quantity) || 1);
-    const unitPrice = product.is_custom_price
-      ? Math.max(0, Number(raw.unit_price) || 0)
-      : Number(product.price);
+  if (clientError || !client) {
+    return NextResponse.json(
+      { error: "El cliente seleccionado ya no existe." },
+      { status: 400 },
+    );
+  }
 
-    return {
-      product_id: product.id,
-      sku: product.sku,
-      name: product.name,
-      unit_price: unitPrice,
-      quantity,
-      is_custom_price: product.is_custom_price,
-    };
+  // El precio y el desglose financiero siempre se recalculan en el servidor
+  // contra el list_price real de la propiedad — nunca se confía en los
+  // montos que manda el navegador.
+  const breakdown = calculatePricing({
+    listPrice: Number(property.list_price),
+    discountPct: Number(body.discountPct) || 0,
+    downPaymentPct: Number(body.downPaymentPct) || 0,
+    installmentsCount: Number(body.installmentsCount) || 1,
+    finalPaymentPct: Number(body.finalPaymentPct) || 0,
   });
-
-  const totalAmount = items.reduce(
-    (sum, item) => sum + item.unit_price * item.quantity,
-    0,
-  );
+  const installmentsCount = Math.max(1, Math.floor(Number(body.installmentsCount)) || 1);
+  const notes = body.notes?.trim() || null;
+  const advisorName = body.advisorName?.trim() || null;
 
   const quoteId = randomUUID();
   const createdAt = new Date().toISOString();
@@ -95,11 +99,14 @@ export async function POST(
       tenantName: tenant.name,
       tenantLogoUrl: tenant.logo_url,
       brandColor: tenant.brand_color,
+      advisorName,
       quoteId,
-      clientName: body.clientName,
-      clientPhone: body.clientPhone,
-      items,
-      totalAmount,
+      clientName: client.full_name,
+      clientPhone: client.phone,
+      property,
+      breakdown,
+      installmentsCount,
+      notes,
       createdAt,
     }),
   );
@@ -126,10 +133,18 @@ export async function POST(
   const { error: insertError } = await supabase.from("quotes").insert({
     id: quoteId,
     tenant_id: tenant.id,
-    client_name: body.clientName,
-    client_phone: body.clientPhone,
-    items,
-    total_amount: totalAmount,
+    property_id: property.id,
+    client_id: client.id,
+    client_name: client.full_name,
+    client_phone: client.phone,
+    discount_pct: body.discountPct ?? 0,
+    down_payment_pct: body.downPaymentPct ?? 0,
+    down_payment_amount: breakdown.downPaymentAmount,
+    installments_count: installmentsCount,
+    monthly_payment_amount: breakdown.monthlyPaymentAmount,
+    final_payment_amount: breakdown.finalPaymentAmount,
+    total_amount: breakdown.effectivePrice,
+    notes,
     pdf_url: publicUrl,
     status: "sent",
     created_at: createdAt,
@@ -144,10 +159,12 @@ export async function POST(
 
   const whatsappUrl = buildWhatsAppUrl({
     tenantName: tenant.name,
-    clientName: body.clientName,
-    clientPhone: body.clientPhone,
-    items,
-    totalAmount,
+    clientName: client.full_name,
+    clientPhone: client.phone,
+    propertyTitle: property.title,
+    propertyUnitNumber: property.unit_number,
+    breakdown,
+    installmentsCount,
     pdfUrl: publicUrl,
   });
 
@@ -155,6 +172,6 @@ export async function POST(
     quoteId,
     pdfUrl: publicUrl,
     whatsappUrl,
-    totalAmount,
+    breakdown,
   });
 }

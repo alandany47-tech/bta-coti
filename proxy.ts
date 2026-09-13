@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { refreshAdminSession } from "@/lib/supabase/proxy-session";
 
 /**
  * Next.js 16 renombró `middleware.ts` a `proxy.ts` (misma funcionalidad,
  * ver node_modules/next/dist/docs/01-app/01-getting-started/16-proxy.md).
+ * Proxy corre en runtime Node.js por default en esta versión, por eso puede
+ * hacer queries a Supabase y usar @supabase/ssr sin restricciones de Edge.
  */
 
 const ROOT_DOMAIN = (
@@ -31,15 +35,54 @@ function extractTenantSlug(hostname: string): string | null {
   return null;
 }
 
-export function proxy(request: NextRequest) {
+/**
+ * Solo el status — es lo único que el kill-switch necesita, y sigue siendo
+ * legible con la anon key (ver GRANT/REVOKE de la migración 0003).
+ * Devuelve null tanto si el tenant no existe como si hay error de red: en
+ * ambos casos se debe caer al manejo de "no encontrado" ya existente, nunca
+ * bloquear un tenant sano por un hipo de la base de datos.
+ */
+async function getTenantStatus(slug: string): Promise<string | null> {
+  const supabase = createServerSupabaseClient();
+  const { data, error } = await supabase
+    .from("tenants")
+    .select("status")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.status as string;
+}
+
+export async function proxy(request: NextRequest) {
   const url = request.nextUrl;
   const hostname = request.headers.get("host") ?? "";
   const tenantSlug = extractTenantSlug(hostname);
 
   if (!tenantSlug) {
+    // Dominio raíz: el único consumidor de Supabase Auth es el Panel Admin.
+    // @supabase/ssr necesita reescribir cookies de sesión renovadas en cada
+    // request, algo que un Server Component no puede hacer por su cuenta.
+    if (url.pathname.startsWith("/admin")) {
+      const { supabase, response } = refreshAdminSession(request);
+      await supabase.auth.getUser();
+      return response;
+    }
     return NextResponse.next();
   }
 
+  // Kill-switch de suspensión: corta el acceso a CUALQUIER ruta del
+  // subdominio antes de llegar a layout.tsx, sin importar qué se pidió.
+  const status = await getTenantStatus(tenantSlug);
+  if (status === "suspended") {
+    const suspendedUrl = new URL("/suspended", request.url);
+    suspendedUrl.searchParams.set("tenant", tenantSlug);
+    return NextResponse.rewrite(suspendedUrl);
+  }
+
+  // Tenant inexistente o en un estado no operable (past_due/canceled): se
+  // mantiene el flujo actual — layout.tsx resuelve el tenant y hace
+  // notFound() si getTenantBySlug no lo considera operable.
   if (url.pathname.startsWith(`/${tenantSlug}`)) {
     return NextResponse.next();
   }

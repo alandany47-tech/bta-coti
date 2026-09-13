@@ -2,83 +2,53 @@
 
 import { useMemo, useState } from "react";
 import { Send, Loader2 } from "lucide-react";
-import { ProductCombobox } from "@/components/cotizador/product-combobox";
-import { QuoteItemsTable } from "@/components/cotizador/quote-items-table";
-import { ClientInfoForm, type ClientInfo } from "@/components/cotizador/client-info-form";
+import { PropertySelector } from "@/components/cotizador/property-selector";
+import { FinancialCalculator, type FinancialInputs } from "@/components/cotizador/financial-calculator";
+import { ClientCombobox } from "@/components/cotizador/client-combobox";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
-import type { Product, QuoteItem } from "@/lib/types";
+import { calculatePricing } from "@/lib/pricing";
+import type { Property, Client } from "@/lib/types";
+
+const DEFAULT_INPUTS: FinancialInputs = {
+  discountPct: 0,
+  downPaymentPct: 20,
+  installmentsCount: 12,
+  finalPaymentPct: 0,
+};
 
 export function CotizadorClient({
   tenantSlug,
-  products,
+  properties,
 }: {
   tenantSlug: string;
-  products: Product[];
+  properties: Property[];
 }) {
-  const [items, setItems] = useState<QuoteItem[]>([]);
-  const [client, setClient] = useState<ClientInfo>({
-    name: "",
-    countryCode: "+52",
-    phone: "",
-  });
+  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [inputs, setInputs] = useState<FinancialInputs>(DEFAULT_INPUTS);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [advisorName, setAdvisorName] = useState("");
+  const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const total = useMemo(
-    () => items.reduce((sum, item) => sum + item.unit_price * item.quantity, 0),
-    [items],
+  const breakdown = useMemo(
+    () =>
+      calculatePricing({
+        listPrice: selectedProperty?.list_price ?? 0,
+        discountPct: inputs.discountPct,
+        downPaymentPct: inputs.downPaymentPct,
+        installmentsCount: inputs.installmentsCount,
+        finalPaymentPct: inputs.finalPaymentPct,
+      }),
+    [selectedProperty, inputs],
   );
 
-  function handleAddProduct(product: Product) {
-    setItems((prev) => {
-      const existing = prev.find((item) => item.product_id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product_id === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item,
-        );
-      }
-      return [
-        ...prev,
-        {
-          product_id: product.id,
-          sku: product.sku,
-          name: product.name,
-          unit_price: product.price,
-          quantity: 1,
-          is_custom_price: product.is_custom_price,
-        },
-      ];
-    });
-  }
-
-  function handleChangeQuantity(productId: string, quantity: number) {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.product_id === productId ? { ...item, quantity } : item,
-      ),
-    );
-  }
-
-  function handleChangePrice(productId: string, unit_price: number) {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.product_id === productId ? { ...item, unit_price } : item,
-      ),
-    );
-  }
-
-  function handleRemove(productId: string) {
-    setItems((prev) => prev.filter((item) => item.product_id !== productId));
-  }
-
-  const canSubmit =
-    items.length > 0 && client.name.trim() && client.phone.trim() && !isSubmitting;
+  const canSubmit = Boolean(selectedProperty) && Boolean(selectedClient) && !isSubmitting;
 
   async function handleGenerateAndSend() {
-    if (!canSubmit) return;
+    if (!selectedProperty || !selectedClient || isSubmitting) return;
     setIsSubmitting(true);
     setErrorMessage(null);
 
@@ -87,13 +57,14 @@ export function CotizadorClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          clientName: client.name.trim(),
-          clientPhone: `${client.countryCode}${client.phone.trim()}`,
-          items: items.map((item) => ({
-            product_id: item.product_id,
-            quantity: item.quantity,
-            unit_price: item.unit_price,
-          })),
+          propertyId: selectedProperty.id,
+          clientId: selectedClient.id,
+          advisorName: advisorName.trim() || undefined,
+          discountPct: inputs.discountPct,
+          downPaymentPct: inputs.downPaymentPct,
+          installmentsCount: inputs.installmentsCount,
+          finalPaymentPct: inputs.finalPaymentPct,
+          notes: notes.trim() || undefined,
         }),
       });
 
@@ -105,8 +76,10 @@ export function CotizadorClient({
       }
 
       window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
-      setItems([]);
-      setClient({ name: "", countryCode: client.countryCode, phone: "" });
+      setSelectedProperty(null);
+      setSelectedClient(null);
+      setInputs(DEFAULT_INPUTS);
+      setNotes("");
     } catch {
       setErrorMessage("Error de red al generar la cotización.");
     } finally {
@@ -116,38 +89,67 @@ export function CotizadorClient({
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
-      <ProductCombobox products={products} onSelect={handleAddProduct} />
-
-      <QuoteItemsTable
-        items={items}
-        onChangeQuantity={handleChangeQuantity}
-        onChangePrice={handleChangePrice}
-        onRemove={handleRemove}
+      <PropertySelector
+        properties={properties}
+        selectedId={selectedProperty?.id ?? null}
+        onSelect={setSelectedProperty}
       />
 
-      <div className="rounded-lg border border-border-subtle bg-surface p-4">
-        <h2 className="mb-4 text-sm font-semibold text-foreground">
-          Datos del cliente
-        </h2>
-        <ClientInfoForm value={client} onChange={setClient} />
-      </div>
+      {selectedProperty && (
+        <>
+          <FinancialCalculator
+            listPrice={selectedProperty.list_price}
+            inputs={inputs}
+            onChange={setInputs}
+            breakdown={breakdown}
+          />
 
-      {errorMessage && (
-        <p className="text-sm text-red-400">{errorMessage}</p>
+          <div className="rounded-lg border border-border-subtle bg-surface p-4">
+            <h2 className="mb-4 text-sm font-semibold text-foreground">
+              Cliente
+            </h2>
+            <ClientCombobox
+              tenantSlug={tenantSlug}
+              selected={selectedClient}
+              onSelect={setSelectedClient}
+            />
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted">
+                Asesor (opcional)
+              </label>
+              <Input
+                value={advisorName}
+                onChange={(e) => setAdvisorName(e.target.value)}
+                placeholder="Nombre del asesor"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-medium text-muted">
+                Notas para el PDF (opcional)
+              </label>
+              <Input
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Condiciones especiales, vigencia, etc."
+              />
+            </div>
+          </div>
+        </>
       )}
+
+      {errorMessage && <p className="text-sm text-red-400">{errorMessage}</p>}
 
       <div className="sticky bottom-0 mt-auto flex items-center justify-between gap-4 border-t border-border-subtle bg-background/95 py-4 backdrop-blur">
         <div>
-          <p className="text-xs text-muted">Total</p>
+          <p className="text-xs text-muted">Total de la operación</p>
           <p className="text-2xl font-semibold text-foreground">
-            {formatCurrency(total)}
+            {selectedProperty ? formatCurrency(breakdown.effectivePrice) : "—"}
           </p>
         </div>
-        <Button
-          size="lg"
-          disabled={!canSubmit}
-          onClick={handleGenerateAndSend}
-        >
+        <Button size="lg" disabled={!canSubmit} onClick={handleGenerateAndSend}>
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (

@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { getTenantBySlug } from "@/lib/tenants";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { CotizadorClient } from "@/components/cotizador/cotizador-client";
-import type { Product } from "@/lib/types";
+import type { Property } from "@/lib/types";
 
 export default async function CotizadorPage({
   params,
@@ -14,16 +14,17 @@ export default async function CotizadorPage({
   if (!tenant) notFound();
 
   const supabase = createServerSupabaseClient();
-  const { data: products } = await supabase
-    .from("products")
+  const { data: properties } = await supabase
+    .from("properties")
     .select("*")
     .eq("tenant_id", tenant.id)
-    .order("name", { ascending: true });
+    .neq("status", "sold")
+    .order("unit_number", { ascending: true });
 
   return (
     <CotizadorClient
       tenantSlug={slug}
-      products={(products ?? []) as Product[]}
+      properties={(properties ?? []) as Property[]}
     />
   );
 }
