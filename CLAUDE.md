@@ -82,12 +82,15 @@ proyecto.
   recalcula el precio/desglose en el servidor con
   [lib/pricing.ts](./lib/pricing.ts) — nunca confíes en los montos que manda
   el navegador.
-- **Paleta fija dark en la app**: negro `#09090B` / grises `#18181B`,
-  `#27272A`, `#71717A` / blanco `#FAFAFA` / gris claro `#E4E4E7`, definida
-  como CSS vars en `app/globals.css`. No se soporta light mode; `<html>`
-  fuerza `dark`. El PDF es la excepción intencional: página 1 es fondo claro
-  (documento imprimible) con bloques de acento oscuro, página 2 (galería) es
-  full-dark — no "corrijas" esto para que combine con `globals.css`.
+- **Paleta clara "papel y tinta" (T00)**: los tokens de `docs/BRAND.md` §4–7 viven
+  solo en `app/globals.css` (`--paper`, `--ink`, `--accent`, …); los nombres
+  legados (`bg-background`, `text-foreground`, `text-muted`, …) son alias de
+  esos tokens. Nada de hex ni colores crudos de Tailwind en componentes: usa
+  `text-danger`, `text-ok`, `text-warn`, `bg-accent`. Fuentes Newsreader
+  (titulares) + Instrument Sans (UI); el nombre y dominio de marca salen de
+  `lib/brand.ts`. El PDF es la excepción intencional: página 1 es fondo claro
+  con bloques de acento oscuro, página 2 (galería) es full-dark; no lo
+  "corrijas" para que combine con `globals.css`.
 - **Storage**: dos buckets públicos — `quotes` (PDFs generados) y
   `property-media` (hasta 10 imágenes + 1 plano por propiedad, creado en
   0002). Las subidas de medios pasan por

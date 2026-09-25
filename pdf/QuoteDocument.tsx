@@ -1,6 +1,7 @@
 import { Document, Page, View, Text, StyleSheet, Image } from "@react-pdf/renderer";
 import type { Property } from "@/lib/types";
 import type { PricingBreakdown } from "@/lib/pricing";
+import { BRAND } from "@/lib/brand";
 
 const DARK = "#18181B";
 const DARKER = "#09090B";
@@ -514,7 +515,7 @@ export function QuoteDocument({
         ) : null}
 
         <Text style={styles.footer}>
-          Cotización preparada por {tenantName} vía BTA Cotiza para {clientName}{" "}
+          Cotización preparada por {tenantName} vía {BRAND.name} para {clientName}{" "}
           ({clientPhone}) — folio {folio}. Cifras informativas sujetas a
           disponibilidad, apartado y validación crediticia; no constituyen un
           contrato de compraventa.
@@ -558,7 +559,7 @@ export function QuoteDocument({
         )}
 
         <Text style={styles.darkFooter}>
-          {tenantName} · Dossier generado vía BTA Cotiza · Folio {folio}
+          {tenantName} · Dossier generado vía {BRAND.name} · Folio {folio}
         </Text>
       </Page>
     </Document>

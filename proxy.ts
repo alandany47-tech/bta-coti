@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { refreshAdminSession } from "@/lib/supabase/proxy-session";
+import { BRAND } from "@/lib/brand";
 
 /**
  * Next.js 16 renombró `middleware.ts` a `proxy.ts` (misma funcionalidad,
@@ -10,9 +11,7 @@ import { refreshAdminSession } from "@/lib/supabase/proxy-session";
  * hacer queries a Supabase y usar @supabase/ssr sin restricciones de Edge.
  */
 
-const ROOT_DOMAIN = (
-  process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "btacotiza.com"
-).toLowerCase();
+const ROOT_DOMAIN = BRAND.domain;
 
 /** Extrae el slug del tenant a partir del host (subdominio). */
 function extractTenantSlug(hostname: string): string | null {

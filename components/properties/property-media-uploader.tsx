@@ -166,7 +166,7 @@ export function PropertyMediaUploader({
                 type="button"
                 onClick={() => handleRemoveImage(url)}
                 disabled={pendingRemoval === url}
-                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-foreground-muted opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100 disabled:opacity-50"
+                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-foreground-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100 disabled:opacity-50"
                 aria-label="Eliminar imagen"
               >
                 {pendingRemoval === url ? (
@@ -225,7 +225,7 @@ export function PropertyMediaUploader({
               type="button"
               onClick={handleRemovePlan}
               disabled={pendingRemoval === property.floor_plan_url}
-              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-foreground-muted opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100 disabled:opacity-50"
+              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-foreground-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100 disabled:opacity-50"
               aria-label="Eliminar plano"
             >
               {pendingRemoval === property.floor_plan_url ? (
@@ -247,7 +247,7 @@ export function PropertyMediaUploader({
         )}
       </div>
 
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }

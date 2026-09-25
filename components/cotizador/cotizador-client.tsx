@@ -140,7 +140,7 @@ export function CotizadorClient({
         </>
       )}
 
-      {errorMessage && <p className="text-sm text-red-400">{errorMessage}</p>}
+      {errorMessage && <p className="text-sm text-danger">{errorMessage}</p>}
 
       <div className="sticky bottom-0 mt-auto flex items-center justify-between gap-4 border-t border-border-subtle bg-background/95 py-4 backdrop-blur">
         <div>

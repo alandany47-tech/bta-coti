@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/admin-auth";
 import { createSessionSupabaseClient } from "@/lib/supabase/server";
 import { LoginForm } from "@/components/admin/login-form";
+import { BRAND } from "@/lib/brand";
 
 export default async function AdminLoginPage() {
   const admin = await getAdminUser();
@@ -20,7 +21,7 @@ export default async function AdminLoginPage() {
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
-            BTA Cotiza
+            {BRAND.name}
           </h1>
           <p className="mt-1 text-sm text-muted">Master Console</p>
         </div>

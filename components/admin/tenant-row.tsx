@@ -166,7 +166,7 @@ export function TenantRow({
             {savingNotes ? "..." : "Guardar"}
           </Button>
         </div>
-        {error ? <p className="mt-1 text-xs text-red-400">{error}</p> : null}
+        {error ? <p className="mt-1 text-xs text-danger">{error}</p> : null}
       </td>
     </tr>
   );

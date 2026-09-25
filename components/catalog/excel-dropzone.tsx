@@ -200,13 +200,13 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
             <span className="text-muted">Importando {state.rows} filas…</span>
           )}
           {state.status === "success" && (
-            <span className="flex items-center gap-1 text-emerald-400">
+            <span className="flex items-center gap-1 text-ok">
               <CheckCircle2 className="h-3.5 w-3.5" />
               {state.imported} propiedades importadas
             </span>
           )}
           {state.status === "error" && (
-            <span className="flex items-center gap-1 text-red-400">
+            <span className="flex items-center gap-1 text-danger">
               <XCircle className="h-3.5 w-3.5" />
               {state.message}
             </span>
