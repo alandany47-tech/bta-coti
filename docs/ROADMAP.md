@@ -8,7 +8,7 @@
 
 | ID | Ticket | Agente | Depende de | Criterios de aceptación | Estado |
 |---|---|---|---|---|---|
-| T00 | Setup: `lib/brand.ts`, instalar skills, tokens de `BRAND.md` en `globals.css`, fuentes Newsreader + Instrument Sans, quitar `dark` forzado, `supabase gen types` | CC | — | Build sin errores. Los tokens coinciden con BRAND §4–6. Las skills aparecen en `.claude/skills` | 🟨 (falta instalar skills) |
+| T00 | Setup: `lib/brand.ts`, instalar skills, tokens de `BRAND.md` en `globals.css`, fuentes Newsreader + Instrument Sans, quitar `dark` forzado, `supabase gen types` | CC | — | Build sin errores. Los tokens coinciden con BRAND §4–6. Las skills aparecen en `.claude/skills` | ✅ |
 | T01 | Migración 0004: fix de grants de tenants, `plans` (+ seed de 5 planes), columnas nuevas de tenants, `tenant_members`, `usage`, `audit_log`, `is_member`, `provision_tenant`, `slug_available`, slugs reservados | CC | T00 | La anon key ya **no** lee `notes`/`stripe_*` (probar con curl). `provision_tenant` es idempotente y rechaza reservados. Tests SQL en `supabase/tests` | ⬜ |
 | T02 | Auth: `@supabase/ssr` con cookie `.dominio.com`, `/login`, `/recuperar`, `/auth/callback` único y redirección por rol o tenant | CC | T01 | Login en la raíz sigue activo en `slug.localhost`. Admin → `/admin`, owner → su panel | ⬜ |
 | T03 | Panel del tenant protegido: mover cotizador, propiedades e import a `slug./panel/*`. Rutas `api/[tenant]/*` con sesión + RLS, sin service role. Storefront público de solo lectura en `slug./` | CC | T02 | Sin sesión: `POST /api/<t>/*` → 401. Un miembro de A no puede escribir en B (test). `grep createServiceRoleClient` solo aparece en admin, webhooks, cron y provisión | ⬜ |
