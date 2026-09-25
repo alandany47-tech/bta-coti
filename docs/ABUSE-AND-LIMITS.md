@@ -36,6 +36,8 @@ Viven en `plans.limits` y los aplican triggers o el servidor, nunca solo la UI.
 | `/q/*` | 120 por minuto |
 | `/api/*` en general | 300 por minuto |
 
+**Implementación:** `lib/rate-limit.ts` (Upstash) aplica `register` a `/api/slug-available`; `login` y `api` quedan listos para T02 y T04. En producción se duplican como reglas de Vercel Firewall (Rate Limiting) con las mismas rutas y topes, y las variables `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` van en Production y Preview. La lista de correos desechables se sincroniza con `scripts/sync-disposable-domains.ts` y `/api/cron/disposable-domains` (semanal, se programa en T17).
+
 ## 3. Antiphishing: bloqueo automático al registrarse
 
 Se aplica en **tres puntos**:

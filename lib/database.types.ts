@@ -64,6 +64,56 @@ export type Database = {
           },
         ]
       }
+      blocked_terms: {
+        Row: {
+          created_at: string
+          kind: string
+          term: string
+        }
+        Insert: {
+          created_at?: string
+          kind: string
+          term: string
+        }
+        Update: {
+          created_at?: string
+          kind?: string
+          term?: string
+        }
+        Relationships: []
+      }
+      blocked_terms_allow: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          reason: string | null
+          slug: string
+          tenant_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          reason?: string | null
+          slug: string
+          tenant_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          reason?: string | null
+          slug?: string
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blocked_terms_allow_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string
@@ -98,6 +148,21 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      disposable_email_domains: {
+        Row: {
+          added_at: string
+          domain: string
+        }
+        Insert: {
+          added_at?: string
+          domain: string
+        }
+        Update: {
+          added_at?: string
+          domain?: string
+        }
+        Relationships: []
       }
       plans: {
         Row: {
@@ -425,13 +490,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _slug_forms: { Args: { p_text: string }; Returns: string[] }
+      _terms_hit: { Args: { p_forms: string[] }; Returns: boolean }
       is_app_admin: { Args: never; Returns: boolean }
+      is_disposable_email: { Args: { p_email: string }; Returns: boolean }
       is_member: {
         Args: { p_min_role?: string; p_tenant_id: string }
         Returns: boolean
       }
+      is_slug_blocked: { Args: { p_slug: string }; Returns: boolean }
       is_slug_reserved: { Args: { p_slug: string }; Returns: boolean }
       is_slug_valid: { Args: { p_slug: string }; Returns: boolean }
+      is_text_flagged: { Args: { p_text: string }; Returns: boolean }
+      normalize_slug: { Args: { p_text: string }; Returns: string }
       provision_tenant: {
         Args: {
           p_billing_mode?: string
