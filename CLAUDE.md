@@ -1,5 +1,9 @@
 @AGENTS.md
 
+> **Documentación objetivo en `docs/` (leer `docs/README.md` primero).** Si algo de este archivo
+> contradice `docs/`, manda `docs/`: este archivo describe el estado del MVP previo a F0.
+
+
 # BTA Cotiza
 
 Cotizador multi-tenant para brokers inmobiliarios de lujo (cartera de hasta
