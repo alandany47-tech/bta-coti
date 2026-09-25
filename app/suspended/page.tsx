@@ -1,12 +1,13 @@
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { BRAND } from "@/lib/brand";
 
 const SUPPORT_WHATSAPP = process.env.NEXT_PUBLIC_SUPPORT_WHATSAPP ?? "";
 
 function buildSupportWhatsAppUrl(tenantName: string | null) {
   const digits = SUPPORT_WHATSAPP.replace(/[^\d]/g, "");
   const message = tenantName
-    ? `Hola, soy administrador de "${tenantName}" en BTA Cotiza. Mi cuenta aparece suspendida y quisiera reactivarla.`
-    : "Hola, mi cuenta en BTA Cotiza aparece suspendida y quisiera reactivarla.";
+    ? `Hola, soy administrador de "${tenantName}" en ${BRAND.name}. Mi cuenta aparece suspendida y quisiera reactivarla.`
+    : `Hola, mi cuenta en ${BRAND.name} aparece suspendida y quisiera reactivarla.`;
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
 
@@ -31,7 +32,7 @@ export default async function SuspendedPage({
   return (
     <div className="flex flex-1 items-center justify-center px-6">
       <div className="w-full max-w-md rounded-lg border border-border-subtle bg-surface p-8 text-center">
-        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-red-950 text-red-300">
+        <div className="mx-auto mb-6 flex h-12 w-12 items-center justify-center rounded-full bg-danger/10 text-danger">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"

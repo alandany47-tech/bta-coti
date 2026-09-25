@@ -9,22 +9,21 @@ const STATUS_LABEL: Record<TenantStatus, string> = {
   canceled: "Cancelado",
 };
 
-const STATUS_CLASSNAME: Record<TenantStatus, string> = {
-  trialing: "bg-blue-950 text-blue-300",
-  active: "bg-emerald-950 text-emerald-300",
-  past_due: "bg-amber-950 text-amber-300",
-  suspended: "bg-red-950 text-red-300",
-  canceled: "bg-surface-hover text-muted",
+const STATUS_DOT: Record<TenantStatus, string> = {
+  trialing: "bg-accent",
+  active: "bg-ok",
+  past_due: "bg-warn",
+  suspended: "bg-danger",
+  canceled: "bg-ink-3",
 };
 
 export function StatusBadge({ status }: { status: TenantStatus }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
-        STATUS_CLASSNAME[status],
-      )}
-    >
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-foreground">
+      <span
+        aria-hidden
+        className={cn("h-1.5 w-1.5 rounded-full", STATUS_DOT[status])}
+      />
       {STATUS_LABEL[status]}
     </span>
   );

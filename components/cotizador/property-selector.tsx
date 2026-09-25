@@ -11,9 +11,9 @@ const STATUS_LABEL: Record<Property["status"], string> = {
 };
 
 const STATUS_DOT: Record<Property["status"], string> = {
-  available: "bg-emerald-500",
-  reserved: "bg-amber-500",
-  sold: "bg-red-500",
+  available: "bg-ok",
+  reserved: "bg-warn",
+  sold: "bg-danger",
 };
 
 export function PropertySelector({

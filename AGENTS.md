@@ -1,3 +1,6 @@
+> **Documentación objetivo en `docs/` (leer `docs/README.md` primero).** Si algo de este archivo
+> contradice `docs/`, manda `docs/`: este archivo describe el estado del MVP previo a F0.
+
 <!-- BEGIN:nextjs-agent-rules -->
 
 # This is NOT the Next.js you know

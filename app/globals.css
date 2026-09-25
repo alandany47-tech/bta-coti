@@ -1,28 +1,97 @@
 @import "tailwindcss";
 
+/* Tokens de docs/BRAND.md §4–7. Único archivo con valores de color. */
 :root {
-  --background: #09090b;
-  --surface: #18181b;
-  --surface-hover: #27272a;
-  --border-subtle: #27272a;
-  --muted: #71717a;
-  --foreground: #fafafa;
-  --foreground-muted: #e4e4e7;
+  --paper: #f7f6f3;
+  --surface: #ffffff;
+  --sunken: #efede8;
+  --line: #e3e0d9;
+  --line-strong: #cfcbc2;
+  --ink: #1a1917;
+  --ink-2: #4a4843;
+  --ink-3: #8a867d;
+  --accent: #b4532a;
+  --accent-soft: #f4e6de;
+  --ok: #2e6b4f;
+  --warn: #a86a12;
+  --danger: #b42318;
+
+  --shadow-float: 0 1px 2px rgb(26 25 23 / 0.06), 0 8px 24px rgb(26 25 23 / 0.08);
+
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out-strong: cubic-bezier(0.77, 0, 0.175, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
+
+  /* Alias semánticos usados por los componentes existentes */
+  --background: var(--paper);
+  --surface-hover: var(--sunken);
+  --border-subtle: var(--line);
+  --muted: var(--ink-3);
+  --foreground: var(--ink);
+  --foreground-muted: var(--ink-2);
+
+  color-scheme: light;
 }
 
 @theme inline {
-  --color-background: var(--background);
+  --color-paper: var(--paper);
   --color-surface: var(--surface);
+  --color-sunken: var(--sunken);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-danger: var(--danger);
+
+  --color-background: var(--background);
   --color-surface-hover: var(--surface-hover);
   --color-border-subtle: var(--border-subtle);
   --color-muted: var(--muted);
   --color-foreground: var(--foreground);
   --color-foreground-muted: var(--foreground-muted);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  --shadow-lg: var(--shadow-float);
+
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-newsreader), ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+@utility tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-property: opacity !important;
+    transition-duration: 0.01ms !important;
+  }
 }

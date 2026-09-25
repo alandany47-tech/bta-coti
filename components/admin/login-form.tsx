@@ -62,7 +62,7 @@ export function LoginForm() {
           onChange={(event) => setPassword(event.target.value)}
         />
       </div>
-      {error ? <p className="text-sm text-red-400">{error}</p> : null}
+      {error ? <p className="text-sm text-danger">{error}</p> : null}
       <Button type="submit" disabled={loading} className="mt-2">
         {loading ? "Entrando..." : "Entrar"}
       </Button>

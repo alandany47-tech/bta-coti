@@ -193,7 +193,7 @@ export function ClientCombobox({
                 </Button>
               </div>
               {createError && (
-                <p className="mt-1.5 text-xs text-red-400">{createError}</p>
+                <p className="mt-1.5 text-xs text-danger">{createError}</p>
               )}
             </div>
           )}
