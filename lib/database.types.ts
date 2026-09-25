@@ -29,6 +29,41 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          id: string
+          payload: Json
+          tenant_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          tenant_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          id?: string
+          payload?: Json
+          tenant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           created_at: string
@@ -63,6 +98,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      plans: {
+        Row: {
+          code: string
+          id: string
+          limits: Json
+          modules: string[]
+          name: string
+          price_month: number
+          price_year: number
+          public: boolean
+          sort: number
+          stripe_price_month: string | null
+          stripe_price_year: string | null
+        }
+        Insert: {
+          code: string
+          id?: string
+          limits?: Json
+          modules?: string[]
+          name: string
+          price_month?: number
+          price_year?: number
+          public?: boolean
+          sort?: number
+          stripe_price_month?: string | null
+          stripe_price_year?: string | null
+        }
+        Update: {
+          code?: string
+          id?: string
+          limits?: Json
+          modules?: string[]
+          name?: string
+          price_month?: number
+          price_year?: number
+          public?: boolean
+          sort?: number
+          stripe_price_month?: string | null
+          stripe_price_year?: string | null
+        }
+        Relationships: []
       }
       properties: {
         Row: {
@@ -205,47 +282,143 @@ export type Database = {
           },
         ]
       }
+      tenant_members: {
+        Row: {
+          created_at: string
+          role: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
+          billing_mode: string
           brand_color: string
           created_at: string
+          flagged: boolean
           id: string
+          is_demo: boolean
           logo_url: string | null
           name: string
           notes: string | null
+          plan_id: string
+          settings: Json
           slug: string
+          source: string | null
           status: string
+          status_reason: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
+          theme: Json
           trial_ends_at: string | null
         }
         Insert: {
+          billing_mode?: string
           brand_color?: string
           created_at?: string
+          flagged?: boolean
           id?: string
+          is_demo?: boolean
           logo_url?: string | null
           name: string
           notes?: string | null
+          plan_id: string
+          settings?: Json
           slug: string
+          source?: string | null
           status?: string
+          status_reason?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          theme?: Json
           trial_ends_at?: string | null
         }
         Update: {
+          billing_mode?: string
           brand_color?: string
           created_at?: string
+          flagged?: boolean
           id?: string
+          is_demo?: boolean
           logo_url?: string | null
           name?: string
           notes?: string | null
+          plan_id?: string
+          settings?: Json
           slug?: string
+          source?: string | null
           status?: string
+          status_reason?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
+          theme?: Json
           trial_ends_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tenants_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage: {
+        Row: {
+          items_count: number
+          month_key: string
+          quotes_this_month: number
+          storage_bytes: number
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          items_count?: number
+          month_key?: string
+          quotes_this_month?: number
+          storage_bytes?: number
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          items_count?: number
+          month_key?: string
+          quotes_this_month?: number
+          storage_bytes?: number
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -253,6 +426,26 @@ export type Database = {
     }
     Functions: {
       is_app_admin: { Args: never; Returns: boolean }
+      is_member: {
+        Args: { p_min_role?: string; p_tenant_id: string }
+        Returns: boolean
+      }
+      is_slug_reserved: { Args: { p_slug: string }; Returns: boolean }
+      is_slug_valid: { Args: { p_slug: string }; Returns: boolean }
+      provision_tenant: {
+        Args: {
+          p_billing_mode?: string
+          p_name: string
+          p_owner: string
+          p_plan_code: string
+          p_slug: string
+          p_source: string
+          p_status: string
+          p_trial_days: number
+        }
+        Returns: string
+      }
+      slug_available: { Args: { p_slug: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
