@@ -43,9 +43,10 @@ clic.
    npm install
    npm run dev
    ```
-4. Crea un tenant de prueba (tabla `tenants`), importa propiedades desde
-   `/[tenant]/catalog` (Excel) o insértalas directo, y visita
-   `http://<slug>.localhost:3000`.
+4. Crea un tenant con `provision_tenant` (o desde `/admin`), inicia sesión en
+   `http://localhost:3000/login`, importa propiedades desde
+   `http://<slug>.localhost:3000/panel/importar` (Excel) y visita
+   `http://<slug>.localhost:3000` (storefront público).
 
 ## Estructura
 
@@ -53,11 +54,13 @@ clic.
 app/
   page.tsx                     landing del dominio raíz
   [tenant]/
-    layout.tsx                 resuelve tenant, header con logo/marca
-    page.tsx                   Cotizador (core): selector de cartera,
+    layout.tsx                 resuelve el tenant
+    (public)/page.tsx          storefront público de solo lectura
+    panel/layout.tsx           gate de sesión y membresía, navegación por rol
+    panel/page.tsx             Cotizador (core): selector de cartera,
                                 calculadora financiera, mini-CRM
-    properties/page.tsx        carga de fotos (hasta 10) y plano por propiedad
-    catalog/page.tsx           import masivo de cartera vía Excel
+    panel/propiedades/page.tsx carga de fotos (hasta 10) y plano por propiedad
+    panel/importar/page.tsx    import masivo de cartera vía Excel
   api/[tenant]/
     quotes/route.ts                       recalcula precios, genera el
                                            dossier PDF de 2 páginas, sube a

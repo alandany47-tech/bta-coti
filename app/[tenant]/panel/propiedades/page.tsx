@@ -1,6 +1,5 @@
-import { notFound } from "next/navigation";
-import { getTenantBySlug } from "@/lib/tenants";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
+import { getPanelContext, hasRole } from "@/lib/auth/panel";
 import { PropertiesManager } from "@/components/properties/properties-manager";
 import type { Property } from "@/lib/types";
 
@@ -10,10 +9,9 @@ export default async function PropertiesPage({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant: slug } = await params;
-  const tenant = await getTenantBySlug(slug);
-  if (!tenant) notFound();
+  const { supabase, tenant, role } = await getPanelContext(slug);
+  if (!hasRole(role, "editor")) redirect("/panel");
 
-  const supabase = createServerSupabaseClient();
   const { data: properties } = await supabase
     .from("properties")
     .select("*")
@@ -23,9 +21,7 @@ export default async function PropertiesPage({
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">
       <div>
-        <h1 className="text-lg font-semibold text-foreground">
-          Propiedades
-        </h1>
+        <h1 className="text-lg font-semibold text-foreground">Propiedades</h1>
         <p className="text-sm text-muted">
           Sube hasta 10 imágenes y el plano de cada propiedad. Esto alimenta
           la galería del dossier en PDF y el selector del cotizador.

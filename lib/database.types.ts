@@ -517,6 +517,7 @@ export type Database = {
         Returns: string
       }
       slug_available: { Args: { p_slug: string }; Returns: boolean }
+      tenant_from_path: { Args: { p_name: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

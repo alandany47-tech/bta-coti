@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { createServiceRoleClient } from "@/lib/supabase/server";
-import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
+import { requireTenantAccess } from "@/lib/auth/api";
 import { QuoteDocument } from "@/pdf/QuoteDocument";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { calculatePricing } from "@/lib/pricing";
@@ -27,6 +26,10 @@ export async function POST(
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   const { tenant: slug } = await params;
+  const access = await requireTenantAccess(slug, "viewer");
+  if (access instanceof NextResponse) return access;
+  const { supabase, tenant } = access;
+
   const body = (await request.json()) as Partial<QuoteRequestBody>;
 
   if (!body.propertyId || !body.clientId) {
@@ -34,19 +37,6 @@ export async function POST(
       { error: "Falta seleccionar una propiedad y un cliente." },
       { status: 400 },
     );
-  }
-
-  const supabase = createServiceRoleClient();
-
-  const { data: tenant, error: tenantError } = await supabase
-    .from("tenants")
-    .select("*")
-    .eq("slug", slug)
-    .in("status", OPERABLE_TENANT_STATUSES)
-    .maybeSingle();
-
-  if (tenantError || !tenant) {
-    return NextResponse.json({ error: "Tenant no encontrado." }, { status: 404 });
   }
 
   const { data: property, error: propertyError } = await supabase
@@ -116,7 +106,7 @@ export async function POST(
     .from("quotes")
     .upload(pdfPath, pdfBuffer, {
       contentType: "application/pdf",
-      upsert: true,
+      upsert: false,
     });
 
   if (uploadError) {

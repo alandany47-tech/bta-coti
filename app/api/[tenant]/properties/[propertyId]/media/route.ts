@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { createServiceRoleClient } from "@/lib/supabase/server";
-import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { requireTenantAccess } from "@/lib/auth/api";
 import { MAX_PROPERTY_IMAGES, MAX_UPLOAD_BYTES } from "@/lib/uploads";
 
 export const runtime = "nodejs";
@@ -9,29 +9,20 @@ export const runtime = "nodejs";
 type MediaKind = "image" | "floor_plan";
 
 async function resolveProperty(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  slug: string,
+  supabase: SupabaseClient,
+  tenantId: string,
   propertyId: string,
 ) {
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("id")
-    .eq("slug", slug)
-    .in("status", OPERABLE_TENANT_STATUSES)
-    .maybeSingle();
-
-  if (!tenant) return { error: "Tenant no encontrado." as const };
-
   const { data: property } = await supabase
     .from("properties")
     .select("id, images, floor_plan_url")
     .eq("id", propertyId)
-    .eq("tenant_id", tenant.id)
+    .eq("tenant_id", tenantId)
     .maybeSingle();
 
   if (!property) return { error: "Propiedad no encontrada." as const };
 
-  return { tenant, property };
+  return { property };
 }
 
 export async function POST(
@@ -39,6 +30,10 @@ export async function POST(
   { params }: { params: Promise<{ tenant: string; propertyId: string }> },
 ) {
   const { tenant: slug, propertyId } = await params;
+  const access = await requireTenantAccess(slug, "editor");
+  if (access instanceof NextResponse) return access;
+  const { supabase, tenant } = access;
+
   const formData = await request.formData();
   const kind = formData.get("kind");
   const file = formData.get("file");
@@ -61,12 +56,11 @@ export async function POST(
     );
   }
 
-  const supabase = createServiceRoleClient();
-  const resolved = await resolveProperty(supabase, slug, propertyId);
+  const resolved = await resolveProperty(supabase, tenant.id, propertyId);
   if ("error" in resolved) {
     return NextResponse.json({ error: resolved.error }, { status: 404 });
   }
-  const { tenant, property } = resolved;
+  const { property } = resolved;
 
   if (mediaKind === "image" && property.images.length >= MAX_PROPERTY_IMAGES) {
     return NextResponse.json(
@@ -121,6 +115,10 @@ export async function DELETE(
   { params }: { params: Promise<{ tenant: string; propertyId: string }> },
 ) {
   const { tenant: slug, propertyId } = await params;
+  const access = await requireTenantAccess(slug, "editor");
+  if (access instanceof NextResponse) return access;
+  const { supabase, tenant } = access;
+
   const { searchParams } = new URL(request.url);
   const url = searchParams.get("url");
   const kind = searchParams.get("kind");
@@ -130,8 +128,7 @@ export async function DELETE(
   }
   const mediaKind = kind as MediaKind;
 
-  const supabase = createServiceRoleClient();
-  const resolved = await resolveProperty(supabase, slug, propertyId);
+  const resolved = await resolveProperty(supabase, tenant.id, propertyId);
   if ("error" in resolved) {
     return NextResponse.json({ error: resolved.error }, { status: 404 });
   }
@@ -145,7 +142,7 @@ export async function DELETE(
   const marker = "/property-media/";
   const markerIndex = url.indexOf(marker);
   const storagePath = markerIndex >= 0 ? url.slice(markerIndex + marker.length) : null;
-  if (storagePath) {
+  if (storagePath?.startsWith(`${tenant.id}/`)) {
     await supabase.storage.from("property-media").remove([storagePath]);
   }
 
