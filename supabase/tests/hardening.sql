@@ -21,21 +21,21 @@ reset role;
 
 -- URLs de medios
 set local role authenticated;
-select lives_ok(format($$insert into public.properties (tenant_id, title, unit_number, list_price, images) values (%L, 'ok', '1', 1, array[%L])$$,
+select lives_ok(format($$insert into public.items (kind, tenant_id, title, sku, price, images) values ('property', %L, 'ok', '1', 1, array[%L])$$,
   current_setting('t.t'), 'https://abcdefghijklmnop.supabase.co/storage/v1/object/public/property-media/' || current_setting('t.t') || '/a.jpg'), 'URL propia aceptada');
-select throws_ok(format($$insert into public.properties (tenant_id, title, unit_number, list_price, images) values (%L, 'x', '2', 1, array['http://169.254.169.254/latest'])$$, current_setting('t.t')), '22023', 'invalid_media_url', 'URL externa rechazada');
-select throws_ok(format($$insert into public.properties (tenant_id, title, unit_number, list_price, images) values (%L, 'x', '3', 1, array[%L])$$,
+select throws_ok(format($$insert into public.items (kind, tenant_id, title, sku, price, images) values ('property', %L, 'x', '2', 1, array['http://169.254.169.254/latest'])$$, current_setting('t.t')), '22023', 'invalid_media_url', 'URL externa rechazada');
+select throws_ok(format($$insert into public.items (kind, tenant_id, title, sku, price, images) values ('property', %L, 'x', '3', 1, array[%L])$$,
   current_setting('t.t'), 'https://abcdefghijklmnop.supabase.co/storage/v1/object/public/property-media/00000000-0000-0000-0000-000000000001/a.jpg'), '22023', 'invalid_media_url', 'carpeta de otro tenant rechazada');
-select throws_ok(format($$insert into public.properties (tenant_id, title, unit_number, list_price, images) values (%L, 'x', '4', 1, array[%L])$$,
+select throws_ok(format($$insert into public.items (kind, tenant_id, title, sku, price, images) values ('property', %L, 'x', '4', 1, array[%L])$$,
   current_setting('t.t'), 'https://abcdefghijklmnop.supabase.co/storage/v1/object/public/property-media/' || current_setting('t.t') || '/../x.jpg'), '22023', 'invalid_media_url', 'traversal rechazado');
-select throws_ok(format($$update public.properties set floor_plan_url = 'https://evil.example/p.png' where tenant_id = %L$$, current_setting('t.t')), '22023', 'invalid_media_url', 'plano externo rechazado');
+select throws_ok(format($$update public.items set floor_plan_url = 'https://evil.example/p.png' where tenant_id = %L$$, current_setting('t.t')), '22023', 'invalid_media_url', 'plano externo rechazado');
 reset role;
 
 -- datos previos con URL externa: se pueden conservar al quitar otra imagen
-insert into public.properties (id, tenant_id, title, unit_number, list_price, images)
-  values ('00000000-0000-0000-0000-00000000ee01', current_setting('t.t')::uuid, 'legado', '9', 1, array['https://ext.example/1.jpg', 'https://ext.example/2.jpg']);
+insert into public.items (kind, id, tenant_id, title, sku, price, images)
+  values ('property', '00000000-0000-0000-0000-00000000ee01', current_setting('t.t')::uuid, 'legado', '9', 1, array['https://ext.example/1.jpg', 'https://ext.example/2.jpg']);
 set local role authenticated;
-select lives_ok($$update public.properties set images = array['https://ext.example/1.jpg'] where id = '00000000-0000-0000-0000-00000000ee01'$$, 'quitar una imagen legada no exige URL propia');
+select lives_ok($$update public.items set images = array['https://ext.example/1.jpg'] where id = '00000000-0000-0000-0000-00000000ee01'$$, 'quitar una imagen legada no exige URL propia');
 reset role;
 
 select is((select allowed_mime_types from storage.buckets where id = 'quotes'), array['application/pdf'], 'quotes solo PDF');

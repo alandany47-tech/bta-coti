@@ -36,8 +36,8 @@ select throws_ok(format($$select public.confirm_media(%L, %L, 300000000, 0)$$, c
 select is((select status from public.media where id = current_setting('t.c')::uuid), 'pending', 'sigue pending tras el rechazo');
 
 -- imágenes por ítem (prueba = 5)
-insert into public.properties (id, tenant_id, title, unit_number, list_price)
-  values ('00000000-0000-0000-0000-00000000ff01', current_setting('t.b')::uuid, 'P', '1', 1);
+insert into public.items (kind, id, tenant_id, title, sku, price)
+  values ('property', '00000000-0000-0000-0000-00000000ff01', current_setting('t.b')::uuid, 'P', '1', 1);
 select lives_ok(format($$select * from public.reserve_media(%L, '00000000-0000-0000-0000-00000000ff01', 'image', 'image/webp', 10, 1, 1, 1)$$, current_setting('t.b')), 'imagen 1..5 permitidas') from generate_series(1, 5);
 select throws_ok(format($$select * from public.reserve_media(%L, '00000000-0000-0000-0000-00000000ff01', 'image', 'image/webp', 10, 1, 1, 1)$$, current_setting('t.b')), 'P0001', 'item_media_limit', 'la 6.ª imagen se rechaza en prueba');
 delete from public.media where tenant_id = current_setting('t.a')::uuid;

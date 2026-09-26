@@ -10,10 +10,10 @@ select is(public.admin_user_id_by_email(' dueño@test.local '), '00000000-0000-0
 select is(public.admin_user_id_by_email('nadie@test.local'), null, 'correo inexistente devuelve null');
 
 select is((select items_count from public.usage where tenant_id = current_setting('t.t')::uuid), 0, 'usage empieza en 0');
-insert into public.properties (tenant_id, title, unit_number, list_price) values
-  (current_setting('t.t')::uuid, 'P1', '1', 10), (current_setting('t.t')::uuid, 'P2', '2', 10);
+insert into public.items (kind, tenant_id, title, sku, price) values
+  ('property', current_setting('t.t')::uuid, 'P1', '1', 10), ('property', current_setting('t.t')::uuid, 'P2', '2', 10);
 select is((select items_count from public.usage where tenant_id = current_setting('t.t')::uuid), 2, 'insertar propiedades suma items_count');
-delete from public.properties where tenant_id = current_setting('t.t')::uuid and unit_number = '2';
+delete from public.items where tenant_id = current_setting('t.t')::uuid and sku = '2';
 select is((select items_count from public.usage where tenant_id = current_setting('t.t')::uuid), 1, 'borrar propiedad resta items_count');
 
 insert into public.quotes (tenant_id, client_name, client_phone) values (current_setting('t.t')::uuid, 'x', '1'), (current_setting('t.t')::uuid, 'y', '2');

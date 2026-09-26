@@ -24,7 +24,7 @@ select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000
 update public.tenants set status = 'suspended' where id = current_setting('t.t1')::uuid;
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000c1","role":"authenticated"}', true);
 set local role authenticated;
-select throws_ok(format($$insert into public.properties (tenant_id, title, unit_number, list_price) values (%L, 'x', '1', 1)$$, current_setting('t.t1')), '42501', null, 'tenant suspendido no escribe propiedades');
+select throws_ok(format($$insert into public.items (kind, tenant_id, title, sku, price) values ('property', %L, 'x', '1', 1)$$, current_setting('t.t1')), '42501', null, 'tenant suspendido no escribe propiedades');
 select throws_ok(format($$insert into public.clients (tenant_id, full_name, phone) values (%L, 'x', '1')$$, current_setting('t.t1')), '42501', null, 'tenant suspendido no crea clientes');
 reset role;
 update public.tenants set status = 'trialing' where id = current_setting('t.t1')::uuid;

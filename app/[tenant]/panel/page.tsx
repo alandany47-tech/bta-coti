@@ -1,6 +1,6 @@
 import { getPanelContext } from "@/lib/auth/panel";
 import { CotizadorClient } from "@/components/cotizador/cotizador-client";
-import type { Property } from "@/lib/types";
+import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 
 export default async function CotizadorPage({
   params,
@@ -11,16 +11,17 @@ export default async function CotizadorPage({
   const { supabase, tenant } = await getPanelContext(slug);
 
   const { data: properties } = await supabase
-    .from("properties")
-    .select("*")
+    .from("items")
+    .select(PROPERTY_COLUMNS)
     .eq("tenant_id", tenant.id)
-    .neq("status", "sold")
-    .order("unit_number", { ascending: true });
+    .eq("kind", "property")
+    .in("status", ["available", "reserved"])
+    .order("sku", { ascending: true });
 
   return (
     <CotizadorClient
       tenantSlug={slug}
-      properties={(properties ?? []) as Property[]}
+      properties={(properties ?? []).map(itemToProperty)}
     />
   );
 }

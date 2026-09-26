@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getPanelContext, hasRole } from "@/lib/auth/panel";
 import { PropertiesManager } from "@/components/properties/properties-manager";
 import { mediaUrl } from "@/lib/media";
-import type { Property } from "@/lib/types";
+import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 
 export default async function PropertiesPage({
   params,
@@ -14,10 +14,12 @@ export default async function PropertiesPage({
   if (!hasRole(role, "editor")) redirect("/panel");
 
   const { data: properties } = await supabase
-    .from("properties")
-    .select("*")
+    .from("items")
+    .select(PROPERTY_COLUMNS)
     .eq("tenant_id", tenant.id)
-    .order("unit_number", { ascending: true });
+    .eq("kind", "property")
+    .neq("status", "hidden")
+    .order("sku", { ascending: true });
 
   const { data: media } = await supabase
     .from("media")
@@ -38,7 +40,7 @@ export default async function PropertiesPage({
 
       <PropertiesManager
         tenantSlug={slug}
-        initialProperties={(properties ?? []) as Property[]}
+        initialProperties={(properties ?? []).map(itemToProperty)}
         initialMediaIds={mediaIds}
       />
     </div>

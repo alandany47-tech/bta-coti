@@ -59,7 +59,10 @@ usage (
   quotes_this_month int default 0, month_key text, updated_at
 )
 
-items (                                   -- reemplaza properties (migración con copia de datos)
+items (                                   -- reemplaza properties (migración 0014, con copia de datos y mismos ids)
+  -- Implementación T14: además guarda `images text[]` y `floor_plan_url` (la galería de siempre); no hay
+  -- `cover_media_id` (portada = images[0]). `sku` es único por tenant y en propiedades es la unidad;
+  -- attrs de property: unit_number, m2_interior, m2_exterior, m2_total, parking.
   id, tenant_id, kind text check (kind in ('product','service','property')),
   title, sku, description, price numeric(14,2), unit text,  -- pieza, m2, hora, servicio...
   category text, attrs jsonb default '{}',                -- property: m2_interior, m2_exterior, m2_total, parking, unit_number, floor

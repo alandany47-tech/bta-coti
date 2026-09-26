@@ -6,7 +6,7 @@ import { QuoteDocument } from "@/pdf/QuoteDocument";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { calculatePricing } from "@/lib/pricing";
 import { prepareForPdf } from "@/lib/pdf-images";
-import type { Property } from "@/lib/types";
+import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 
 // @react-pdf/renderer necesita APIs de Node (Buffer, fs) — no corre en Edge.
 export const runtime = "nodejs";
@@ -40,19 +40,21 @@ export async function POST(
     );
   }
 
-  const { data: property, error: propertyError } = await supabase
-    .from("properties")
-    .select("*")
+  const { data: propertyRow, error: propertyError } = await supabase
+    .from("items")
+    .select(PROPERTY_COLUMNS)
     .eq("id", body.propertyId)
     .eq("tenant_id", tenant.id)
-    .maybeSingle<Property>();
+    .eq("kind", "property")
+    .maybeSingle();
 
-  if (propertyError || !property) {
+  if (propertyError || !propertyRow) {
     return NextResponse.json(
       { error: "La propiedad seleccionada ya no existe en la cartera." },
       { status: 400 },
     );
   }
+  const property = itemToProperty(propertyRow);
 
   const { data: client, error: clientError } = await supabase
     .from("clients")

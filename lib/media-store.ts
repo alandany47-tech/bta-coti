@@ -77,7 +77,7 @@ export async function deleteMedia(id: string, tenantId: string) {
 
 export type PropertyMedia = { images: string[]; floor_plan_url: string | null };
 
-/** Liga la URL del CDN a `properties.images` / `floor_plan_url` (0012) y devuelve el estado resultante. */
+/** Liga la URL del CDN a `items.images` / `floor_plan_url` (0012) y devuelve el estado resultante. */
 export async function attachMediaUrl(
   tenantId: string,
   itemId: string,

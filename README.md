@@ -14,7 +14,7 @@ clic.
 - Tailwind CSS v4 + paleta dark minimalista (`app/globals.css`).
 - Supabase (Postgres + RLS + Storage) como backend.
 - `@react-pdf/renderer` para generar el PDF en memoria (Route Handler, runtime Node).
-- `xlsx` (SheetJS) para parsear el Excel en el navegador.
+- `exceljs` para parsear el Excel (.xlsx) en el navegador (se carga solo al importar).
 
 ## Arquitectura multi-tenant
 
@@ -93,5 +93,3 @@ proxy.ts                        enrutamiento por subdominio (multi-tenant)
 - Auth/roles por tenant (hoy la cartera y las cotizaciones no requieren login).
 - Paginación/búsqueda server-side si la cartera crece más allá de las ~10
   propiedades pensadas para el nicho de lujo.
-- El paquete `xlsx` de npm tiene un advisory de seguridad conocido sin fix
-  oficial; evaluar la build de SheetJS CDN si esto va a producción real.
