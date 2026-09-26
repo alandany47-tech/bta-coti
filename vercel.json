@@ -1,0 +1,3 @@
+{
+  "crons": [{ "path": "/api/cron/disposable-domains", "schedule": "0 6 * * 1" }]
+}
