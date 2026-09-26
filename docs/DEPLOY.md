@@ -24,6 +24,13 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables) 
 
 3. La service role nunca lleva prefijo `NEXT_PUBLIC_`.
 
+## 2b. Cloudflare R2 (medios, T12)
+1. R2 → crear el bucket (p. ej. `ayx-media`) y conectarle el dominio personalizado `media.ayx.solutions` (con proxy).
+2. R2 → Manage API tokens → token S3 con permiso Object Read & Write sobre ese bucket.
+3. CORS del bucket: permitir `PUT` desde `https://*.ayx.solutions` (y `http://*.localhost:3100` en desarrollo) con el header `Content-Type`.
+4. Variables: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` y, si el dominio no es `media.<raíz>`, `NEXT_PUBLIC_MEDIA_BASE_URL`.
+5. Alerta de facturación de R2 en $5 USD (ABUSE-AND-LIMITS §1).
+
 ## 3. Dominio (Cloudflare, DNS-only)
 1. Comprar `ayx.solutions` en Cloudflare Registrar (o apuntar sus nameservers a Cloudflare).
 2. En Vercel → Domains agregar `ayx.solutions` y `*.ayx.solutions` al proyecto (el comodín exige que Vercel controle `_acme-challenge`).
