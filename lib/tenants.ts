@@ -9,7 +9,7 @@ import type { PublicTenant } from "@/lib/types";
  * al mismo 404 que un tenant inexistente, y 'suspended' se corta antes, en
  * proxy.ts, con la pantalla de bloqueo.
  */
-export const OPERABLE_TENANT_STATUSES = ["active", "trialing"] as const;
+export const OPERABLE_TENANT_STATUSES = ["active", "trialing", "past_due"] as const;
 
 /**
  * Columnas seguras para la anon key. notes/stripe_* están recortadas por
