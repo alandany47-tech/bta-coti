@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { refreshAdminSession } from "@/lib/supabase/proxy-session";
+import { refreshSession } from "@/lib/supabase/proxy-session";
 import { BRAND } from "@/lib/brand";
 
 /**
@@ -12,6 +12,8 @@ import { BRAND } from "@/lib/brand";
  */
 
 const ROOT_DOMAIN = BRAND.domain;
+
+const AUTH_PATHS = ["/admin", "/login", "/recuperar", "/auth"];
 
 /** Extrae el slug del tenant a partir del host (subdominio). */
 function extractTenantSlug(hostname: string): string | null {
@@ -59,11 +61,11 @@ export async function proxy(request: NextRequest) {
   const tenantSlug = extractTenantSlug(hostname);
 
   if (!tenantSlug) {
-    // Dominio raíz: el único consumidor de Supabase Auth es el Panel Admin.
-    // @supabase/ssr necesita reescribir cookies de sesión renovadas en cada
-    // request, algo que un Server Component no puede hacer por su cuenta.
-    if (url.pathname.startsWith("/admin")) {
-      const { supabase, response } = refreshAdminSession(request);
+    // Dominio raíz: rutas con login. @supabase/ssr necesita reescribir las
+    // cookies de sesión renovadas en cada request, algo que un Server
+    // Component no puede hacer por su cuenta.
+    if (AUTH_PATHS.some((path) => url.pathname === path || url.pathname.startsWith(`${path}/`))) {
+      const { supabase, response } = refreshSession(request);
       await supabase.auth.getUser();
       return response;
     }
@@ -91,6 +93,16 @@ export async function proxy(request: NextRequest) {
     request.url,
   );
   rewrittenUrl.search = url.search;
+
+  // El panel usa la sesión compartida (cookie del dominio raíz): se refresca
+  // aquí y las cookies renovadas viajan en la respuesta del rewrite.
+  if (url.pathname === "/panel" || url.pathname.startsWith("/panel/")) {
+    const { supabase, response: sessionResponse } = refreshSession(request);
+    await supabase.auth.getUser();
+    const rewrite = NextResponse.rewrite(rewrittenUrl, { request });
+    sessionResponse.cookies.getAll().forEach((cookie) => rewrite.cookies.set(cookie));
+    return rewrite;
+  }
 
   return NextResponse.rewrite(rewrittenUrl);
 }

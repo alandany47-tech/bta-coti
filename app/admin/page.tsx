@@ -7,7 +7,7 @@ import { BRAND } from "@/lib/brand";
 
 export default async function AdminPage() {
   const admin = await getAdminUser();
-  if (!admin) redirect("/admin/login");
+  if (!admin) redirect("/login?next=/admin");
 
   const tenants = await listTenantsForAdmin();
   const rootDomain = BRAND.domain;

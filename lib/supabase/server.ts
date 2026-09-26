@@ -1,7 +1,8 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { cookieDomainFor } from "@/lib/auth/cookie-domain";
 
 /**
  * Cliente de servidor con anon key: respeta RLS. Úsalo para lecturas
@@ -37,11 +38,13 @@ export function createServiceRoleClient() {
  */
 export async function createSessionSupabaseClient() {
   const cookieStore = await cookies();
+  const host = (await headers()).get("host");
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: { domain: cookieDomainFor(host) },
       cookies: {
         getAll() {
           return cookieStore.getAll();
