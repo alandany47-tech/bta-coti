@@ -50,8 +50,8 @@ select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000
 select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', 'Abc', 'esencial', 'trialing', 7, 'self_signup')$$, '22023', 'slug_invalid', 'mayúsculas rechazadas');
 select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', 'abc-', 'esencial', 'trialing', 7, 'self_signup')$$, '22023', 'slug_invalid', 'guion final rechazado');
 select throws_ok(format($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', %L, 'esencial', 'trialing', 7, 'self_signup')$$, repeat('a', 31)), '22023', 'slug_invalid', '31 caracteres rechazado');
-select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', 'plan-malo', 'nope', 'trialing', 7, 'self_signup')$$, '22023', 'plan_not_found', 'plan inexistente rechazado');
-select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', 'plan-trial', 'trial', 'trialing', 7, 'self_signup')$$, '22023', 'plan_not_found', 'plan trial no asignable');
+select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', 'plan-malo', 'nope', 'trialing', 7, 'admin')$$, '22023', 'plan_not_found', 'plan inexistente rechazado');
+select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', 'plan-trial', 'trial', 'trialing', 7, 'admin')$$, '22023', 'plan_not_found', 'plan trial no asignable');
 select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-0000000000ff', 'X', 'sin-dueno', 'esencial', 'trialing', 7, 'self_signup')$$, '23503', 'invalid_owner', 'dueño inexistente rechazado');
 select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', 'estado-malo', 'esencial', 'suspended', 7, 'self_signup')$$, '22023', 'invalid_status', 'estado inválido rechazado');
 select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000a', 'X', 'sin-dias', 'esencial', 'trialing', 0, 'self_signup')$$, '22023', 'invalid_trial_days', 'trial sin días rechazado');
@@ -85,7 +85,7 @@ select is((select count(*)::int from public.tenant_members), 1, 'b solo ve sus m
 select is((select count(*)::int from public.audit_log), 0, 'b no ve audit_log');
 select throws_ok($$select notes from public.tenants$$, '42501', null, 'authenticated no lee notes');
 select throws_ok(format($$insert into public.tenant_members (tenant_id, user_id, role) values (%L, %L, 'owner')$$, current_setting('t.ta'), '00000000-0000-0000-0000-00000000000b'), '42501', null, 'b no se agrega a A');
-select is_empty($$update public.tenants set name = 'x' returning id$$, 'b no actualiza tenants por RLS');
+select throws_ok($$update public.tenants set name = 'x'$$, '42501', null, 'authenticated no actualiza tenants (solo set_tenant_status)');
 select throws_ok($$select public.provision_tenant('00000000-0000-0000-0000-00000000000b', 'X', 'hack-tenant', 'esencial', 'active', null, 'admin')$$, '42501', null, 'authenticated no ejecuta provision_tenant');
 reset role;
 

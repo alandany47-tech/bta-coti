@@ -28,7 +28,7 @@ export const tenantTag = (slug: string) => `tenant:${slug}`;
 
 /**
  * Tenant por slug en cualquier estado, cacheado con el tag `tenant:<slug>`.
- * Todo cambio de estado, nombre o alta debe llamar `revalidateTag(tenantTag(slug), "max")`
+ * Todo cambio de estado, nombre o alta debe llamar `revalidateTag(tenantTag(slug), { expire: 0 })`
  * (`setTenantStatus`, provisión). También cachea el "no existe" (null).
  */
 export async function getTenantAnyStatus(slug: string): Promise<PublicTenant | null> {

@@ -25,7 +25,7 @@ Arquitectura y arranque: [README.md](./README.md). Tickets y estado: `docs/ROADM
 ## Next.js 16
 
 `middleware.ts` no existe: se llama [`proxy.ts`](./proxy.ts) y exporta `proxy()`. Antes de tocar
-rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, 'max')` exige 2.º argumento.
+rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)` exige 2.º argumento: para autorización usa `{ expire: 0 }` (`'max'` sirve contenido viejo mientras revalida).
 
 ## Multi-tenant
 
@@ -37,7 +37,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, 'max')` 
   `suspended` muestra `SuspendedView` desde `app/[tenant]/layout.tsx`; el resto cae en `notFound()`.
 - Caché del tenant (T11): `getTenantAnyStatus`/`getTenantBySlug` usan `unstable_cache` con tag
   `tenant:<slug>` (TTL de respaldo 300 s). Todo cambio de estado, alta o dato público del tenant
-  debe llamar `revalidateTag(tenantTag(slug), 'max')` (también webhooks y cron futuros). `proxy.ts`
+  debe llamar `revalidateTag(tenantTag(slug), { expire: 0 })` (también webhooks y cron futuros). `proxy.ts`
   ya no consulta la base. El estado en caché puede ir atrasado; RLS (`can_write`) es la verdad.
 - Rutas: `slug./` storefront público de solo lectura; `slug./panel/*` panel (sesión + membresía,
   gate en `app/[tenant]/panel/layout.tsx` y `lib/auth/panel.ts`); `/login`, `/recuperar`,
@@ -90,7 +90,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, 'max')` 
 - "Nuevo cliente" = `POST /api/admin/tenants` (invita al dueño y llama `provision_tenant`,
   `source = 'admin'`). Todo cambio de estado pasa por `setTenantStatus` (`lib/admin-status.ts`,
   RPC `set_tenant_status` con auditoría atómica; suspender/cancelar exigen motivo) y luego
-  `revalidateTag('tenant:<slug>', 'max')`. Conteos desde `usage` (triggers), no contando filas.
+  `revalidateTag(tenantTag(slug), { expire: 0 })`. Conteos desde `usage` (triggers), no contando filas.
 
 ## Entorno local
 
