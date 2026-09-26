@@ -1,5 +1,4 @@
-import { notFound } from "next/navigation";
-import { getTenantBySlug } from "@/lib/tenants";
+import { requireOperableTenant } from "@/lib/tenant-page";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
@@ -23,8 +22,7 @@ export default async function StorefrontPage({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant: slug } = await params;
-  const tenant = await getTenantBySlug(slug);
-  if (!tenant) notFound();
+  const tenant = await requireOperableTenant(slug);
 
   const supabase = createServerSupabaseClient();
   const { data } = await supabase

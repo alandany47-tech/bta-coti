@@ -34,7 +34,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants.status`: `trialing | active | past_due | suspended | canceled`.
   `OPERABLE_TENANT_STATUSES` ([lib/tenants.ts](./lib/tenants.ts): active, trialing, past_due) es la
   única lista de estados "vivos": úsala en toda ruta que resuelva tenant por slug.
-  `suspended` muestra `SuspendedView` desde `app/[tenant]/layout.tsx`; el resto cae en `notFound()`.
+  Layouts y páginas usan `requireOperableTenant` (`lib/tenant-page.ts`): un layout no frena el render de sus hijos, así que cada segmento lo llama; `suspended` redirige a `/suspended` del dominio raíz y el resto cae en `notFound()`.
 - Caché del tenant (T11): `getTenantAnyStatus`/`getTenantBySlug` usan `unstable_cache` con tag
   `tenant:<slug>` (TTL de respaldo 300 s). Todo cambio de estado, alta o dato público del tenant
   debe llamar `revalidateTag(tenantTag(slug), { expire: 0 })` (también webhooks y cron futuros). `proxy.ts`
@@ -54,7 +54,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0014 en `supabase/migrations`; se aplican con `supabase db push --linked`.
+- Migraciones 0001 → 0015 (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
   con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.
