@@ -33,8 +33,12 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, 'max')` 
   reescribe a `/[tenant]/...`. No inventes rutas con prefijo.
 - `tenants.status`: `trialing | active | past_due | suspended | canceled`.
   `OPERABLE_TENANT_STATUSES` ([lib/tenants.ts](./lib/tenants.ts): active, trialing, past_due) es la
-  única lista de estados "vivos": úsala en toda ruta que resuelva tenant por slug. `suspended`
-  se corta en `proxy.ts` hacia `/suspended`; el resto cae en `notFound()`.
+  única lista de estados "vivos": úsala en toda ruta que resuelva tenant por slug.
+  `suspended` muestra `SuspendedView` desde `app/[tenant]/layout.tsx`; el resto cae en `notFound()`.
+- Caché del tenant (T11): `getTenantAnyStatus`/`getTenantBySlug` usan `unstable_cache` con tag
+  `tenant:<slug>` (TTL de respaldo 300 s). Todo cambio de estado, alta o dato público del tenant
+  debe llamar `revalidateTag(tenantTag(slug), 'max')` (también webhooks y cron futuros). `proxy.ts`
+  ya no consulta la base. El estado en caché puede ir atrasado; RLS (`can_write`) es la verdad.
 - Rutas: `slug./` storefront público de solo lectura; `slug./panel/*` panel (sesión + membresía,
   gate en `app/[tenant]/panel/layout.tsx` y `lib/auth/panel.ts`); `/login`, `/recuperar`,
   `/registro`, `/auth/*`, `/admin` en el dominio raíz.

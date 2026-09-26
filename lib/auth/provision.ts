@@ -1,7 +1,9 @@
 import "server-only";
+import { revalidateTag } from "next/cache";
 import type { User } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { parsePendingTenant, type PendingTenant } from "@/lib/auth/register-schema";
+import { tenantTag } from "@/lib/tenants";
 
 export type ProvisionResult =
   | { ok: true; slug: string }
@@ -36,6 +38,7 @@ export async function provisionTenant(userId: string, pending: PendingTenant): P
   }
 
   await clearPending(userId);
+  revalidateTag(tenantTag(pending.slug), "max");
   return { ok: true, slug: pending.slug };
 }
 

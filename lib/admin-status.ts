@@ -1,6 +1,7 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { tenantTag } from "@/lib/tenants";
 import type { TenantStatus } from "@/lib/types";
 
 export const TENANT_STATUSES: TenantStatus[] = ["trialing", "active", "past_due", "suspended", "canceled"];
@@ -28,7 +29,7 @@ export async function setTenantStatus(
     console.error("set_tenant_status falló", error.message);
     return { ok: false, code: "error" };
   }
-  revalidateTag(`tenant:${data}`, "max");
+  revalidateTag(tenantTag(data), "max");
   return { ok: true, slug: data };
 }
 

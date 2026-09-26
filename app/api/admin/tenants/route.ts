@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
 import { getTenantForAdmin, listTenantsForAdmin } from "@/lib/admin-tenants";
@@ -5,6 +6,7 @@ import { logAudit } from "@/lib/admin-status";
 import { validateNewClient } from "@/lib/admin-new-client";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { rootOrigin } from "@/lib/auth/redirects";
+import { tenantTag } from "@/lib/tenants";
 
 export async function GET() {
   const admin = await getAdminUser();
@@ -94,6 +96,7 @@ export async function POST(request: Request) {
     invited,
   });
 
+  revalidateTag(tenantTag(client.slug), "max");
   const tenant = await getTenantForAdmin(tenantId);
   return NextResponse.json({ tenant, invited }, { status: 201 });
 }
