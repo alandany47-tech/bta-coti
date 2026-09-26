@@ -1,87 +1,10 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import * as XLSX from "xlsx";
 import { UploadCloud, FileSpreadsheet, CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { PropertyImportRow } from "@/lib/types";
-
-function normalizeHeader(header: string) {
-  return header
-    .toString()
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[^a-z0-9]/g, "");
-}
-
-/**
- * Columnas esperadas (orden libre, sin acentos obligatorios):
- * Unidad, Titulo, M2 Interior, M2 Exterior, M2 Total (opcional, se calcula
- * si falta), Estacionamientos, Precio de Lista.
- */
-function parseWorkbook(buffer: ArrayBuffer): PropertyImportRow[] {
-  const workbook = XLSX.read(buffer, { type: "array" });
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, {
-    defval: "",
-  });
-
-  return rawRows.map((raw): PropertyImportRow => {
-    const row: PropertyImportRow = {
-      unit_number: "",
-      title: "",
-      m2_interior: 0,
-      m2_exterior: 0,
-      m2_total: 0,
-      parking_spaces: 0,
-      list_price: 0,
-    };
-
-    for (const [key, value] of Object.entries(raw)) {
-      switch (normalizeHeader(key)) {
-        case "unidad":
-        case "nounidad":
-        case "unitnumber":
-          row.unit_number = String(value ?? "").trim();
-          break;
-        case "titulo":
-        case "nombre":
-          row.title = String(value ?? "").trim();
-          break;
-        case "m2interior":
-        case "m2interiores":
-          row.m2_interior = Number(value) || 0;
-          break;
-        case "m2exterior":
-        case "m2exteriores":
-          row.m2_exterior = Number(value) || 0;
-          break;
-        case "m2total":
-        case "m2totales":
-          row.m2_total = Number(value) || 0;
-          break;
-        case "estacionamientos":
-        case "cajones":
-          row.parking_spaces = Math.floor(Number(value)) || 0;
-          break;
-        case "preciodelista":
-        case "precio":
-        case "listprice":
-          row.list_price = Number(value) || 0;
-          break;
-      }
-    }
-
-    if (!row.m2_total) {
-      row.m2_total = row.m2_interior + row.m2_exterior;
-    }
-
-    return row;
-  });
-}
+import { MAX_IMPORT_FILE_BYTES, MAX_IMPORT_ROWS, readWorkbookRows } from "@/lib/import-properties";
 
 type ImportState =
   | { status: "idle" }
@@ -98,10 +21,21 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
     async (file: File) => {
       setState({ status: "parsing", fileName: file.name });
       try {
-        const buffer = await file.arrayBuffer();
-        const rows = parseWorkbook(buffer).filter(
+        if (!file.name.toLowerCase().endsWith(".xlsx")) {
+          setState({ status: "error", fileName: file.name, message: "Solo se aceptan archivos .xlsx. Si tienes un .xls, guárdalo como .xlsx desde Excel." });
+          return;
+        }
+        if (file.size > MAX_IMPORT_FILE_BYTES) {
+          setState({ status: "error", fileName: file.name, message: "El archivo pesa más de 5 MB." });
+          return;
+        }
+        const rows = (await readWorkbookRows(await file.arrayBuffer())).filter(
           (row) => row.unit_number && row.title,
         );
+        if (rows.length > MAX_IMPORT_ROWS) {
+          setState({ status: "error", fileName: file.name, message: `Máximo ${MAX_IMPORT_ROWS} filas por archivo.` });
+          return;
+        }
 
         if (rows.length === 0) {
           setState({
@@ -176,7 +110,7 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
           selecciona un archivo
           <input
             type="file"
-            accept=".xlsx,.xls"
+            accept=".xlsx"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];

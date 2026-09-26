@@ -33,7 +33,7 @@
 - [ ] Antiphishing automático activo (T18, `ABUSE-AND-LIMITS.md` §3).
 - [ ] Botón "Reportar contenido" en storefront y cotización, con suspensión rápida desde el admin.
 - [ ] Stripe según el checklist de `STRIPE.md` §8.
-- [ ] `npm audit` sin altas ni críticas. Quitar `xlsx`.
+- [ ] `npm audit` sin altas ni críticas (`xlsx` ya se quitó en T14; queda solo un aviso moderado de `vitest`, dev).
 
 ## 5. Calidad
 - [ ] E2E con Playwright: registro → onboarding → ítem → cotización → WhatsApp → PDF → pago → suspensión → reactivación.

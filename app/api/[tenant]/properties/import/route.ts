@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireTenantAccess } from "@/lib/auth/api";
+import { MAX_IMPORT_ROWS } from "@/lib/import-properties";
+import { importRowToItem } from "@/lib/items";
 import type { PropertyImportRow } from "@/lib/types";
 
 export async function POST(
@@ -20,24 +22,13 @@ export async function POST(
     );
   }
 
+  if (body.rows.length > MAX_IMPORT_ROWS) {
+    return NextResponse.json({ error: `Máximo ${MAX_IMPORT_ROWS} filas por importación.` }, { status: 400 });
+  }
+
   const rows = body.rows
     .filter((row) => row.unit_number?.trim() && row.title?.trim())
-    .map((row) => {
-      const m2Interior = Math.max(0, Number(row.m2_interior) || 0);
-      const m2Exterior = Math.max(0, Number(row.m2_exterior) || 0);
-      const m2Total = Number(row.m2_total) || m2Interior + m2Exterior;
-
-      return {
-        tenant_id: tenant.id,
-        unit_number: row.unit_number.trim(),
-        title: row.title.trim(),
-        m2_interior: m2Interior,
-        m2_exterior: m2Exterior,
-        m2_total: Math.max(0, m2Total),
-        parking_spaces: Math.max(0, Math.floor(Number(row.parking_spaces)) || 0),
-        list_price: Math.max(0, Number(row.list_price) || 0),
-      };
-    });
+    .map((row) => importRowToItem(tenant.id, row));
 
   if (rows.length === 0) {
     return NextResponse.json(
@@ -47,8 +38,8 @@ export async function POST(
   }
 
   const { error: upsertError, count } = await supabase
-    .from("properties")
-    .upsert(rows, { onConflict: "tenant_id,unit_number", count: "exact" });
+    .from("items")
+    .upsert(rows, { onConflict: "tenant_id,sku", count: "exact" });
 
   if (upsertError) {
     return NextResponse.json(

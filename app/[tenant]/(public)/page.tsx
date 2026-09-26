@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getTenantBySlug } from "@/lib/tenants";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
+import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 import type { Property } from "@/lib/types";
 
 const STATUS_LABEL: Record<Property["status"], string> = {
@@ -27,11 +28,12 @@ export default async function StorefrontPage({
 
   const supabase = createServerSupabaseClient();
   const { data } = await supabase
-    .from("properties")
-    .select("*")
+    .from("items")
+    .select(PROPERTY_COLUMNS)
     .eq("tenant_id", tenant.id)
-    .order("unit_number", { ascending: true });
-  const properties = (data ?? []) as Property[];
+    .eq("kind", "property")
+    .order("sku", { ascending: true });
+  const properties = (data ?? []).map(itemToProperty);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">

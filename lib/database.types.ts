@@ -189,6 +189,71 @@ export type Database = {
         }
         Relationships: []
       }
+      items: {
+        Row: {
+          attrs: Json
+          category: string | null
+          created_at: string
+          description: string | null
+          floor_plan_url: string | null
+          id: string
+          images: string[]
+          kind: string
+          price: number
+          sku: string | null
+          sort: number
+          status: string
+          tenant_id: string
+          title: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          attrs?: Json
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          floor_plan_url?: string | null
+          id?: string
+          images?: string[]
+          kind: string
+          price?: number
+          sku?: string | null
+          sort?: number
+          status?: string
+          tenant_id: string
+          title: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          attrs?: Json
+          category?: string | null
+          created_at?: string
+          description?: string | null
+          floor_plan_url?: string | null
+          id?: string
+          images?: string[]
+          kind?: string
+          price?: number
+          sku?: string | null
+          sort?: number
+          status?: string
+          tenant_id?: string
+          title?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "items_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       media: {
         Row: {
           bytes: number
@@ -290,65 +355,6 @@ export type Database = {
         }
         Relationships: []
       }
-      properties: {
-        Row: {
-          created_at: string
-          floor_plan_url: string | null
-          id: string
-          images: string[]
-          list_price: number
-          m2_exterior: number
-          m2_interior: number
-          m2_total: number
-          parking_spaces: number
-          status: string
-          tenant_id: string
-          title: string
-          unit_number: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          floor_plan_url?: string | null
-          id?: string
-          images?: string[]
-          list_price?: number
-          m2_exterior?: number
-          m2_interior?: number
-          m2_total?: number
-          parking_spaces?: number
-          status?: string
-          tenant_id: string
-          title: string
-          unit_number: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          floor_plan_url?: string | null
-          id?: string
-          images?: string[]
-          list_price?: number
-          m2_exterior?: number
-          m2_interior?: number
-          m2_total?: number
-          parking_spaces?: number
-          status?: string
-          tenant_id?: string
-          title?: string
-          unit_number?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "products_tenant_id_fkey"
-            columns: ["tenant_id"]
-            isOneToOne: false
-            referencedRelation: "tenants"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       quotes: {
         Row: {
           client_id: string | null
@@ -419,7 +425,7 @@ export type Database = {
             foreignKeyName: "quotes_property_id_fkey"
             columns: ["property_id"]
             isOneToOne: false
-            referencedRelation: "properties"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {

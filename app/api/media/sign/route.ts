@@ -35,7 +35,7 @@ export async function POST(request: Request) {
 
   if (input.itemId) {
     const { data: item } = await supabase
-      .from("properties")
+      .from("items")
       .select("id")
       .eq("id", input.itemId)
       .eq("tenant_id", tenant.id)
