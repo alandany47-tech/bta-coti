@@ -1,144 +1,151 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { UploadCloud, X, Loader2, FileImage } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { validateMediaFile, MAX_PROPERTY_IMAGES } from "@/lib/uploads";
+import { ChevronLeft, ChevronRight, FileText, Loader2, UploadCloud, X } from "lucide-react";
+import { deleteMediaById, uploadMedia, type UploadStage } from "@/lib/media-client";
+import { thumbUrl } from "@/lib/media";
 import type { Property } from "@/lib/types";
+
+type QueueItem = { id: string; name: string; stage: UploadStage; progress: number; error?: string };
+
+const STAGE_LABEL: Record<UploadStage, string> = {
+  compressing: "Optimizando",
+  uploading: "Subiendo",
+  confirming: "Confirmando",
+};
+
+const tileControl =
+  "flex h-7 w-7 items-center justify-center rounded-md bg-paper/90 text-ink-2 transition-colors hover:text-ink disabled:opacity-40 disabled:hover:text-ink-2";
 
 export function PropertyMediaUploader({
   tenantSlug,
   property,
+  mediaIds,
   onUpdate,
 }: {
   tenantSlug: string;
   property: Property;
-  onUpdate: (property: Property) => void;
+  mediaIds: Record<string, string>;
+  onUpdate: (property: Property, mediaIds?: Record<string, string>) => void;
 }) {
   const [error, setError] = useState<string | null>(null);
-  const [isUploadingImages, setIsUploadingImages] = useState(false);
-  const [isUploadingPlan, setIsUploadingPlan] = useState(false);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [busy, setBusy] = useState(false);
   const [pendingRemoval, setPendingRemoval] = useState<string | null>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const planInputRef = useRef<HTMLInputElement>(null);
 
-  async function uploadFile(file: File, kind: "image" | "floor_plan") {
-    const validationError = validateMediaFile(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    const formData = new FormData();
-    formData.append("kind", kind);
-    formData.append("file", file);
-
-    const res = await fetch(
-      `/api/${tenantSlug}/properties/${property.id}/media`,
-      { method: "POST", body: formData },
-    );
-    const data = await res.json();
-
-    if (!res.ok) {
-      setError(data.error ?? "No se pudo subir el archivo.");
-      return;
-    }
-
-    onUpdate(data.property as Property);
+  function patchQueue(id: string, patch: Partial<QueueItem>) {
+    setQueue((prev) => prev.map((item) => (item.id === id ? { ...item, ...patch } : item)));
   }
 
-  async function handleImageFiles(files: FileList | null) {
-    if (!files || files.length === 0) return;
+  async function uploadFiles(files: File[], kind: "image" | "plan") {
+    if (files.length === 0) return;
     setError(null);
-
-    const remainingSlots = MAX_PROPERTY_IMAGES - property.images.length;
-    if (remainingSlots <= 0) {
-      setError(`Ya alcanzaste el máximo de ${MAX_PROPERTY_IMAGES} imágenes.`);
-      return;
-    }
-
-    const selected = Array.from(files).slice(0, remainingSlots);
-    setIsUploadingImages(true);
-    try {
-      for (const file of selected) {
-        // Secuencial: cada subida actualiza el array `images` de la propiedad,
-        // así que se evita una condición de carrera si van en paralelo.
-        await uploadFile(file, "image");
+    setBusy(true);
+    let current = property;
+    let ids = mediaIds;
+    // Secuencial: la cuota se valida por archivo y cada confirmación actualiza la propiedad.
+    for (const file of files) {
+      const id = crypto.randomUUID();
+      setQueue((prev) => [...prev, { id, name: file.name, stage: "compressing", progress: 0 }]);
+      const result = await uploadMedia({
+        tenant: tenantSlug,
+        itemId: property.id,
+        kind,
+        file,
+        onStage: (stage) => patchQueue(id, { stage }),
+        onProgress: (progress) => patchQueue(id, { progress }),
+      });
+      if (!result.ok) {
+        patchQueue(id, { error: result.error });
+        setError(result.error);
+        continue;
       }
-    } finally {
-      setIsUploadingImages(false);
+      setQueue((prev) => prev.filter((item) => item.id !== id));
+      if (result.property) {
+        current = { ...current, ...result.property };
+        ids = { ...ids, [result.media.url]: result.media.id };
+        onUpdate(current, ids);
+      }
     }
+    setBusy(false);
   }
 
-  async function handlePlanFile(files: FileList | null) {
-    const file = files?.[0];
-    if (!file) return;
-    setError(null);
-    setIsUploadingPlan(true);
-    try {
-      await uploadFile(file, "floor_plan");
-    } finally {
-      setIsUploadingPlan(false);
-    }
-  }
-
-  async function handleRemoveImage(url: string) {
+  async function removeImage(url: string) {
     setError(null);
     setPendingRemoval(url);
     try {
-      const res = await fetch(
-        `/api/${tenantSlug}/properties/${property.id}/media?kind=image&url=${encodeURIComponent(url)}`,
-        { method: "DELETE" },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo eliminar la imagen.");
-        return;
+      const mediaId = mediaIds[url];
+      if (mediaId) {
+        const failure = await deleteMediaById(tenantSlug, mediaId);
+        if (failure) return setError(failure);
+        onUpdate({ ...property, images: property.images.filter((u) => u !== url) });
+      } else {
+        await saveOrder(property.images.filter((u) => u !== url));
       }
-      onUpdate(data.property as Property);
     } finally {
       setPendingRemoval(null);
     }
   }
 
-  async function handleRemovePlan() {
+  async function removePlan() {
     if (!property.floor_plan_url) return;
     setError(null);
     setPendingRemoval(property.floor_plan_url);
     try {
-      const res = await fetch(
-        `/api/${tenantSlug}/properties/${property.id}/media?kind=floor_plan&url=${encodeURIComponent(property.floor_plan_url)}`,
-        { method: "DELETE" },
-      );
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "No se pudo eliminar el plano.");
-        return;
-      }
-      onUpdate(data.property as Property);
+      const mediaId = mediaIds[property.floor_plan_url];
+      if (!mediaId) return setError("Este plano es anterior al nuevo almacenamiento: reemplázalo subiendo uno nuevo.");
+      const failure = await deleteMediaById(tenantSlug, mediaId);
+      if (failure) return setError(failure);
+      onUpdate({ ...property, floor_plan_url: null });
     } finally {
       setPendingRemoval(null);
     }
   }
 
+  async function saveOrder(images: string[]) {
+    const previous = property;
+    onUpdate({ ...property, images });
+    const response = await fetch(`/api/${tenantSlug}/properties/${property.id}/images`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ images }),
+    });
+    if (!response.ok) {
+      onUpdate(previous);
+      const body = await response.json().catch(() => ({}));
+      setError(body.error ?? "No se pudo guardar el cambio.");
+    }
+  }
+
+  function move(index: number, delta: -1 | 1) {
+    const images = [...property.images];
+    const target = index + delta;
+    if (target < 0 || target >= images.length) return;
+    [images[index], images[target]] = [images[target], images[index]];
+    void saveOrder(images);
+  }
+
+  const plan = property.floor_plan_url;
+  const planIsPdf = plan?.toLowerCase().endsWith(".pdf");
+  const uploading = queue.some((item) => !item.error);
+
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5">
       <div>
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <span className="text-xs font-medium text-muted">
-            Imágenes ({property.images.length}/{MAX_PROPERTY_IMAGES})
+            Imágenes ({property.images.length})
+            {property.images.length > 1 ? " · la primera es la portada" : ""}
           </span>
           <button
             type="button"
-            disabled={isUploadingImages || property.images.length >= MAX_PROPERTY_IMAGES}
+            disabled={busy}
             onClick={() => imageInputRef.current?.click()}
             className="flex items-center gap-1.5 text-xs font-medium text-foreground underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isUploadingImages ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <UploadCloud className="h-3.5 w-3.5" />
-            )}
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <UploadCloud className="h-4 w-4" />}
             Subir imágenes
           </button>
           <input
@@ -148,105 +155,175 @@ export function PropertyMediaUploader({
             multiple
             className="hidden"
             onChange={(e) => {
-              handleImageFiles(e.target.files);
+              void uploadFiles(Array.from(e.target.files ?? []), "image");
               e.target.value = "";
             }}
           />
         </div>
 
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
-          {property.images.map((url) => (
+        <div className="grid grid-cols-2 gap-2 min-[420px]:grid-cols-3 sm:grid-cols-5">
+          {property.images.map((url, index) => (
             <div
               key={url}
-              className="group relative aspect-square overflow-hidden rounded-md border border-border-subtle bg-background"
+              className="group relative aspect-square overflow-hidden rounded-md border border-line bg-sunken"
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={url} alt="" className="h-full w-full object-cover" />
-              <button
-                type="button"
-                onClick={() => handleRemoveImage(url)}
-                disabled={pendingRemoval === url}
-                className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-foreground-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100 disabled:opacity-50"
-                aria-label="Eliminar imagen"
-              >
-                {pendingRemoval === url ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                ) : (
-                  <X className="h-3 w-3" />
-                )}
-              </button>
+              <img src={thumbUrl(url)} alt="" className="h-full w-full object-cover" loading="lazy" />
+              {index === 0 ? (
+                <span className="absolute left-1 top-1 rounded bg-paper/90 px-1.5 py-0.5 text-[11px] font-medium text-ink">
+                  Portada
+                </span>
+              ) : null}
+              <div className="absolute inset-x-1 bottom-1 flex items-center justify-between opacity-100 transition-opacity duration-[120ms] sm:opacity-0 sm:group-focus-within:opacity-100 sm:group-hover:opacity-100">
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    className={tileControl}
+                    onClick={() => move(index, -1)}
+                    disabled={index === 0}
+                    aria-label="Mover a la izquierda"
+                  >
+                    <ChevronLeft className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                  <button
+                    type="button"
+                    className={tileControl}
+                    onClick={() => move(index, 1)}
+                    disabled={index === property.images.length - 1}
+                    aria-label="Mover a la derecha"
+                  >
+                    <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  className={`${tileControl} hover:!text-danger`}
+                  onClick={() => void removeImage(url)}
+                  disabled={pendingRemoval === url}
+                  aria-label="Eliminar imagen"
+                >
+                  {pendingRemoval === url ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <X className="h-4 w-4" strokeWidth={1.5} />
+                  )}
+                </button>
+              </div>
             </div>
           ))}
-          {property.images.length === 0 && (
-            <div className="col-span-full flex aspect-[3/1] items-center justify-center rounded-md border border-dashed border-border-subtle text-xs text-muted">
-              Sin imágenes
+
+          {queue.map((item) => (
+            <div
+              key={item.id}
+              className="relative flex aspect-square flex-col justify-end gap-1 overflow-hidden rounded-md border border-dashed border-line-strong p-2"
+            >
+              <p className="truncate text-[11px] text-ink-2" title={item.name}>
+                {item.name}
+              </p>
+              {item.error ? (
+                <>
+                  <p className="text-[11px] leading-tight text-danger">{item.error}</p>
+                  <button
+                    type="button"
+                    onClick={() => setQueue((prev) => prev.filter((q) => q.id !== item.id))}
+                    className="self-start text-[11px] text-ink-2 underline"
+                  >
+                    Descartar
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="tabular text-[11px] text-ink-3">
+                    {STAGE_LABEL[item.stage]}
+                    {item.stage === "uploading" ? ` ${Math.round(item.progress * 100)}%` : ""}
+                  </p>
+                  <div className="h-0.5 w-full overflow-hidden rounded bg-line">
+                    <div
+                      className="h-full bg-accent transition-[width] duration-[120ms]"
+                      style={{ width: `${item.stage === "uploading" ? item.progress * 100 : item.stage === "confirming" ? 100 : 8}%` }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+
+          {property.images.length === 0 && queue.length === 0 && (
+            <div className="col-span-full flex aspect-[3/1] items-center justify-center rounded-md border border-dashed border-line-strong text-xs text-muted">
+              Sin imágenes. Se optimizan solas: una foto de 8 MB queda en menos de 400 KB.
             </div>
           )}
         </div>
       </div>
 
       <div>
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-xs font-medium text-muted">Plano</span>
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="text-xs font-medium text-muted">Plano (imagen o PDF)</span>
           <button
             type="button"
-            disabled={isUploadingPlan}
+            disabled={busy}
             onClick={() => planInputRef.current?.click()}
             className="flex items-center gap-1.5 text-xs font-medium text-foreground underline underline-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {isUploadingPlan ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <UploadCloud className="h-3.5 w-3.5" />
-            )}
-            {property.floor_plan_url ? "Reemplazar plano" : "Subir plano"}
+            <UploadCloud className="h-4 w-4" />
+            {plan ? "Reemplazar plano" : "Subir plano"}
           </button>
           <input
             ref={planInputRef}
             type="file"
-            accept="image/*"
+            accept="image/*,application/pdf"
             className="hidden"
             onChange={(e) => {
-              handlePlanFile(e.target.files);
+              const file = e.target.files?.[0];
+              if (file) void uploadFiles([file], "plan");
               e.target.value = "";
             }}
           />
         </div>
 
-        {property.floor_plan_url ? (
-          <div className="group relative flex h-28 w-full max-w-xs items-center justify-center overflow-hidden rounded-md border border-border-subtle bg-background">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={property.floor_plan_url}
-              alt=""
-              className="h-full w-full object-contain"
-            />
+        {plan ? (
+          <div className="group relative flex h-28 w-full max-w-xs items-center justify-center overflow-hidden rounded-md border border-line bg-sunken">
+            {planIsPdf ? (
+              <a
+                href={plan}
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 text-xs text-ink-2 underline"
+              >
+                <FileText className="h-4 w-4" strokeWidth={1.5} />
+                Plano en PDF
+              </a>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={plan} alt="" className="h-full w-full object-contain" />
+            )}
             <button
               type="button"
-              onClick={handleRemovePlan}
-              disabled={pendingRemoval === property.floor_plan_url}
-              className="absolute right-1 top-1 flex h-5 w-5 items-center justify-center rounded-full bg-background/90 text-foreground-muted opacity-0 transition-opacity hover:text-danger group-hover:opacity-100 disabled:opacity-50"
+              onClick={() => void removePlan()}
+              disabled={pendingRemoval === plan}
+              className={`${tileControl} absolute right-1 top-1 hover:!text-danger`}
               aria-label="Eliminar plano"
             >
-              {pendingRemoval === property.floor_plan_url ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+              {pendingRemoval === plan ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <X className="h-3 w-3" />
+                <X className="h-4 w-4" strokeWidth={1.5} />
               )}
             </button>
           </div>
         ) : (
-          <div
-            className={cn(
-              "flex h-28 w-full max-w-xs items-center justify-center gap-2 rounded-md border border-dashed border-border-subtle text-xs text-muted",
-            )}
-          >
-            <FileImage className="h-4 w-4" />
+          <div className="flex h-28 w-full max-w-xs items-center justify-center rounded-md border border-dashed border-line-strong text-xs text-muted">
             Sin plano
           </div>
         )}
+        {planIsPdf ? (
+          <p className="mt-1 text-xs text-muted">Los planos en PDF aún no se incluyen en el dossier; sube una imagen para verlo ahí.</p>
+        ) : null}
       </div>
 
+      <p className="sr-only" aria-live="polite">
+        {uploading ? "Subiendo archivos" : ""}
+      </p>
       {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );

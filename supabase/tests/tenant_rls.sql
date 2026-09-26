@@ -42,7 +42,7 @@ select is_empty($$update public.properties set title = 'x' where id = '00000000-
 select is_empty($$delete from public.properties where id = '00000000-0000-0000-0000-00000000bb01' returning id$$, 'editor de A no borra propiedad de B');
 select is((select count(*)::int from public.clients), 1, 'editor de A solo ve clientes de A');
 select throws_ok(format($$insert into public.clients (tenant_id, full_name, phone) values (%L, 'x', '1')$$, current_setting('t.tb')), '42501', null, 'editor de A no inserta cliente en B');
-select lives_ok(format($$insert into storage.objects (bucket_id, name) values ('property-media', %L)$$, current_setting('t.ta') || '/a.jpg'), 'editor sube a property-media de A');
+select throws_ok(format($$insert into storage.objects (bucket_id, name) values ('property-media', %L)$$, current_setting('t.ta') || '/a.jpg'), '42501', null, 'editor ya no sube a property-media (los medios van a R2, 0012)');
 select throws_ok(format($$insert into storage.objects (bucket_id, name) values ('property-media', %L)$$, current_setting('t.tb') || '/x.jpg'), '42501', null, 'editor de A no sube a property-media de B');
 select throws_ok($$insert into storage.objects (bucket_id, name) values ('property-media', 'no-uuid/x.jpg')$$, '42501', null, 'carpeta que no es uuid rechazada');
 reset role;

@@ -50,7 +50,7 @@ export async function reserveMedia(input: {
 export async function getPendingMedia(id: string, tenantId: string) {
   const { data } = await createServiceRoleClient()
     .from("media")
-    .select("id, kind, status, r2_key, thumb_key, content_type, bytes, thumb_bytes")
+    .select("id, item_id, kind, status, r2_key, thumb_key, content_type, bytes, thumb_bytes")
     .eq("id", id)
     .eq("tenant_id", tenantId)
     .maybeSingle();
@@ -73,4 +73,42 @@ export async function deleteMedia(id: string, tenantId: string) {
   const { data, error } = await createServiceRoleClient().rpc("delete_media", { p_id: id, p_tenant: tenantId });
   if (error) console.error("delete_media falló", error.message);
   return data?.[0] ?? null;
+}
+
+export type PropertyMedia = { images: string[]; floor_plan_url: string | null };
+
+/** Liga la URL del CDN a `properties.images` / `floor_plan_url` (0012) y devuelve el estado resultante. */
+export async function attachMediaUrl(
+  tenantId: string,
+  itemId: string,
+  kind: string,
+  url: string,
+): Promise<PropertyMedia | null> {
+  const { data, error } = await createServiceRoleClient().rpc("attach_media_url", {
+    p_tenant: tenantId,
+    p_item: itemId,
+    p_kind: kind,
+    p_url: url,
+  });
+  if (error || !data?.[0]) {
+    console.error("attach_media_url falló", error?.message);
+    return null;
+  }
+  return data[0];
+}
+
+export async function detachMediaUrl(tenantId: string, url: string) {
+  const { error } = await createServiceRoleClient().rpc("detach_media_url", { p_tenant: tenantId, p_url: url });
+  if (error) console.error("detach_media_url falló", error.message);
+}
+
+export async function listItemMedia(tenantId: string, itemId: string, kind: string, exceptId: string) {
+  const { data } = await createServiceRoleClient()
+    .from("media")
+    .select("id, r2_key, thumb_key")
+    .eq("tenant_id", tenantId)
+    .eq("item_id", itemId)
+    .eq("kind", kind)
+    .neq("id", exceptId);
+  return data ?? [];
 }
