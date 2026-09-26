@@ -8,6 +8,8 @@ import { StatusBadge, STATUS_LABEL } from "@/components/admin/status-badge";
 import type { AdminTenantRow, TenantStatus } from "@/lib/types";
 
 const ALL_STATUSES = Object.keys(STATUS_LABEL) as TenantStatus[];
+const NEEDS_REASON: TenantStatus[] = ["suspended", "canceled"];
+const SOURCE_LABEL = { self_signup: "Registro", admin: "Admin", demo_clone: "Demo" } as const;
 
 /** Nunca cambia después del mount: alcanza con un subscribe no-op. */
 function subscribeToNothing() {
@@ -50,6 +52,8 @@ export function TenantRow({
   const [savingStatus, setSavingStatus] = useState(false);
   const [savingNotes, setSavingNotes] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<TenantStatus | null>(null);
+  const [reason, setReason] = useState("");
   const tenantUrl = useTenantUrl(tenant.slug, rootDomain);
 
   const notesDirty = notesDraft !== (tenant.notes ?? "");
@@ -67,11 +71,22 @@ export function TenantRow({
     return payload.tenant as AdminTenantRow;
   }
 
-  async function handleStatusChange(status: TenantStatus) {
+  function handleSelect(status: TenantStatus) {
+    if (status === tenant.status) return;
+    if (NEEDS_REASON.includes(status)) {
+      setPendingStatus(status);
+      setReason("");
+      return;
+    }
+    void handleStatusChange(status, "");
+  }
+
+  async function handleStatusChange(status: TenantStatus, statusReason: string) {
     setSavingStatus(true);
     setError(null);
     try {
-      const updated = await patchTenant({ status });
+      const updated = await patchTenant({ status, reason: statusReason });
+      setPendingStatus(null);
       onUpdate({ ...tenant, ...updated });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error inesperado.");
@@ -124,22 +139,25 @@ export function TenantRow({
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </td>
+      <td className="p-3 text-sm text-foreground-muted">{tenant.plan_name}</td>
       <td className="p-3">
         <StatusBadge status={tenant.status} />
+        {tenant.status_reason ? (
+          <p className="mt-0.5 max-w-[160px] truncate text-xs text-muted" title={tenant.status_reason}>
+            {tenant.status_reason}
+          </p>
+        ) : null}
       </td>
-      <td className="p-3 text-center text-sm text-foreground-muted">
-        {tenant.properties_count}
+      <td className="p-3 text-sm text-foreground-muted">
+        {tenant.source ? SOURCE_LABEL[tenant.source] : "—"}
       </td>
-      <td className="p-3 text-center text-sm text-foreground-muted">
-        {tenant.quotes_count}
-      </td>
+      <td className="p-3 text-center text-sm text-foreground-muted tabular">{tenant.items_count}</td>
+      <td className="p-3 text-center text-sm text-foreground-muted tabular">{tenant.quotes_month}</td>
       <td className="p-3">
         <Select
           value={tenant.status}
           disabled={savingStatus}
-          onChange={(event) =>
-            handleStatusChange(event.target.value as TenantStatus)
-          }
+          onChange={(event) => handleSelect(event.target.value as TenantStatus)}
           className="h-8 text-xs"
         >
           {ALL_STATUSES.map((status) => (
@@ -148,6 +166,28 @@ export function TenantRow({
             </option>
           ))}
         </Select>
+        {pendingStatus ? (
+          <div className="mt-2 flex min-w-[220px] flex-col gap-1.5">
+            <input
+              value={reason}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder={`Motivo para pasar a ${STATUS_LABEL[pendingStatus].toLowerCase()}`}
+              className="h-8 w-full rounded-md border border-border-subtle bg-surface px-2 text-xs text-foreground placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-foreground-muted"
+            />
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                disabled={!reason.trim() || savingStatus}
+                onClick={() => handleStatusChange(pendingStatus, reason.trim())}
+              >
+                {savingStatus ? "..." : "Confirmar"}
+              </Button>
+              <Button size="sm" variant="secondary" onClick={() => setPendingStatus(null)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        ) : null}
       </td>
       <td className="p-3">
         <div className="flex min-w-[200px] items-center gap-2">

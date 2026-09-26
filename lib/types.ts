@@ -29,10 +29,13 @@ export type PublicTenant = Omit<
   "stripe_customer_id" | "stripe_subscription_id" | "notes"
 >;
 
-/** Fila de tenants.status + conteos que arma el Panel de Administración Master. */
+/** Fila de tenants + plan y conteos de `usage` que arma el Panel de Administración Master. */
 export type AdminTenantRow = Tenant & {
-  properties_count: number;
-  quotes_count: number;
+  plan_name: string;
+  source: "self_signup" | "admin" | "demo_clone" | null;
+  status_reason: string | null;
+  items_count: number;
+  quotes_month: number;
 };
 
 export type PropertyStatus = "available" | "reserved" | "sold";

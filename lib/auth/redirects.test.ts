@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { originFromHeaders, rootOrigin, safeNext, tenantOrigin } from "./redirects";
 
-const PROD = "btacotiza.com";
+const PROD = "ayx.solutions";
 const LOCAL = "localhost:3100";
 
 describe("safeNext", () => {
@@ -19,13 +19,13 @@ describe("safeNext", () => {
       "https://evil.com/panel",
       "javascript:alert(1)",
       "data:text/html,x",
-      "https://btacotiza.com.evil.com/panel",
-      "https://evilbtacotiza.com",
-      "https://user:pass@btacotiza.com",
-      "http://btacotiza.com/panel",
-      "https://a.btacotiza.com/panel",
-      "https://-bad.btacotiza.com",
-      "https://x.y.btacotiza.com",
+      "https://ayx.solutions.evil.com/panel",
+      "https://evilayx.solutions",
+      "https://user:pass@ayx.solutions",
+      "http://ayx.solutions/panel",
+      "https://a.ayx.solutions/panel",
+      "https://-bad.ayx.solutions",
+      "https://x.y.ayx.solutions",
       "/ok\nSet-Cookie: a=b",
       "",
     ]) {
@@ -36,9 +36,9 @@ describe("safeNext", () => {
   });
 
   it("acepta el dominio raíz y subdominios de tenant en producción", () => {
-    expect(safeNext("https://btacotiza.com/admin", PROD)).toBe("https://btacotiza.com/admin");
-    expect(safeNext("https://torrezafiro.btacotiza.com/panel", PROD)).toBe(
-      "https://torrezafiro.btacotiza.com/panel",
+    expect(safeNext("https://ayx.solutions/admin", PROD)).toBe("https://ayx.solutions/admin");
+    expect(safeNext("https://torrezafiro.ayx.solutions/panel", PROD)).toBe(
+      "https://torrezafiro.ayx.solutions/panel",
     );
   });
 
@@ -54,19 +54,19 @@ describe("safeNext", () => {
 
 describe("orígenes", () => {
   it("construye el origen del tenant y de la raíz", () => {
-    expect(tenantOrigin("torrezafiro", PROD)).toBe("https://torrezafiro.btacotiza.com");
+    expect(tenantOrigin("torrezafiro", PROD)).toBe("https://torrezafiro.ayx.solutions");
     expect(tenantOrigin("torrezafiro", LOCAL)).toBe("http://torrezafiro.localhost:3100");
     expect(tenantOrigin("torrezafiro", "torrezafiro.localhost:3100")).toBe(
       "http://torrezafiro.localhost:3100",
     );
-    expect(rootOrigin("torrezafiro.btacotiza.com")).toBe("https://btacotiza.com");
+    expect(rootOrigin("torrezafiro.ayx.solutions")).toBe("https://ayx.solutions");
     expect(rootOrigin("torrezafiro.localhost:3100")).toBe("http://localhost:3100");
   });
 
   it("deriva el origen de la petición", () => {
     expect(originFromHeaders(new Headers({ host: LOCAL }))).toBe("http://localhost:3100");
     expect(originFromHeaders(new Headers({ host: PROD, "x-forwarded-proto": "https" }))).toBe(
-      "https://btacotiza.com",
+      "https://ayx.solutions",
     );
   });
 });
