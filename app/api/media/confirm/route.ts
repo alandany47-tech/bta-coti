@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireTenantAccess } from "@/lib/auth/api";
 import { isUuid, MEDIA_LIMITS, mediaUrl } from "@/lib/media";
 import { deleteObjects, headObject, r2Configured } from "@/lib/r2";
-import { confirmMedia, deleteMedia, getPendingMedia } from "@/lib/media-store";
+import { attachMediaUrl, confirmMedia, deleteMedia, getPendingMedia, listItemMedia } from "@/lib/media-store";
 
 export const runtime = "nodejs";
 
@@ -37,7 +37,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "El archivo no llegó al almacenamiento. Vuelve a intentarlo." }, { status: 409 });
   }
 
-  const maxFull = media.kind === "plan" ? MEDIA_LIMITS.planBytes : MEDIA_LIMITS.fullBytes;
+  const maxFull = media.content_type === "application/pdf" ? MEDIA_LIMITS.planBytes : MEDIA_LIMITS.fullBytes;
   const valid =
     full.bytes > 0 &&
     full.bytes <= maxFull &&
@@ -60,12 +60,28 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudo confirmar el archivo." }, { status: 500 });
   }
 
+  const url = mediaUrl(media.r2_key);
+  const attached = media.item_id ? await attachMediaUrl(tenant.id, media.item_id, media.kind, url) : null;
+  if (media.item_id && !attached) {
+    await discard();
+    return NextResponse.json({ error: "No se pudo ligar el archivo a la propiedad." }, { status: 500 });
+  }
+
+  // Un plano nuevo reemplaza al anterior: se borra el archivo viejo para no pagar almacenamiento.
+  if (media.kind === "plan" && media.item_id) {
+    for (const old of await listItemMedia(tenant.id, media.item_id, "plan", media.id)) {
+      await deleteMedia(old.id, tenant.id);
+      await deleteObjects([old.r2_key, old.thumb_key]);
+    }
+  }
+
   return NextResponse.json({
     media: {
       id: media.id,
-      url: mediaUrl(media.r2_key),
+      url,
       thumbUrl: media.thumb_key ? mediaUrl(media.thumb_key) : null,
       bytes: full.bytes + (thumb?.bytes ?? 0),
     },
+    property: attached,
   });
 }

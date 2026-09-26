@@ -14,16 +14,20 @@ const STATUS_LABEL: Record<Property["status"], string> = {
 export function PropertiesManager({
   tenantSlug,
   initialProperties,
+  initialMediaIds,
 }: {
   tenantSlug: string;
   initialProperties: Property[];
+  initialMediaIds: Record<string, string>;
 }) {
   const [properties, setProperties] = useState(initialProperties);
+  const [mediaIds, setMediaIds] = useState(initialMediaIds);
 
-  function handleUpdate(updated: Property) {
+  function handleUpdate(updated: Property, ids?: Record<string, string>) {
     setProperties((prev) =>
       prev.map((p) => (p.id === updated.id ? updated : p)),
     );
+    if (ids) setMediaIds(ids);
   }
 
   if (properties.length === 0) {
@@ -59,6 +63,7 @@ export function PropertiesManager({
           <PropertyMediaUploader
             tenantSlug={tenantSlug}
             property={property}
+            mediaIds={mediaIds}
             onUpdate={handleUpdate}
           />
         </div>

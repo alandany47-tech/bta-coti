@@ -5,6 +5,7 @@ import { requireTenantAccess } from "@/lib/auth/api";
 import { QuoteDocument } from "@/pdf/QuoteDocument";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { calculatePricing } from "@/lib/pricing";
+import { prepareForPdf } from "@/lib/pdf-images";
 import type { Property } from "@/lib/types";
 
 // @react-pdf/renderer necesita APIs de Node (Buffer, fs) — no corre en Edge.
@@ -93,7 +94,7 @@ export async function POST(
       quoteId,
       clientName: client.full_name,
       clientPhone: client.phone,
-      property,
+      property: await prepareForPdf(property, tenant.id),
       breakdown,
       installmentsCount,
       notes,

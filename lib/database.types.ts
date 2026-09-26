@@ -577,6 +577,22 @@ export type Database = {
       _slug_forms: { Args: { p_text: string }; Returns: string[] }
       _terms_hit: { Args: { p_forms: string[] }; Returns: boolean }
       admin_user_id_by_email: { Args: { p_email: string }; Returns: string }
+      attach_media_url: {
+        Args: {
+          p_item: string
+          p_kind: string
+          p_tenant: string
+          p_url: string
+        }
+        Returns: {
+          floor_plan_url: string
+          images: string[]
+        }[]
+      }
+      can_read: {
+        Args: { p_min_role?: string; p_tenant_id: string }
+        Returns: boolean
+      }
       can_write: {
         Args: { p_min_role?: string; p_tenant_id: string }
         Returns: boolean
@@ -596,6 +612,10 @@ export type Database = {
           r2_key: string
           thumb_key: string
         }[]
+      }
+      detach_media_url: {
+        Args: { p_tenant: string; p_url: string }
+        Returns: undefined
       }
       effective_limit: {
         Args: { p_key: string; p_tenant: string }

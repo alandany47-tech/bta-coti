@@ -58,14 +58,17 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
   con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.
-- Storage: buckets `quotes` (solo PDF, 10 MB) y `property-media` (imágenes sin SVG, 5 MB). La
-  primera carpeta del objeto es el `tenant_id`; los objetos no se borran por SQL (`protect_delete`).
-  Un trigger obliga a que `images`/`floor_plan_url` escritas por usuarios sean de su carpeta.
+- Storage: solo `quotes` (PDF, 10 MB; se retira en T15) usa Supabase Storage; la primera carpeta
+  del objeto es el `tenant_id` y los objetos no se borran por SQL (`protect_delete`). `property-media`
+  ya no tiene políticas (0012): los medios van a R2. Un trigger obliga a que `images`/`floor_plan_url`
+  escritas por usuarios existan ya en la propiedad; solo el servidor agrega URLs (`attach_media_url`).
 - Medios en R2 (T12): `/api/media/sign` → PUT directo a R2 → `/api/media/confirm` (HEAD real,
   `confirm_media`) y `DELETE /api/media/[id]`. Cuota por plan en BD (`reserve_media`,
   `effective_limit`: en prueba manda el tope de `plans.trial`); `usage.storage_bytes` lo mantiene
-  `trg_media_usage`. Llaves `t/<tenant>/<item|_>/<uuid>-{full|thumb}.webp`. Las rutas viejas de
-  Supabase Storage siguen hasta T13. `aws4fetch` no ata el tamaño a la firma: por eso el HEAD.
+  `trg_media_usage`. Llaves `t/<tenant>/<item|_>/<uuid>-{full|thumb}.webp`. El navegador convierte a
+  WebP (full ≤ 2000 px y ~380 KB, thumb 480 px) antes de subir (`lib/image-client.ts`,
+  `lib/media-client.ts`). react-pdf no lee WebP: `lib/pdf-images.ts` lo pasa a JPEG solo para URLs
+  del CDN del propio tenant. `aws4fetch` no ata el tamaño a la firma: por eso el HEAD.
 - `xlsx` (SheetJS) tiene un advisory sin fix oficial (se reemplaza en T14).
 
 ## Auth y registro

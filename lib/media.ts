@@ -37,20 +37,21 @@ export function validateSignRequest(
   if (!MEDIA_KINDS.includes(kind)) return { ok: false, error: "Tipo de medio inválido." };
 
   const isPlan = kind === "plan";
-  const contentType = isPlan ? "application/pdf" : "image/webp";
-  if (b.contentType !== contentType) {
-    return { ok: false, error: isPlan ? "El plano debe ser un PDF." : "La imagen debe ser WebP." };
+  const contentType = b.contentType;
+  const isPdf = contentType === "application/pdf";
+  if (contentType !== "image/webp" && !(isPlan && isPdf)) {
+    return { ok: false, error: isPlan ? "El plano debe ser una imagen WebP o un PDF." : "La imagen debe ser WebP." };
   }
 
   const bytes = positiveInt(b.bytes);
-  const max = isPlan ? MEDIA_LIMITS.planBytes : MEDIA_LIMITS.fullBytes;
+  const max = isPdf ? MEDIA_LIMITS.planBytes : MEDIA_LIMITS.fullBytes;
   if (!bytes) return { ok: false, error: "Indica el tamaño del archivo." };
   if (bytes > max) return { ok: false, error: `El archivo supera el máximo de ${max / 1024 / 1024} MB.` };
 
   const rawThumb = b.thumbBytes ?? 0;
   const thumbBytes = rawThumb === 0 ? 0 : positiveInt(rawThumb);
   if (thumbBytes === null) return { ok: false, error: "Tamaño de miniatura inválido." };
-  if (isPlan && thumbBytes > 0) return { ok: false, error: "Los planos no llevan miniatura." };
+  if (isPdf && thumbBytes > 0) return { ok: false, error: "Los PDF no llevan miniatura." };
   if (thumbBytes > MEDIA_LIMITS.thumbBytes) return { ok: false, error: "La miniatura supera 200 KB." };
 
   const needsItem = kind === "image" || kind === "render" || kind === "plan";
@@ -66,7 +67,16 @@ export function validateSignRequest(
 
   return {
     ok: true,
-    value: { tenant: b.tenant, itemId: itemId as string | null, kind, contentType, bytes, thumbBytes, width, height },
+    value: {
+      tenant: b.tenant,
+      itemId: itemId as string | null,
+      kind,
+      contentType: contentType as SignRequest["contentType"],
+      bytes,
+      thumbBytes,
+      width,
+      height,
+    },
   };
 }
 
@@ -74,4 +84,9 @@ export function validateSignRequest(
 export function mediaUrl(key: string): string {
   const base = process.env.NEXT_PUBLIC_MEDIA_BASE_URL ?? `https://media.${BRAND.domain}`;
   return `${base.replace(/\/$/, "")}/${key}`;
+}
+
+/** Miniatura de un medio de R2 (`…-full.webp` → `…-thumb.webp`); otras URLs (legadas) se devuelven igual. */
+export function thumbUrl(url: string): string {
+  return url.endsWith("-full.webp") ? url.replace(/-full\.webp$/, "-thumb.webp") : url;
 }
