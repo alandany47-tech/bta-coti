@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServiceRoleClient } from "@/lib/supabase/server";
-import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
+import { requireTenantAccess } from "@/lib/auth/api";
 import type { PropertyImportRow } from "@/lib/types";
 
 export async function POST(
@@ -8,6 +7,10 @@ export async function POST(
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   const { tenant: slug } = await params;
+  const access = await requireTenantAccess(slug, "editor");
+  if (access instanceof NextResponse) return access;
+  const { supabase, tenant } = access;
+
   const body = (await request.json()) as { rows?: PropertyImportRow[] };
 
   if (!Array.isArray(body.rows) || body.rows.length === 0) {
@@ -15,19 +18,6 @@ export async function POST(
       { error: "El archivo no tiene filas válidas para importar." },
       { status: 400 },
     );
-  }
-
-  const supabase = createServiceRoleClient();
-
-  const { data: tenant, error: tenantError } = await supabase
-    .from("tenants")
-    .select("id")
-    .eq("slug", slug)
-    .in("status", OPERABLE_TENANT_STATUSES)
-    .maybeSingle();
-
-  if (tenantError || !tenant) {
-    return NextResponse.json({ error: "Tenant no encontrado." }, { status: 404 });
   }
 
   const rows = body.rows

@@ -26,13 +26,12 @@ proyecto.
   con path prefix manual: el slug siempre viaja en el subdominio.
 - **Tres formas de hablar con Supabase, a propósito**
   ([lib/supabase/server.ts](./lib/supabase/server.ts)): anon key
-  (`createServerSupabaseClient`) para lecturas públicas del cotizador (respeta
-  RLS), service role (`createServiceRoleClient`) SOLO dentro de Route
-  Handlers (`app/api/[tenant]/...` y `app/api/admin/...`) para escrituras y
-  para los conteos cross-tenant de la Master Console, y sesión de Supabase
-  Auth (`createSessionSupabaseClient`, vía `@supabase/ssr`) SOLO para el
-  Panel Admin logueado. Nunca insertes propiedades/clientes/cotizaciones
-  desde el cliente con la anon key.
+  (`createServerSupabaseClient`) para lecturas públicas (storefront y resolución
+  de tenant; respeta RLS), sesión de Supabase Auth (`createSessionSupabaseClient`,
+  vía `@supabase/ssr`) para TODO lo que escribe un usuario logueado (panel del
+  tenant y `/api/[tenant]/*`, protegido por RLS con `is_member`), y service role
+  (`createServiceRoleClient`) SOLO en `app/api/admin/*`, webhooks, cron y la
+  provisión de tenants. Nunca uses la service role en `app/api/[tenant]/*`.
 - **Login único (T02)**: `/login` (contraseña o magic link, Server Actions con rate
   limit), `/recuperar` y `/auth/callback` (acepta `code` y `token_hash`+`type`) sirven
   a admins y a miembros de tenants. La cookie de sesión se fija en el dominio raíz
@@ -68,22 +67,20 @@ proyecto.
   usan ahora `OPERABLE_TENANT_STATUSES` — si agregás una ruta nueva que
   resuelva tenant por slug, importá esa constante en vez de hardcodear
   `"active"`.
-- **`clients` es PII, sin lectura pública**: a diferencia de `properties`
-  (RLS permite `select` público de tenants activos, igual que el catálogo
-  original), `clients` no tiene ninguna policy de select/insert para
-  anon/authenticated. El mini-CRM del cotizador siempre busca/crea clientes
-  vía [`/api/[tenant]/clients`](./app/api/[tenant]/clients/route.ts)
-  (service role), nunca con la anon key desde el navegador.
-- **El cotizador (público) sigue sin auth**: el import de cartera, la carga
-  de medios y el alta de cotizaciones no requieren login (fuera de alcance
-  del MVP) — el único login real del proyecto es el del Panel Admin (ver
-  arriba). Si se agrega auth por tenant, hay que revisar las políticas RLS en
-  [supabase/migrations/0001_init.sql](./supabase/migrations/0001_init.sql),
-  [0002_real_estate_upgrade.sql](./supabase/migrations/0002_real_estate_upgrade.sql)
-  y [0003_subscriptions_and_admin.sql](./supabase/migrations/0003_subscriptions_and_admin.sql)
-  (0002 migra `products`→`properties`, agrega `clients` y extiende `quotes`
-  con el desglose financiero; 0003 agrega el ciclo de vida de suscripción y
-  `app_admins` — aplícalas siempre en ese orden, 0001 → 0002 → 0003).
+- **Panel del tenant protegido (T03)**: el cotizador, las propiedades y el import
+  viven en `slug./panel`, `/panel/propiedades` y `/panel/importar` (layout con
+  gate en `app/[tenant]/panel/layout.tsx` + `lib/auth/panel.ts`); `slug./` es el
+  storefront público de solo lectura. Toda ruta `app/api/[tenant]/*` empieza con
+  `requireTenantAccess(slug, rol)` de `lib/auth/api.ts` (401 sin sesión, 403 sin
+  rol) y escribe con el cliente de sesión: RLS de
+  [0006_tenant_rls.sql](./supabase/migrations/0006_tenant_rls.sql) es la barrera
+  real. Roles: `viewer` crea cotizaciones y clientes; `editor` escribe
+  propiedades, medios e importa. `clients` es PII: sin policies para anon.
+  Storage (`quotes`, `property-media`): la primera carpeta del objeto es el
+  `tenant_id` y las policies de `storage.objects` lo comparan con `is_member`.
+  Los objetos de Storage no se borran por SQL (`protect_delete`), solo por la API.
+- **Migraciones**: 0001 → 0006 en orden. Las escribe el repo y se aplican con
+  `supabase db push --linked` (0002/0003 se marcaron con `migration repair`).
 - **PDF en runtime Node**: `@react-pdf/renderer` no corre en Edge. La ruta
   `app/api/[tenant]/quotes/route.ts` declara `export const runtime = "nodejs"`;
   no lo quites. El dossier ([pdf/QuoteDocument.tsx](./pdf/QuoteDocument.tsx))

@@ -1,21 +1,7 @@
 import { NextResponse } from "next/server";
-import { createServiceRoleClient } from "@/lib/supabase/server";
-import { OPERABLE_TENANT_STATUSES } from "@/lib/tenants";
+import { requireTenantAccess } from "@/lib/auth/api";
 
-/** clients tiene PII: nunca se lee/escribe desde el cliente con la anon key. */
-async function resolveActiveTenant(
-  supabase: ReturnType<typeof createServiceRoleClient>,
-  slug: string,
-) {
-  const { data: tenant } = await supabase
-    .from("tenants")
-    .select("id")
-    .eq("slug", slug)
-    .in("status", OPERABLE_TENANT_STATUSES)
-    .maybeSingle();
-
-  return tenant;
-}
+/** clients tiene PII: solo miembros del tenant, con sesión y RLS. */
 
 export async function GET(
   request: Request,
@@ -28,11 +14,9 @@ export async function GET(
   // nombres/teléfonos reales.
   const q = (searchParams.get("q") ?? "").trim().replace(/[%_]/g, "");
 
-  const supabase = createServiceRoleClient();
-  const tenant = await resolveActiveTenant(supabase, slug);
-  if (!tenant) {
-    return NextResponse.json({ error: "Tenant no encontrado." }, { status: 404 });
-  }
+  const access = await requireTenantAccess(slug, "viewer");
+  if (access instanceof NextResponse) return access;
+  const { supabase, tenant } = access;
 
   let query = supabase
     .from("clients")
@@ -62,6 +46,10 @@ export async function POST(
   { params }: { params: Promise<{ tenant: string }> },
 ) {
   const { tenant: slug } = await params;
+  const access = await requireTenantAccess(slug, "viewer");
+  if (access instanceof NextResponse) return access;
+  const { supabase, tenant } = access;
+
   const body = await request.json();
 
   const fullName = String(body.fullName ?? "").trim();
@@ -73,12 +61,6 @@ export async function POST(
       { error: "Nombre y teléfono son obligatorios." },
       { status: 400 },
     );
-  }
-
-  const supabase = createServiceRoleClient();
-  const tenant = await resolveActiveTenant(supabase, slug);
-  if (!tenant) {
-    return NextResponse.json({ error: "Tenant no encontrado." }, { status: 404 });
   }
 
   const { data: client, error } = await supabase
