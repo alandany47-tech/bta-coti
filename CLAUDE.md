@@ -54,7 +54,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0009 en `supabase/migrations`; se aplican con `supabase db push --linked`.
+- Migraciones 0001 → 0013 en `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
   con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.

@@ -64,9 +64,15 @@ export async function POST(request: Request) {
   }
 
   const { media } = reserved;
-  const uploads = [{ part: "full", url: await presignPut(media.r2_key), contentType: input.contentType }];
+  const uploads = [
+    { part: "full", url: await presignPut(media.r2_key, input.contentType, input.bytes), contentType: input.contentType },
+  ];
   if (media.thumb_key) {
-    uploads.push({ part: "thumb", url: await presignPut(media.thumb_key), contentType: "image/webp" });
+    uploads.push({
+      part: "thumb",
+      url: await presignPut(media.thumb_key, "image/webp", input.thumbBytes),
+      contentType: "image/webp",
+    });
   }
 
   return NextResponse.json({ mediaId: media.id, uploads, expiresIn: SIGN_EXPIRES_SECONDS });

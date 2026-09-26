@@ -10,7 +10,10 @@ const LIMITS: Record<Bucket, [number, Window][]> = {
     [5, "1 m"],
     [20, "1 d"],
   ],
-  slug: [[40, "1 m"]],
+  slug: [
+    [20, "1 m"],
+    [200, "1 d"],
+  ],
   login: [[10, "1 m"]],
   api: [[300, "1 m"]],
   media: [[60, "1 m"]],
