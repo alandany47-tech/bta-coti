@@ -13,7 +13,7 @@ import { BRAND } from "@/lib/brand";
 
 const ROOT_DOMAIN = BRAND.domain;
 
-const AUTH_PATHS = ["/admin", "/login", "/recuperar", "/auth"];
+const AUTH_PATHS = ["/admin", "/login", "/recuperar", "/registro", "/auth"];
 
 /** Extrae el slug del tenant a partir del host (subdominio). */
 function extractTenantSlug(hostname: string): string | null {

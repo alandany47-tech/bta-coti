@@ -1,4 +1,4 @@
-# BTA Cotiza
+# AYX Cotiza
 
 Cotizador multi-tenant para brokers inmobiliarios de lujo (cartera de hasta 10
 propiedades por tenant): importan su cartera desde Excel, suben fotos y plano
