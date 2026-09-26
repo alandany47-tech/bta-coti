@@ -21,12 +21,13 @@ describe("r2", () => {
   });
 
   it("prefirma un PUT de 5 minutos hacia el bucket", async () => {
-    const url = new URL(await presignPut("t/abc/_/x-full.webp"));
+    const url = new URL(await presignPut("t/abc/_/x-full.webp", "image/webp", 1234));
     expect(url.host).toBe("acct123.r2.cloudflarestorage.com");
     expect(url.pathname).toBe("/media-test/t/abc/_/x-full.webp");
     expect(url.searchParams.get("X-Amz-Expires")).toBe("300");
     expect(url.searchParams.get("X-Amz-Signature")).toMatch(/^[0-9a-f]{64}$/);
     expect(url.searchParams.get("X-Amz-Credential")).toContain("AKIATEST/");
+    expect(url.searchParams.get("X-Amz-SignedHeaders")).toBe("content-length;content-type;host");
   });
 
   it("HEAD devuelve el tamaño real y null si no existe", async () => {

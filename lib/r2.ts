@@ -31,14 +31,16 @@ function target(key: string) {
 export const SIGN_EXPIRES_SECONDS = 300;
 
 /**
- * URL PUT prefirmada (5 min). aws4fetch no firma content-type ni content-length, así que el
- * tamaño no queda atado a la firma: el tamaño real se verifica con `headObject` al confirmar.
+ * URL PUT prefirmada (5 min) con `Content-Type` y `Content-Length` firmados: el cliente solo
+ * puede subir exactamente esos bytes, así la URL no sirve para sobrescribir con otro tamaño
+ * después de confirmar. El HEAD al confirmar sigue midiendo el tamaño real.
  */
-export async function presignPut(key: string): Promise<string> {
+export async function presignPut(key: string, contentType: string, bytes: number): Promise<string> {
   const { client, url } = target(key);
   const signed = await client.sign(`${url}?X-Amz-Expires=${SIGN_EXPIRES_SECONDS}`, {
     method: "PUT",
-    aws: { signQuery: true },
+    headers: { "Content-Type": contentType, "Content-Length": String(bytes) },
+    aws: { signQuery: true, allHeaders: true },
   });
   return signed.url;
 }

@@ -95,9 +95,17 @@ export function PropertyMediaUploader({
     setPendingRemoval(property.floor_plan_url);
     try {
       const mediaId = mediaIds[property.floor_plan_url];
-      if (!mediaId) return setError("Este plano es anterior al nuevo almacenamiento: reemplázalo subiendo uno nuevo.");
-      const failure = await deleteMediaById(tenantSlug, mediaId);
-      if (failure) return setError(failure);
+      if (mediaId) {
+        const failure = await deleteMediaById(tenantSlug, mediaId);
+        if (failure) return setError(failure);
+      } else {
+        const response = await fetch(`/api/${tenantSlug}/properties/${property.id}/images`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ floor_plan_url: null }),
+        });
+        if (!response.ok) return setError((await response.json().catch(() => ({}))).error ?? "No se pudo quitar el plano.");
+      }
       onUpdate({ ...property, floor_plan_url: null });
     } finally {
       setPendingRemoval(null);

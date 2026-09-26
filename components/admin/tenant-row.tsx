@@ -160,7 +160,7 @@ export function TenantRow({
           onChange={(event) => handleSelect(event.target.value as TenantStatus)}
           className="h-8 text-xs"
         >
-          {ALL_STATUSES.map((status) => (
+          {ALL_STATUSES.filter((status) => status !== "trialing" || tenant.status === "trialing").map((status) => (
             <option key={status} value={status}>
               {STATUS_LABEL[status]}
             </option>

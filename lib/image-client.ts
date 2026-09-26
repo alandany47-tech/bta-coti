@@ -4,7 +4,7 @@ export const FULL_MAX_EDGE = 2000;
 export const THUMB_MAX_EDGE = 480;
 export const FULL_TARGET_BYTES = 380 * 1024;
 export const THUMB_TARGET_BYTES = 60 * 1024;
-export const MAX_SOURCE_BYTES = 30 * 1024 * 1024;
+export const MAX_SOURCE_BYTES = 10 * 1024 * 1024;
 
 export function fitWithin(width: number, height: number, maxEdge: number): { width: number; height: number } {
   const scale = Math.min(1, maxEdge / Math.max(width, height));
@@ -39,7 +39,8 @@ function draw(bitmap: ImageBitmap, width: number, height: number): HTMLCanvasEle
 
 /**
  * Redimensiona y comprime a WebP hasta quedar bajo `targetBytes`: baja la calidad y, si aún no
- * alcanza, reduce el lado largo un 15 % (mínimo 1000 px, o el máximo pedido si es menor).
+ * alcanza, reduce el lado largo un 15 % hasta un mínimo de 480 px (240 px en miniaturas). Si aun
+ * así no cabe en el objetivo, falla en vez de devolver un archivo más pesado de lo prometido.
  */
 export async function toWebp(
   bitmap: ImageBitmap,
@@ -47,25 +48,23 @@ export async function toWebp(
   targetBytes: number,
   startQuality = 0.82,
 ): Promise<WebpResult> {
-  const floor = Math.min(maxEdge, 1000);
+  const floor = Math.min(maxEdge, maxEdge >= FULL_MAX_EDGE ? 480 : 240);
   let edge = maxEdge;
-  let best: WebpResult | null = null;
   for (;;) {
     const { width, height } = fitWithin(bitmap.width, bitmap.height, edge);
     const canvas = draw(bitmap, width, height);
     for (let quality = startQuality; quality >= 0.5; quality -= 0.08) {
       const blob = await encode(canvas, quality);
-      best = { blob, width, height };
-      if (blob.size <= targetBytes) return best;
+      if (blob.size <= targetBytes) return { blob, width, height };
     }
-    if (edge <= floor) return best!;
+    if (edge <= floor) throw new Error("No se pudo comprimir la imagen a un tamaño aceptable. Prueba con otra imagen.");
     edge = Math.max(floor, Math.round(edge * 0.85));
   }
 }
 
 export async function prepareImage(file: File): Promise<{ full: WebpResult; thumb: WebpResult }> {
   if (!file.type.startsWith("image/")) throw new Error(`"${file.name}" no es una imagen.`);
-  if (file.size > MAX_SOURCE_BYTES) throw new Error(`"${file.name}" pesa más de 30 MB.`);
+  if (file.size > MAX_SOURCE_BYTES) throw new Error(`"${file.name}" pesa más de 10 MB.`);
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
