@@ -32,6 +32,23 @@
 - **Modo presentación:** `?present=1` oculta el banner de demo y usa pantalla completa. Pensado para enseñarlo en una tablet o laptop con el cliente.
 - Tenant demo **personalizable al vuelo** desde el admin: "Clonar demo como `prospecto-x`", con su logo y color, en estado `trialing` de 7 días. Sirve para la reunión con un cliente que ya tienes: le muestras *su* cotizador.
 
+## 4.1 Usuarios y tenants de demo por suscripción (adelanto de T26)
+
+`npm run seed:demo` (o `DEMO_PASSWORD=... npm run seed:demo`; `-- --rollback` valida sin dejar nada) recrea 8 tenants con `is_demo = true`, cada uno con datos propios, y usuarios `rol.plan@demo.ayx.test` con una sola contraseña (aleatoria si no pasas `DEMO_PASSWORD`; se imprime al final). Los datos viven en `supabase/seed/demo.sql` (idempotente) y la lista de cuentas en `supabase/seed/demo-accounts.json`.
+
+| Subdominio | Negocio de ejemplo | Plan · estado | Usuarios |
+|---|---|---|---|
+| `demo-esencial` | Plomería Garza (12 servicios y materiales) | Esencial · activo | owner |
+| `demo-catalogo` | Muebles Nogal (14 productos, 4 categorías) | Catálogo · activo | owner, editor |
+| `demo-broker` | Residencial Almendro (12 unidades, 2 apartadas, 1 vendida; 4 cotizaciones) | Broker · activo | owner, editor, viewer |
+| `demo-brokerpro` | Grupo Vértice Inmobiliario (24 unidades, 6 cotizaciones) | Broker Pro · activo | owner, editor |
+| `demo-prueba` | Casa Lomas Residencial (5 casas) | Broker · en prueba 7 días | owner |
+| `demo-morosa` | Boutique Aurora | Catálogo · `past_due` | owner |
+| `demo-suspendida` | Taller Mecánico Rivas | Esencial · suspendido (muestra el bloqueo) | owner |
+| `demo-cancelada` | Inmobiliaria Sol Naciente | Broker · cancelado (404) | owner |
+
+Hoy el storefront y el cotizador solo pintan propiedades (Servicios y Catálogo llegan en T30 y T32), así que los tenants de servicios/productos ya tienen sus ítems cargados pero sin pantalla propia. Las fotos son placeholders de picsum.photos.
+
 ## 5. Ticket
 
 - **T26 (CC):** `is_demo`, seeds, `/demo/entrar`, restricciones, cron de reset, clonar demo desde el admin.

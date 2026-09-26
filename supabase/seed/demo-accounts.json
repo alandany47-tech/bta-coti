@@ -1,0 +1,114 @@
+[
+ {
+  "slug": "demo-esencial",
+  "name": "Plomería Garza",
+  "plan": "esencial",
+  "status": "active",
+  "emails": [
+   [
+    "owner",
+    "owner.esencial@demo.ayx.test"
+   ]
+  ]
+ },
+ {
+  "slug": "demo-catalogo",
+  "name": "Muebles Nogal",
+  "plan": "catalogo",
+  "status": "active",
+  "emails": [
+   [
+    "owner",
+    "owner.catalogo@demo.ayx.test"
+   ],
+   [
+    "editor",
+    "editor.catalogo@demo.ayx.test"
+   ]
+  ]
+ },
+ {
+  "slug": "demo-broker",
+  "name": "Residencial Almendro",
+  "plan": "broker",
+  "status": "active",
+  "emails": [
+   [
+    "owner",
+    "owner.broker@demo.ayx.test"
+   ],
+   [
+    "editor",
+    "editor.broker@demo.ayx.test"
+   ],
+   [
+    "viewer",
+    "viewer.broker@demo.ayx.test"
+   ]
+  ]
+ },
+ {
+  "slug": "demo-brokerpro",
+  "name": "Grupo Vértice Inmobiliario",
+  "plan": "broker_pro",
+  "status": "active",
+  "emails": [
+   [
+    "owner",
+    "owner.brokerpro@demo.ayx.test"
+   ],
+   [
+    "editor",
+    "editor.brokerpro@demo.ayx.test"
+   ]
+  ]
+ },
+ {
+  "slug": "demo-prueba",
+  "name": "Casa Lomas Residencial",
+  "plan": "broker",
+  "status": "trialing",
+  "emails": [
+   [
+    "owner",
+    "owner.prueba@demo.ayx.test"
+   ]
+  ]
+ },
+ {
+  "slug": "demo-morosa",
+  "name": "Boutique Aurora",
+  "plan": "catalogo",
+  "status": "past_due",
+  "emails": [
+   [
+    "owner",
+    "owner.morosa@demo.ayx.test"
+   ]
+  ]
+ },
+ {
+  "slug": "demo-suspendida",
+  "name": "Taller Mecánico Rivas",
+  "plan": "esencial",
+  "status": "suspended",
+  "emails": [
+   [
+    "owner",
+    "owner.suspendida@demo.ayx.test"
+   ]
+  ]
+ },
+ {
+  "slug": "demo-cancelada",
+  "name": "Inmobiliaria Sol Naciente",
+  "plan": "broker",
+  "status": "canceled",
+  "emails": [
+   [
+    "owner",
+    "owner.cancelada@demo.ayx.test"
+   ]
+  ]
+ }
+]
