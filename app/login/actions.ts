@@ -41,6 +41,7 @@ export async function sendMagicLink(_: FormState, formData: FormData): Promise<F
 
   const next = safeNext(String(formData.get("next") ?? ""), host);
   const callback = new URL("/auth/callback", rootOrigin(host));
+  callback.searchParams.set("src", "magiclink");
   if (next) callback.searchParams.set("next", next);
 
   const supabase = await createSessionSupabaseClient();

@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       app_admins: {
@@ -492,6 +517,10 @@ export type Database = {
     Functions: {
       _slug_forms: { Args: { p_text: string }; Returns: string[] }
       _terms_hit: { Args: { p_forms: string[] }; Returns: boolean }
+      can_write: {
+        Args: { p_min_role?: string; p_tenant_id: string }
+        Returns: boolean
+      }
       is_app_admin: { Args: never; Returns: boolean }
       is_disposable_email: { Args: { p_email: string }; Returns: boolean }
       is_member: {
@@ -646,6 +675,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },

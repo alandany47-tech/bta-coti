@@ -28,6 +28,7 @@
 ## 4. Seguridad
 - [ ] Tests de RLS en CI (aislamiento entre tenants, anon bloqueado).
 - [ ] Rate limit en registro, login, `/api/media/*` y `/q/*`. Turnstile en registro.
+- [ ] Turnstile: widget en Cloudflare, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` en Vercel y Captcha (Turnstile) activado en Supabase Auth con el secret; sin lo segundo, un `signUp` directo con la anon key se salta el formulario.
 - [ ] Headers: CSP, HSTS, X-Frame-Options (excepto donde se permita embeber el catálogo).
 - [ ] Antiphishing automático activo (T18, `ABUSE-AND-LIMITS.md` §3).
 - [ ] Botón "Reportar contenido" en storefront y cotización, con suspensión rápida desde el admin.

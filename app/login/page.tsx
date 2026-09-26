@@ -8,6 +8,8 @@ import { BRAND } from "@/lib/brand";
 
 const ERRORS: Record<string, string> = {
   enlace_invalido: "El enlace venció o ya se usó. Solicita uno nuevo.",
+  prueba_usada:
+    "Este correo ya usó su prueba gratuita. Inicia sesión para entrar a tu espacio o escríbenos para contratar un plan.",
   sin_tenant: "Tu cuenta no está ligada a ningún negocio. Escríbenos para ayudarte.",
 };
 
@@ -22,7 +24,7 @@ export default async function LoginPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user && error !== "sin_tenant") {
+  if (user && error !== "sin_tenant" && error !== "prueba_usada") {
     const host = (await headers()).get("host") ?? "";
     redirect(await resolveDestination(supabase, host, next));
   }

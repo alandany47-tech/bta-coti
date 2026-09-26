@@ -2,9 +2,9 @@
 
 > Fuente de verdad visual para la web, el panel, el admin, las cotizaciones y el PDF. Los tokens de Figma y `app/globals.css` deben coincidir 1:1 con §4 a §7.
 
-## 1. Nombre (pendiente)
+## 1. Nombre
 
-Nombre de trabajo: **BTA Cotiza**. Candidatos cortos, en español y fáciles de dictar por teléfono (validar dominio .com / .mx y marca en IMPI):
+Nombre: **AYX Cotiza** (decidido por el dueño del producto, sustituye al provisional "BTA Cotiza"). "AYX" va primero y es la marca; "Cotiza" describe el producto. Falta validar dominio .com / .mx y marca en IMPI. Alternativas que se evaluaron, por si el dominio no se consigue:
 
 | Nombre | Idea |
 |---|---|

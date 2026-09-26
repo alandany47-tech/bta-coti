@@ -4,7 +4,7 @@
 > contradice `docs/`, manda `docs/`: este archivo describe el estado del MVP previo a F0.
 
 
-# BTA Cotiza
+# AYX Cotiza
 
 Cotizador multi-tenant para brokers inmobiliarios de lujo (cartera de hasta
 10 propiedades por tenant, vía Excel + fotos/plano en Supabase Storage),
@@ -67,6 +67,13 @@ proyecto.
   usan ahora `OPERABLE_TENANT_STATUSES` — si agregás una ruta nueva que
   resuelva tenant por slug, importá esa constante en vez de hardcodear
   `"active"`.
+- **Registro (T04)**: `/registro` hace `signUp` con `pending_tenant` en `user_metadata`;
+  `/auth/callback` lo provisiona con `lib/auth/provision.ts` (`provision_tenant`, `trialing`,
+  7 días). `pending_tenant` lo escribe el usuario: siempre se revalida con
+  `parsePendingTenant` (plan solo `esencial|catalogo|broker`). Una prueba por dueño y las
+  escrituras solo en tenants `active|trialing` se imponen en BD (0007: `can_write`,
+  `trial_used`). Turnstile es opcional por entorno (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`).
+  La validación en vivo del slug usa el bucket `slug`, no `register`.
 - **Panel del tenant protegido (T03)**: el cotizador, las propiedades y el import
   viven en `slug./panel`, `/panel/propiedades` y `/panel/importar` (layout con
   gate en `app/[tenant]/panel/layout.tsx` + `lib/auth/panel.ts`); `slug./` es el
@@ -79,7 +86,7 @@ proyecto.
   Storage (`quotes`, `property-media`): la primera carpeta del objeto es el
   `tenant_id` y las policies de `storage.objects` lo comparan con `is_member`.
   Los objetos de Storage no se borran por SQL (`protect_delete`), solo por la API.
-- **Migraciones**: 0001 → 0006 en orden. Las escribe el repo y se aplican con
+- **Migraciones**: 0001 → 0007 en orden. Las escribe el repo y se aplican con
   `supabase db push --linked` (0002/0003 se marcaron con `migration repair`).
 - **PDF en runtime Node**: `@react-pdf/renderer` no corre en Edge. La ruta
   `app/api/[tenant]/quotes/route.ts` declara `export const runtime = "nodejs"`;
