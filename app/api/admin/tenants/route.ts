@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     invited,
   });
 
-  revalidateTag(tenantTag(client.slug), "max");
+  revalidateTag(tenantTag(client.slug), { expire: 0 });
   const tenant = await getTenantForAdmin(tenantId);
   return NextResponse.json({ tenant, invited }, { status: 201 });
 }

@@ -29,7 +29,7 @@ export async function setTenantStatus(
     console.error("set_tenant_status falló", error.message);
     return { ok: false, code: "error" };
   }
-  revalidateTag(tenantTag(data), "max");
+  revalidateTag(tenantTag(data), { expire: 0 });
   return { ok: true, slug: data };
 }
 

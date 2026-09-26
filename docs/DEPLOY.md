@@ -44,3 +44,14 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables) 
 - `https://ayx.solutions/login` inicia sesión y `https://<slug>.ayx.solutions/panel` conserva la sesión (cookie `.ayx.solutions`).
 - Un preview usa el Supabase de desarrollo: `NEXT_PUBLIC_SUPABASE_URL` distinto al de producción en Settings → Environment Variables.
 - El cron aparece en Vercel → Settings → Cron Jobs y responde 200 al ejecutarlo a mano.
+
+## 5. Ligar un dueño a un tenant existente (pilotos previos a 0004)
+Los tenants creados antes de la membresía no tienen dueño y su panel responde 404/403 hasta ligarlos. Con el usuario ya creado en Supabase Auth:
+
+```sql
+insert into public.tenant_members (tenant_id, user_id, role)
+select t.id, u.id, 'owner'
+from public.tenants t, auth.users u
+where t.slug = '<slug>' and u.email = '<correo del dueño>'
+on conflict do nothing;
+```

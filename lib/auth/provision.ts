@@ -38,7 +38,7 @@ export async function provisionTenant(userId: string, pending: PendingTenant): P
   }
 
   await clearPending(userId);
-  revalidateTag(tenantTag(pending.slug), "max");
+  revalidateTag(tenantTag(pending.slug), { expire: 0 });
   return { ok: true, slug: pending.slug };
 }
 
