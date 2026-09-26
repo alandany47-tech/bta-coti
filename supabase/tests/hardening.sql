@@ -38,7 +38,7 @@ set local role authenticated;
 select lives_ok($$update public.items set images = array['https://ext.example/1.jpg'] where id = '00000000-0000-0000-0000-00000000ee01'$$, 'quitar una imagen legada no exige URL propia');
 reset role;
 
-select is((select allowed_mime_types from storage.buckets where id = 'quotes'), array['application/pdf'], 'quotes solo PDF');
+select is((select count(*)::int from storage.buckets where id = 'quotes'), 0, 'el bucket quotes ya no existe (T15)');
 select ok((select 'image/svg+xml' <> all (allowed_mime_types) from storage.buckets where id = 'property-media'), 'property-media rechaza SVG');
 
 select * from finish();

@@ -22,6 +22,9 @@ insert into public.clients (id, tenant_id, full_name, phone) values
   ('00000000-0000-0000-0000-00000000cb01', current_setting('t.tb')::uuid, 'Cliente B', '222');
 insert into storage.objects (bucket_id, name) values
   ('property-media', current_setting('t.tb') || '/b.jpg');
+insert into public.quotes (tenant_id, property_id, client_id, client_name, client_phone, snapshot) values
+  (current_setting('t.ta')::uuid, '00000000-0000-0000-0000-00000000aa01', '00000000-0000-0000-0000-00000000ca01', 'Cliente A', '111', '{}'),
+  (current_setting('t.tb')::uuid, '00000000-0000-0000-0000-00000000bb01', '00000000-0000-0000-0000-00000000cb01', 'Cliente B', '222', '{}');
 
 -- anon
 set local role anon;
@@ -55,13 +58,10 @@ select is_empty($$update public.items set title = 'x' where id = '00000000-0000-
 select lives_ok(format($$insert into public.clients (tenant_id, full_name, phone) values (%L, 'Nuevo', '3')$$, current_setting('t.ta')), 'viewer crea cliente');
 select is_empty($$update public.clients set full_name = 'x' returning id$$, 'viewer no edita clientes');
 select is_empty($$delete from public.clients returning id$$, 'viewer no borra clientes');
-select lives_ok(format($$insert into public.quotes (tenant_id, property_id, client_id, client_name, client_phone) values (%L, '00000000-0000-0000-0000-00000000aa01', '00000000-0000-0000-0000-00000000ca01', 'Cliente A', '111')$$, current_setting('t.ta')), 'viewer crea cotización en A');
-select throws_ok(format($$insert into public.quotes (tenant_id, client_name, client_phone) values (%L, 'x', '1')$$, current_setting('t.tb')), '42501', null, 'viewer de A no crea cotización en B');
-select throws_ok(format($$insert into public.quotes (tenant_id, client_id, client_name, client_phone) values (%L, '00000000-0000-0000-0000-00000000cb01', 'x', '1')$$, current_setting('t.ta')), '42501', null, 'cotización de A no referencia cliente de B');
+select throws_ok(format($$insert into public.quotes (tenant_id, client_name, client_phone) values (%L, 'x', '1')$$, current_setting('t.tb')), '42501', null, 'viewer no crea cotización por REST');
 select is((select count(*)::int from public.quotes), 1, 'viewer solo ve cotizaciones de A');
-select is_empty($$update public.quotes set notes = 'x' returning id$$, 'viewer no edita cotizaciones');
-select lives_ok(format($$insert into storage.objects (bucket_id, name) values ('quotes', %L)$$, current_setting('t.ta') || '/q.pdf'), 'viewer sube PDF a quotes de A');
-select throws_ok(format($$insert into storage.objects (bucket_id, name) values ('quotes', %L)$$, current_setting('t.tb') || '/q.pdf'), '42501', null, 'viewer no sube PDF a quotes de B');
+select throws_ok($$update public.quotes set notes = 'x'$$, '42501', null, 'viewer no edita cotizaciones');
+select throws_ok(format($$insert into storage.objects (bucket_id, name) values ('quotes', %L)$$, current_setting('t.ta') || '/q.pdf'), '42501', null, 'el bucket quotes ya no admite subidas');
 select throws_ok(format($$insert into storage.objects (bucket_id, name) values ('property-media', %L)$$, current_setting('t.ta') || '/v.jpg'), '42501', null, 'viewer no sube a property-media');
 reset role;
 

@@ -16,10 +16,10 @@ select is((select items_count from public.usage where tenant_id = current_settin
 delete from public.items where tenant_id = current_setting('t.t')::uuid and sku = '2';
 select is((select items_count from public.usage where tenant_id = current_setting('t.t')::uuid), 1, 'borrar propiedad resta items_count');
 
-insert into public.quotes (tenant_id, client_name, client_phone) values (current_setting('t.t')::uuid, 'x', '1'), (current_setting('t.t')::uuid, 'y', '2');
+insert into public.quotes (tenant_id, client_name, client_phone, snapshot) values (current_setting('t.t')::uuid, 'x', '1', '{}'), (current_setting('t.t')::uuid, 'y', '2', '{}');
 select is((select quotes_this_month from public.usage where tenant_id = current_setting('t.t')::uuid), 2, 'cotizaciones del mes suman');
 update public.usage set month_key = '2000-01', quotes_this_month = 9 where tenant_id = current_setting('t.t')::uuid;
-insert into public.quotes (tenant_id, client_name, client_phone) values (current_setting('t.t')::uuid, 'z', '3');
+insert into public.quotes (tenant_id, client_name, client_phone, snapshot) values (current_setting('t.t')::uuid, 'z', '3', '{}');
 select is((select quotes_this_month from public.usage where tenant_id = current_setting('t.t')::uuid), 1, 'el contador se reinicia al cambiar de mes');
 
 select is(public.set_tenant_status(current_setting('t.t')::uuid, 'suspended', 'Falta de pago', '00000000-0000-0000-0000-0000000000d1'), 'negocio-d', 'set_tenant_status devuelve el slug');

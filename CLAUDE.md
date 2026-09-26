@@ -20,7 +20,9 @@ Arquitectura y arranque: [README.md](./README.md). Tickets y estado: `docs/ROADM
   Newsreader (titulares) + Instrument Sans. Textos en español de México.
 - El PDF ([pdf/QuoteDocument.tsx](./pdf/QuoteDocument.tsx)) es excepción intencional (pág. 1
   clara, pág. 2 oscura): no lo "corrijas". Recalcula montos en servidor con `lib/pricing.ts`;
-  nunca confíes en los del navegador. Corre en runtime Node (`export const runtime = "nodejs"`).
+  nunca confíes en los del navegador. Ya no se genera en el servidor (T15): `lib/pdf-client.ts` lo arma
+  en el navegador desde el snapshot (re-codifica las imágenes a JPEG por canvas; el CDN de medios
+  necesita CORS `GET`).
 
 ## Next.js 16
 
@@ -54,13 +56,12 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0015 (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
+- Migraciones 0001 → 0016 (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
   con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.
-- Storage: solo `quotes` (PDF, 10 MB; se retira en T15) usa Supabase Storage; la primera carpeta
-  del objeto es el `tenant_id` y los objetos no se borran por SQL (`protect_delete`). `property-media`
-  ya no tiene políticas (0012): los medios van a R2. Un trigger obliga a que `images`/`floor_plan_url`
+- Storage de Supabase: ya sin buckets en uso (`quotes` se retiró en T15 con
+  `scripts/remove-quotes-bucket.mjs`; `property-media` sin políticas desde 0012): los medios van a R2. Un trigger obliga a que `images`/`floor_plan_url`
   escritas por usuarios existan ya en la propiedad; solo el servidor agrega URLs (`attach_media_url`).
 - Medios en R2 (T12): `/api/media/sign` → PUT directo a R2 → `/api/media/confirm` (HEAD real,
   `confirm_media`) y `DELETE /api/media/[id]`. Cuota por plan en BD (`reserve_media`,
@@ -69,6 +70,11 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   WebP (full ≤ 2000 px y ~380 KB, thumb 480 px) antes de subir (`lib/image-client.ts`,
   `lib/media-client.ts`). react-pdf no lee WebP: `lib/pdf-images.ts` lo pasa a JPEG solo para URLs
   del CDN del propio tenant. `aws4fetch` no ata el tamaño a la firma: por eso el HEAD.
+- Cotizaciones (T15): `quotes.snapshot` (`lib/quote-snapshot.ts`) congela todo lo que muestran la página
+  `/q/<token>` (dominio raíz, pública, rate limit `share`) y el PDF; editar el ítem no la cambia. Los
+  usuarios solo LEEN `quotes`: las crea `POST /api/[tenant]/quotes` con service role
+  (`lib/quote-store.ts`, montos recalculados; el trigger `quotes_quota_guard` da número consecutivo
+  y tope diario). `get_shared_quote(token)` (anon) suma vistas y marca `viewed`; vigencia 30 días.
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La

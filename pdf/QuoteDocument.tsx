@@ -331,6 +331,7 @@ export type QuoteDocumentProps = {
   brandColor?: string;
   advisorName?: string | null;
   quoteId: string;
+  quoteNumber?: number | null;
   clientName: string;
   clientPhone: string;
   property: Property;
@@ -346,6 +347,7 @@ export function QuoteDocument({
   brandColor = "#18181B",
   advisorName,
   quoteId,
+  quoteNumber,
   clientName,
   clientPhone,
   property,
@@ -354,7 +356,7 @@ export function QuoteDocument({
   notes,
   createdAt,
 }: QuoteDocumentProps) {
-  const folio = quoteId.slice(0, 8).toUpperCase();
+  const folio = quoteNumber ? String(quoteNumber).padStart(4, "0") : quoteId.slice(0, 8).toUpperCase();
   const date = new Date(createdAt).toLocaleDateString("es-MX", {
     year: "numeric",
     month: "long",

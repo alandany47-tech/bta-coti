@@ -13,7 +13,7 @@ type BuildWhatsAppMessageArgs = {
   propertyUnitNumber: string;
   breakdown: PricingBreakdown;
   installmentsCount: number;
-  pdfUrl: string;
+  quoteUrl: string;
 };
 
 export function buildWhatsAppMessage({
@@ -23,7 +23,7 @@ export function buildWhatsAppMessage({
   propertyUnitNumber,
   breakdown,
   installmentsCount,
-  pdfUrl,
+  quoteUrl,
 }: BuildWhatsAppMessageArgs) {
   const lines = [
     `Hola ${clientName}, aquí el desglose ejecutivo de tu cotización con *${tenantName}*:`,
@@ -37,7 +37,7 @@ export function buildWhatsAppMessage({
       ? `Saldo a escrituración: ${formatCurrency(breakdown.finalPaymentAmount)}`
       : null,
     "",
-    `Descarga tu cotización en PDF: ${pdfUrl}`,
+    `Consulta y descarga tu cotización: ${quoteUrl}`,
   ].filter((line): line is string => line !== null);
 
   return lines.join("\n");
