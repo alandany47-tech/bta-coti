@@ -75,6 +75,8 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   usuarios solo LEEN `quotes`: las crea `POST /api/[tenant]/quotes` con service role
   (`lib/quote-store.ts`, montos recalculados; el trigger `quotes_quota_guard` da número consecutivo
   y tope diario). `get_shared_quote(token)` (anon) suma vistas y marca `viewed`; vigencia 30 días.
+- Demo: `npm run seed:demo` (`scripts/seed-demo.mjs` + `supabase/seed/demo.sql`) crea 8 tenants `demo-*`
+  (uno por plan/estado) con usuarios `rol.plan@demo.ayx.test`; ver `docs/DEMO.md` §4.1.
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La
