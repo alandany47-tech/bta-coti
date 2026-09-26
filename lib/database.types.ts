@@ -517,6 +517,7 @@ export type Database = {
     Functions: {
       _slug_forms: { Args: { p_text: string }; Returns: string[] }
       _terms_hit: { Args: { p_forms: string[] }; Returns: boolean }
+      admin_user_id_by_email: { Args: { p_email: string }; Returns: string }
       can_write: {
         Args: { p_min_role?: string; p_tenant_id: string }
         Returns: boolean
@@ -542,6 +543,15 @@ export type Database = {
           p_source: string
           p_status: string
           p_trial_days: number
+        }
+        Returns: string
+      }
+      set_tenant_status: {
+        Args: {
+          p_actor: string
+          p_reason: string
+          p_status: string
+          p_tenant: string
         }
         Returns: string
       }

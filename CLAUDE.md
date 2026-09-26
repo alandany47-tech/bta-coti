@@ -74,6 +74,12 @@ proyecto.
   escrituras solo en tenants `active|trialing` se imponen en BD (0007: `can_write`,
   `trial_used`). Turnstile es opcional por entorno (`NEXT_PUBLIC_TURNSTILE_SITE_KEY`).
   La validación en vivo del slug usa el bucket `slug`, no `register`.
+- **Admin (T05)**: "Nuevo cliente" es `POST /api/admin/tenants` (invita al dueño con
+  `inviteUserByEmail` si no existe y llama `provision_tenant` con `source = 'admin'`; si la
+  provisión falla borra al usuario recién invitado). Todo cambio de estado pasa por
+  `setTenantStatus` (`lib/admin-status.ts` → RPC `set_tenant_status`, que audita en la misma
+  transacción; suspender/cancelar exigen motivo) y luego `revalidateTag('tenant:<slug>', 'max')`.
+  Los conteos vienen de `usage`, mantenida por triggers de 0008 (no cuentes filas en JS).
 - **Panel del tenant protegido (T03)**: el cotizador, las propiedades y el import
   viven en `slug./panel`, `/panel/propiedades` y `/panel/importar` (layout con
   gate en `app/[tenant]/panel/layout.tsx` + `lib/auth/panel.ts`); `slug./` es el
@@ -86,7 +92,7 @@ proyecto.
   Storage (`quotes`, `property-media`): la primera carpeta del objeto es el
   `tenant_id` y las policies de `storage.objects` lo comparan con `is_member`.
   Los objetos de Storage no se borran por SQL (`protect_delete`), solo por la API.
-- **Migraciones**: 0001 → 0007 en orden. Las escribe el repo y se aplican con
+- **Migraciones**: 0001 → 0008 en orden. Las escribe el repo y se aplican con
   `supabase db push --linked` (0002/0003 se marcaron con `migration repair`).
 - **PDF en runtime Node**: `@react-pdf/renderer` no corre en Edge. La ruta
   `app/api/[tenant]/quotes/route.ts` declara `export const runtime = "nodejs"`;
