@@ -49,7 +49,8 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, 'max')` 
 2. Sesión (`createSessionSupabaseClient`, `@supabase/ssr`): TODO lo que escribe un usuario
    logueado (panel y `/api/[tenant]/*`). RLS con `is_member` / `can_write` es la barrera real.
 3. Service role (`createServiceRoleClient`): SOLO `app/api/admin/*`, webhooks, cron y
-   provisión de tenants. Nunca en `app/api/[tenant]/*`.
+   provisión de tenants, más `lib/media-store.ts` (RPC de medios, solo tras validar sesión, rol
+   editor y el HEAD real en R2). Nunca en `app/api/[tenant]/*`.
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
@@ -60,6 +61,11 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, 'max')` 
 - Storage: buckets `quotes` (solo PDF, 10 MB) y `property-media` (imágenes sin SVG, 5 MB). La
   primera carpeta del objeto es el `tenant_id`; los objetos no se borran por SQL (`protect_delete`).
   Un trigger obliga a que `images`/`floor_plan_url` escritas por usuarios sean de su carpeta.
+- Medios en R2 (T12): `/api/media/sign` → PUT directo a R2 → `/api/media/confirm` (HEAD real,
+  `confirm_media`) y `DELETE /api/media/[id]`. Cuota por plan en BD (`reserve_media`,
+  `effective_limit`: en prueba manda el tope de `plans.trial`); `usage.storage_bytes` lo mantiene
+  `trg_media_usage`. Llaves `t/<tenant>/<item|_>/<uuid>-{full|thumb}.webp`. Las rutas viejas de
+  Supabase Storage siguen hasta T13. `aws4fetch` no ata el tamaño a la firma: por eso el HEAD.
 - `xlsx` (SheetJS) tiene un advisory sin fix oficial (se reemplaza en T14).
 
 ## Auth y registro

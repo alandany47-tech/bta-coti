@@ -189,6 +189,65 @@ export type Database = {
         }
         Relationships: []
       }
+      media: {
+        Row: {
+          bytes: number
+          content_type: string
+          created_at: string
+          height: number | null
+          id: string
+          item_id: string | null
+          kind: string
+          r2_key: string
+          sort: number
+          status: string
+          tenant_id: string
+          thumb_bytes: number
+          thumb_key: string | null
+          width: number | null
+        }
+        Insert: {
+          bytes: number
+          content_type: string
+          created_at?: string
+          height?: number | null
+          id?: string
+          item_id?: string | null
+          kind: string
+          r2_key: string
+          sort?: number
+          status?: string
+          tenant_id: string
+          thumb_bytes?: number
+          thumb_key?: string | null
+          width?: number | null
+        }
+        Update: {
+          bytes?: number
+          content_type?: string
+          created_at?: string
+          height?: number | null
+          id?: string
+          item_id?: string | null
+          kind?: string
+          r2_key?: string
+          sort?: number
+          status?: string
+          tenant_id?: string
+          thumb_bytes?: number
+          thumb_key?: string | null
+          width?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           code: string
@@ -522,6 +581,26 @@ export type Database = {
         Args: { p_min_role?: string; p_tenant_id: string }
         Returns: boolean
       }
+      confirm_media: {
+        Args: {
+          p_bytes: number
+          p_id: string
+          p_tenant: string
+          p_thumb_bytes: number
+        }
+        Returns: undefined
+      }
+      delete_media: {
+        Args: { p_id: string; p_tenant: string }
+        Returns: {
+          r2_key: string
+          thumb_key: string
+        }[]
+      }
+      effective_limit: {
+        Args: { p_key: string; p_tenant: string }
+        Returns: number
+      }
       is_app_admin: { Args: never; Returns: boolean }
       is_disposable_email: { Args: { p_email: string }; Returns: boolean }
       is_member: {
@@ -545,6 +624,23 @@ export type Database = {
           p_trial_days: number
         }
         Returns: string
+      }
+      reserve_media: {
+        Args: {
+          p_bytes: number
+          p_content_type: string
+          p_height: number
+          p_item: string
+          p_kind: string
+          p_tenant: string
+          p_thumb_bytes: number
+          p_width: number
+        }
+        Returns: {
+          id: string
+          r2_key: string
+          thumb_key: string
+        }[]
       }
       set_tenant_status: {
         Args: {
