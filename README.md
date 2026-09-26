@@ -18,7 +18,7 @@ clic.
 
 ## Arquitectura multi-tenant
 
-- `proxy.ts` lee el header `Host`, extrae el subdominio (`cliente1.btacotiza.com`
+- `proxy.ts` lee el header `Host`, extrae el subdominio (`cliente1.ayx.solutions`
   o `cliente1.localhost:3000`) y reescribe internamente a `/[tenant]/...`.
 - `app/[tenant]/layout.tsx` resuelve el tenant por slug contra Supabase y
   devuelve 404 si no existe o está inactivo.

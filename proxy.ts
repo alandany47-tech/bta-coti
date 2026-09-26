@@ -26,7 +26,7 @@ function extractTenantSlug(hostname: string): string | null {
   }
   if (host === "localhost" || host === "127.0.0.1") return null;
 
-  // producción: cliente1.btacotiza.com
+  // producción: cliente1.ayx.solutions
   if (host === ROOT_DOMAIN || host === `www.${ROOT_DOMAIN}`) return null;
   if (host.endsWith(`.${ROOT_DOMAIN}`)) {
     const sub = host.slice(0, -(ROOT_DOMAIN.length + 1));

@@ -1,6 +1,6 @@
 # Documentación del proyecto (leer primero)
 
-> Nombre: **AYX Cotiza** (definido por el dueño del producto; el dominio final sigue pendiente) (ver `BRAND.md` §1).
+> Nombre: **AYX Cotiza** (definido por el dueño del producto; dominio ayx.solutions) (ver `BRAND.md` §1).
 > Estos documentos describen el **estado objetivo**. Si algo del código actual o de `CLAUDE.md` los contradice, mandan estos documentos.
 
 ## Orden de lectura para agentes (Claude Code / Codex)

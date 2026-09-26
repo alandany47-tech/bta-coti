@@ -22,7 +22,7 @@ proyecto.
   `middleware()`. Antes de tocar rutas, App Router o config, revisa
   `node_modules/next/dist/docs/` (AGENTS.md ya lo recuerda arriba).
 - **Multi-tenant por subdominio**: `proxy.ts` reescribe `cliente1.localhost:3000`
-  o `cliente1.btacotiza.com` a `/[tenant]/...`. No inventes rutas `/tenant/`
+  o `cliente1.ayx.solutions` a `/[tenant]/...`. No inventes rutas `/tenant/`
   con path prefix manual: el slug siempre viaja en el subdominio.
 - **Tres formas de hablar con Supabase, a propósito**
   ([lib/supabase/server.ts](./lib/supabase/server.ts)): anon key
