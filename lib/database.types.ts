@@ -305,6 +305,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "media_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "media_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
@@ -361,57 +368,75 @@ export type Database = {
           client_name: string
           client_phone: string
           created_at: string
+          created_by: string | null
           discount_pct: number
           down_payment_amount: number
           down_payment_pct: number
+          expires_at: string | null
           final_payment_amount: number
           id: string
           installments_count: number
+          last_viewed_at: string | null
           monthly_payment_amount: number
           notes: string | null
-          pdf_url: string | null
+          number: number
           property_id: string | null
+          share_token: string
+          snapshot: Json
           status: string
           tenant_id: string
           total_amount: number
+          views: number
         }
         Insert: {
           client_id?: string | null
           client_name: string
           client_phone: string
           created_at?: string
+          created_by?: string | null
           discount_pct?: number
           down_payment_amount?: number
           down_payment_pct?: number
+          expires_at?: string | null
           final_payment_amount?: number
           id?: string
           installments_count?: number
+          last_viewed_at?: string | null
           monthly_payment_amount?: number
           notes?: string | null
-          pdf_url?: string | null
+          number: number
           property_id?: string | null
+          share_token?: string
+          snapshot: Json
           status?: string
           tenant_id: string
           total_amount?: number
+          views?: number
         }
         Update: {
           client_id?: string | null
           client_name?: string
           client_phone?: string
           created_at?: string
+          created_by?: string | null
           discount_pct?: number
           down_payment_amount?: number
           down_payment_pct?: number
+          expires_at?: string | null
           final_payment_amount?: number
           id?: string
           installments_count?: number
+          last_viewed_at?: string | null
           monthly_payment_amount?: number
           notes?: string | null
-          pdf_url?: string | null
+          number?: number
           property_id?: string | null
+          share_token?: string
+          snapshot?: Json
           status?: string
           tenant_id?: string
           total_amount?: number
+          views?: number
         }
         Relationships: [
           {
@@ -626,6 +651,17 @@ export type Database = {
       effective_limit: {
         Args: { p_key: string; p_tenant: string }
         Returns: number
+      }
+      get_shared_quote: {
+        Args: { p_token: string }
+        Returns: {
+          expired: boolean
+          expires_at: string
+          number: number
+          snapshot: Json
+          status: string
+          views: number
+        }[]
       }
       is_app_admin: { Args: never; Returns: boolean }
       is_disposable_email: { Args: { p_email: string }; Returns: boolean }

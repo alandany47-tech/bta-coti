@@ -37,9 +37,10 @@ reset role;
 
 select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000d1","role":"authenticated"}', true);
 set local role authenticated;
-select lives_ok(format($$insert into public.quotes (tenant_id, property_id, client_name, client_phone, discount_pct, down_payment_pct, down_payment_amount, installments_count, monthly_payment_amount, final_payment_amount, total_amount) values (%L, '00000000-0000-0000-0000-00000000dd01', 'C', '5500000000', 0, 10, 1, 1, 1, 1, 1)$$, current_setting('t.a')), 'cotización ligada a un ítem propio');
+select throws_ok(format($$insert into public.quotes (tenant_id, client_name, client_phone, snapshot) values (%L, 'C', '1', '{}')$$, current_setting('t.a')), '42501', null, 'los usuarios no insertan cotizaciones por REST');
 reset role;
 
+insert into public.quotes (tenant_id, property_id, client_name, client_phone, snapshot) values (current_setting('t.a')::uuid, '00000000-0000-0000-0000-00000000dd01', 'C', '5500000000', '{}');
 delete from public.items where id = '00000000-0000-0000-0000-00000000dd01';
 select is((select property_id from public.quotes where tenant_id = current_setting('t.a')::uuid limit 1), null, 'borrar el ítem deja property_id en null');
 select is((select items_count from public.usage where tenant_id = current_setting('t.a')::uuid), 4, 'usage baja al borrar');

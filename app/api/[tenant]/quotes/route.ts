@@ -1,15 +1,12 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { renderToBuffer } from "@react-pdf/renderer";
 import { requireTenantAccess } from "@/lib/auth/api";
-import { QuoteDocument } from "@/pdf/QuoteDocument";
+import { rootOrigin } from "@/lib/auth/redirects";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { calculatePricing } from "@/lib/pricing";
-import { prepareForPdf } from "@/lib/pdf-images";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
-
-// @react-pdf/renderer necesita APIs de Node (Buffer, fs) — no corre en Edge.
-export const runtime = "nodejs";
+import { buildQuoteSnapshot } from "@/lib/quote-snapshot";
+import { createQuote } from "@/lib/quote-store";
 
 type QuoteRequestBody = {
   propertyId: string;
@@ -29,9 +26,9 @@ export async function POST(
   const { tenant: slug } = await params;
   const access = await requireTenantAccess(slug, "viewer");
   if (access instanceof NextResponse) return access;
-  const { supabase, tenant } = access;
+  const { supabase, tenant, user } = access;
 
-  const body = (await request.json()) as Partial<QuoteRequestBody>;
+  const body = (await request.json().catch(() => ({}))) as Partial<QuoteRequestBody>;
 
   if (!body.propertyId || !body.clientId) {
     return NextResponse.json(
@@ -70,86 +67,55 @@ export async function POST(
     );
   }
 
-  // El precio y el desglose financiero siempre se recalculan en el servidor
-  // contra el list_price real de la propiedad — nunca se confía en los
-  // montos que manda el navegador.
+  // El precio y el desglose financiero siempre se recalculan en el servidor contra el precio
+  // real del ítem: nunca se confía en los montos que manda el navegador.
+  const discountPct = Math.min(100, Math.max(0, Number(body.discountPct) || 0));
+  const downPaymentPct = Math.min(100, Math.max(0, Number(body.downPaymentPct) || 0));
+  const installmentsCount = Math.min(360, Math.max(1, Math.floor(Number(body.installmentsCount)) || 1));
   const breakdown = calculatePricing({
     listPrice: Number(property.list_price),
-    discountPct: Number(body.discountPct) || 0,
-    downPaymentPct: Number(body.downPaymentPct) || 0,
-    installmentsCount: Number(body.installmentsCount) || 1,
+    discountPct,
+    downPaymentPct,
+    installmentsCount,
     finalPaymentPct: Number(body.finalPaymentPct) || 0,
   });
-  const installmentsCount = Math.max(1, Math.floor(Number(body.installmentsCount)) || 1);
-  const notes = body.notes?.trim() || null;
-  const advisorName = body.advisorName?.trim() || null;
 
   const quoteId = randomUUID();
-  const createdAt = new Date().toISOString();
-
-  const pdfBuffer = await renderToBuffer(
-    QuoteDocument({
-      tenantName: tenant.name,
-      tenantLogoUrl: tenant.logo_url,
-      brandColor: tenant.brand_color,
-      advisorName,
-      quoteId,
-      clientName: client.full_name,
-      clientPhone: client.phone,
-      property: await prepareForPdf(property, tenant.id),
-      breakdown,
-      installmentsCount,
-      notes,
-      createdAt,
-    }),
-  );
-
-  const pdfPath = `${tenant.id}/${quoteId}.pdf`;
-  const { error: uploadError } = await supabase.storage
-    .from("quotes")
-    .upload(pdfPath, pdfBuffer, {
-      contentType: "application/pdf",
-      upsert: false,
-    });
-
-  if (uploadError) {
-    return NextResponse.json(
-      { error: `No se pudo guardar el PDF: ${uploadError.message}` },
-      { status: 500 },
-    );
-  }
-
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from("quotes").getPublicUrl(pdfPath);
-
-  const { error: insertError } = await supabase.from("quotes").insert({
-    id: quoteId,
-    tenant_id: tenant.id,
-    property_id: property.id,
-    client_id: client.id,
-    client_name: client.full_name,
-    client_phone: client.phone,
-    discount_pct: body.discountPct ?? 0,
-    down_payment_pct: body.downPaymentPct ?? 0,
-    down_payment_amount: breakdown.downPaymentAmount,
-    installments_count: installmentsCount,
-    monthly_payment_amount: breakdown.monthlyPaymentAmount,
-    final_payment_amount: breakdown.finalPaymentAmount,
-    total_amount: breakdown.effectivePrice,
-    notes,
-    pdf_url: publicUrl,
-    status: "sent",
-    created_at: createdAt,
+  const snapshot = buildQuoteSnapshot({
+    quoteId,
+    tenant,
+    advisorName: body.advisorName?.trim().slice(0, 120) || null,
+    clientName: client.full_name,
+    clientPhone: client.phone,
+    property,
+    breakdown,
+    installmentsCount,
+    notes: body.notes?.trim().slice(0, 500) || null,
+    createdAt: new Date().toISOString(),
   });
 
-  if (insertError) {
-    return NextResponse.json(
-      { error: `No se pudo registrar la cotización: ${insertError.message}` },
-      { status: 500 },
-    );
+  const created = await createQuote({
+    id: quoteId,
+    tenantId: tenant.id,
+    createdBy: user.id,
+    propertyId: property.id,
+    clientId: client.id,
+    snapshot,
+    discountPct,
+    downPaymentPct,
+  });
+  if (!created.ok) {
+    if (created.code === "quote_quota_exceeded") {
+      return NextResponse.json(
+        { error: "Llegaste al límite de cotizaciones de hoy en tu plan. Intenta mañana o cambia de plan." },
+        { status: 429 },
+      );
+    }
+    return NextResponse.json({ error: "No se pudo registrar la cotización." }, { status: 500 });
   }
 
+  const host = request.headers.get("host") ?? "";
+  const quoteUrl = `${rootOrigin(host)}/q/${created.shareToken}`;
   const whatsappUrl = buildWhatsAppUrl({
     tenantName: tenant.name,
     clientName: client.full_name,
@@ -158,13 +124,8 @@ export async function POST(
     propertyUnitNumber: property.unit_number,
     breakdown,
     installmentsCount,
-    pdfUrl: publicUrl,
+    quoteUrl,
   });
 
-  return NextResponse.json({
-    quoteId,
-    pdfUrl: publicUrl,
-    whatsappUrl,
-    breakdown,
-  });
+  return NextResponse.json({ quoteId, number: created.number, quoteUrl, whatsappUrl, breakdown });
 }

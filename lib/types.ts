@@ -66,7 +66,7 @@ export type Client = {
   created_at: string;
 };
 
-export type QuoteStatus = "draft" | "sent" | "accepted" | "rejected";
+export type QuoteStatus = "draft" | "sent" | "viewed" | "accepted" | "rejected" | "expired";
 
 export type Quote = {
   id: string;
@@ -83,7 +83,6 @@ export type Quote = {
   final_payment_amount: number;
   total_amount: number;
   notes: string | null;
-  pdf_url: string | null;
   status: QuoteStatus;
   created_at: string;
 };

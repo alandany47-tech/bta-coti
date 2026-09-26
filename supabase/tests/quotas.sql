@@ -22,9 +22,9 @@ select lives_ok(format($$insert into public.items (tenant_id, kind, title) value
 select throws_ok(format($$insert into public.items (tenant_id, kind, title) values (%L, 'service', 'Otro')$$, current_setting('t.br')), 'P0001', 'item_quota_exceeded', 'tope de ítems aparte');
 
 update public.plans set limits = jsonb_set(limits, '{quotes_per_day}', '2') where code = 'broker';
-insert into public.quotes (tenant_id, client_name, client_phone, total_amount, discount_pct, down_payment_pct, down_payment_amount, installments_count, monthly_payment_amount, final_payment_amount)
-  select current_setting('t.br')::uuid, 'C', '5500000000', 1, 0, 10, 1, 1, 1, 1 from generate_series(1, 2);
-select throws_ok(format($$insert into public.quotes (tenant_id, client_name, client_phone, total_amount, discount_pct, down_payment_pct, down_payment_amount, installments_count, monthly_payment_amount, final_payment_amount) values (%L, 'C', '5500000000', 1, 0, 10, 1, 1, 1, 1)$$, current_setting('t.br')), 'P0001', 'quote_quota_exceeded', 'tope diario de cotizaciones');
+insert into public.quotes (tenant_id, client_name, client_phone, total_amount, discount_pct, down_payment_pct, down_payment_amount, installments_count, monthly_payment_amount, final_payment_amount, snapshot)
+  select current_setting('t.br')::uuid, 'C', '5500000000', 1, 0, 10, 1, 1, 1, 1, '{}' from generate_series(1, 2);
+select throws_ok(format($$insert into public.quotes (tenant_id, client_name, client_phone, total_amount, discount_pct, down_payment_pct, down_payment_amount, installments_count, monthly_payment_amount, final_payment_amount, snapshot) values (%L, 'C', '5500000000', 1, 0, 10, 1, 1, 1, 1, '{}')$$, current_setting('t.br')), 'P0001', 'quote_quota_exceeded', 'tope diario de cotizaciones');
 
 select is((select count(*)::int from public.reserve_media(current_setting('t.br')::uuid, (select id from public.items where sku = 'P1' and tenant_id = current_setting('t.br')::uuid), 'image', 'image/webp', 100, 10, 10, 10)), 1, 'reserva de medio');
 select throws_ok(format($$delete from public.items where tenant_id = %L and sku = 'P1'$$, current_setting('t.br')), '23503', null, 'no se borra un ítem con archivos');
