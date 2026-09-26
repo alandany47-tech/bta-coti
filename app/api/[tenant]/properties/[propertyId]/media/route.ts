@@ -8,6 +8,8 @@ export const runtime = "nodejs";
 
 type MediaKind = "image" | "floor_plan";
 
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
+
 async function resolveProperty(
   supabase: SupabaseClient,
   tenantId: string,
@@ -49,9 +51,9 @@ export async function POST(
       { status: 400 },
     );
   }
-  if (!file.type.startsWith("image/")) {
+  if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
     return NextResponse.json(
-      { error: "El archivo debe ser una imagen." },
+      { error: "El archivo debe ser una imagen JPG, PNG, WebP, GIF o AVIF." },
       { status: 400 },
     );
   }
