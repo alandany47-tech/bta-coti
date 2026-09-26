@@ -21,7 +21,7 @@
 | ID | Ticket | Agente | Depende de | Criterios de aceptación | Estado |
 |---|---|---|---|---|---|
 | T10 | Vercel Pro: proyecto, dominio en Cloudflare con comodín hacia Vercel (delegación `_acme-challenge`, ver PLAN §3), variables por entorno (Preview / Prod), Supabase de prod aparte | CC | F0 | `cualquier.dominio.com` responde con SSL. Los previews usan la base de staging | 🟨 |
-| T11 | Caché del tenant en `proxy.ts`/layout con tag `tenant:<slug>` | CX | T10 | 0 consultas a Supabase por request con el caché caliente (verificar en logs) | ⬜ |
+| T11 | Caché del tenant en `proxy.ts`/layout con tag `tenant:<slug>` | CX | T10 | 0 consultas a Supabase por request con el caché caliente (verificar en logs) | ✅ |
 | T12 | R2: bucket, dominio CDN en Cloudflare, `lib/r2.ts` (aws4fetch), `/api/media/sign` + `/confirm`, triggers de `usage` | CC | T01 | Subir con cuota llena → 402 con mensaje claro. El tamaño registrado es el real (HEAD) | ⬜ |
 | T13 | Uploader: WebP full y thumb en el navegador, progreso, reordenar, borrar. Migrar medios existentes de Supabase Storage a R2 | CX | T12 | Una foto de 8 MB queda en ≤ 400 KB. Los medios viejos se ven igual tras migrar | ⬜ |
 | T14 | `properties` → `items` (kind = property, attrs) + adaptar selector, calculadora e import de Excel (cambiar `xlsx` por `exceljs` o el build CDN de SheetJS) | CC | T01 | El cotizador broker funciona igual. Sin advisory de `xlsx` en `npm audit` | ⬜ |

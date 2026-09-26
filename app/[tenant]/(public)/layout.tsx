@@ -1,3 +1,4 @@
+import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { getTenantBySlug } from "@/lib/tenants";
@@ -27,7 +28,8 @@ export default async function PublicLayout({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant: slug } = await params;
-  const tenant = (await getTenantBySlug(slug))!;
+  const tenant = await getTenantBySlug(slug);
+  if (!tenant) notFound();
   const host = (await headers()).get("host") ?? "";
   const loginHref = `${rootOrigin(host)}/login?next=${encodeURIComponent(`${tenantOrigin(slug, host)}/panel`)}`;
 
