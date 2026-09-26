@@ -41,6 +41,12 @@ export async function POST(
     .from("items")
     .upsert(rows, { onConflict: "tenant_id,sku", count: "exact" });
 
+  if (upsertError?.message.includes("item_quota_exceeded")) {
+    return NextResponse.json(
+      { error: "Tu plan no permite tantas propiedades. Reduce el archivo o cambia de plan." },
+      { status: 402 },
+    );
+  }
   if (upsertError) {
     return NextResponse.json(
       { error: `No se pudo importar la cartera: ${upsertError.message}` },

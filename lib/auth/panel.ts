@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createSessionSupabaseClient } from "@/lib/supabase/server";
-import { getTenantBySlug } from "@/lib/tenants";
+import { requireOperableTenant } from "@/lib/tenant-page";
 import { rootOrigin, tenantOrigin } from "@/lib/auth/redirects";
 import type { TenantRole } from "@/lib/auth/api";
 import type { PublicTenant } from "@/lib/types";
@@ -31,8 +31,7 @@ export const getPanelContext = cache(async (slug: string): Promise<PanelContext>
     redirect(`${rootOrigin(host)}/login?next=${encodeURIComponent(next)}`);
   }
 
-  const tenant = await getTenantBySlug(slug);
-  if (!tenant) notFound();
+  const tenant = await requireOperableTenant(slug);
 
   const { data: membership } = await supabase
     .from("tenant_members")
