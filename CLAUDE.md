@@ -33,6 +33,14 @@ proyecto.
   Auth (`createSessionSupabaseClient`, vía `@supabase/ssr`) SOLO para el
   Panel Admin logueado. Nunca insertes propiedades/clientes/cotizaciones
   desde el cliente con la anon key.
+- **Login único (T02)**: `/login` (contraseña o magic link, Server Actions con rate
+  limit), `/recuperar` y `/auth/callback` (acepta `code` y `token_hash`+`type`) sirven
+  a admins y a miembros de tenants. La cookie de sesión se fija en el dominio raíz
+  (`lib/auth/cookie-domain.ts`: `.dominio.com` y `localhost` en local) para que
+  `slug.dominio.com/panel` la lea. Todo `next`/redirect pasa por `safeNext` en
+  `lib/auth/redirects.ts`; nunca redirijas a una URL sin validarla ahí. Las
+  plantillas de correo de `supabase/templates/` deben estar aplicadas en el proyecto
+  (`supabase config push`) para que invitaciones y recuperaciones lleguen al callback.
 - **`/admin` sí tiene auth real** (a diferencia del cotizador público, ver
   el punto de abajo): Supabase Auth con cookies (`@supabase/ssr`) + la tabla
   `app_admins` (migración

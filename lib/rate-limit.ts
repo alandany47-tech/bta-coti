@@ -36,10 +36,10 @@ function limiter(bucket: Bucket, index: number) {
   return instance;
 }
 
-export function getClientIp(request: Request): string {
+export function getClientIp(headers: Headers): string {
   return (
-    request.headers.get("x-real-ip") ??
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    headers.get("x-real-ip") ??
+    headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
     "unknown"
   );
 }
