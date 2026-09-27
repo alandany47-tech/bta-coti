@@ -27,12 +27,18 @@ select is((select (snapshot ->> 'clientName') from public.get_shared_quote(curre
 select is((select status from public.get_shared_quote(current_setting('t.tok'))), 'viewed', 'la primera vista marca viewed');
 select is((select views from public.get_shared_quote(current_setting('t.tok'))), 3, 'cada lectura suma una vista');
 select is((select count(*)::int from public.get_shared_quote('corto')), 0, 'token inválido no devuelve nada');
+select is((select tenant_slug from public.get_shared_quote(current_setting('t.tok'))), 'negocio-n', 'trae el slug del tenant');
+select is((select get_quote_tenant_slug(current_setting('t.tok'))), 'negocio-n', 'resolución sin contar vista');
+select is((select get_quote_tenant_slug('corto')), null, 'token inválido: sin slug');
 select throws_ok($$select * from public.quotes$$, '42501', null, 'anon no lee la tabla');
 reset role;
+select is((select views from public.quotes where id = '00000000-0000-0000-0000-00000000f001'), 4, 'get_quote_tenant_slug no suma vistas');
 
 update public.quotes set expires_at = now() - interval '1 day' where id = '00000000-0000-0000-0000-00000000f001';
 select is((select expired from public.get_shared_quote(current_setting('t.tok'))), true, 'vencida se reporta expired');
-select is((select views from public.quotes where id = '00000000-0000-0000-0000-00000000f001'), 3, 'una vencida no suma vistas');
+select is((select snapshot from public.get_shared_quote(current_setting('t.tok'))), null, 'vencida no expone el snapshot');
+select is((select tenant_name from public.get_shared_quote(current_setting('t.tok'))), 'Negocio N', 'vencida sí trae el nombre público del tenant');
+select is((select views from public.quotes where id = '00000000-0000-0000-0000-00000000f001'), 4, 'una vencida no suma vistas');
 
 update public.tenants set status = 'suspended' where id = current_setting('t.a')::uuid;
 select is((select count(*)::int from public.get_shared_quote(current_setting('t.tok'))), 0, 'tenant suspendido: no se comparte');

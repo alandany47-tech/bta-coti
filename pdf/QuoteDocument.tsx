@@ -334,7 +334,7 @@ export type QuoteDocumentProps = {
   quoteNumber?: number | null;
   clientName: string;
   clientPhone: string;
-  property: Property;
+  property: Property | null;
   breakdown: PricingBreakdown;
   installmentsCount: number;
   notes?: string | null;
@@ -363,17 +363,19 @@ export function QuoteDocument({
     day: "numeric",
   });
 
-  const stats: { label: string; value: string }[] = [
-    { label: "Unidad", value: property.unit_number },
-    { label: "M² Interiores", value: formatArea(property.m2_interior) },
-    { label: "M² Exteriores", value: formatArea(property.m2_exterior) },
-    { label: "M² Totales", value: formatArea(property.m2_total) },
-    { label: "Estacionamientos", value: String(property.parking_spaces) },
-  ];
+  const stats: { label: string; value: string }[] = property
+    ? [
+        { label: "Unidad", value: property.unit_number },
+        { label: "M² Interiores", value: formatArea(property.m2_interior) },
+        { label: "M² Exteriores", value: formatArea(property.m2_exterior) },
+        { label: "M² Totales", value: formatArea(property.m2_total) },
+        { label: "Estacionamientos", value: String(property.parking_spaces) },
+      ]
+    : [];
 
   const hasFinalPayment = breakdown.finalPaymentAmount > 0.009;
   const hasDiscount = breakdown.discountAmount > 0.009;
-  const previewImages = property.images.slice(0, 9);
+  const previewImages = property?.images.slice(0, 9) ?? [];
 
   return (
     <Document>
@@ -404,52 +406,60 @@ export function QuoteDocument({
 
         <View style={styles.propertyHero}>
           <View>
-            <Text style={styles.propertyTitle}>{property.title}</Text>
+            <Text style={styles.propertyTitle}>{property ? property.title : "Cotización"}</Text>
             <Text style={styles.propertySubtitle}>
-              Unidad {property.unit_number} · Preparado para {clientName}
+              {property ? `Unidad ${property.unit_number} · ` : ""}Preparado para {clientName}
             </Text>
           </View>
-          <View style={styles.statusBadge}>
-            <View
-              style={[
-                styles.statusDot,
-                { backgroundColor: STATUS_COLOR[property.status] },
-              ]}
-            />
-            <Text style={styles.statusText}>
-              {STATUS_LABEL[property.status]}
-            </Text>
-          </View>
+          {property ? (
+            <View style={styles.statusBadge}>
+              <View
+                style={[
+                  styles.statusDot,
+                  { backgroundColor: STATUS_COLOR[property.status] },
+                ]}
+              />
+              <Text style={styles.statusText}>
+                {STATUS_LABEL[property.status]}
+              </Text>
+            </View>
+          ) : null}
         </View>
 
-        <Text style={styles.sectionLabel}>Características generales</Text>
-        <View style={styles.statsRow}>
-          {stats.map((stat, index) => (
-            <View
-              key={stat.label}
-              style={[
-                styles.statCell,
-                index === stats.length - 1 ? styles.statCellLast : {},
-              ]}
-            >
-              <Text style={styles.statLabel}>{stat.label}</Text>
-              <Text style={styles.statValue}>{stat.value}</Text>
+        {stats.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>Características generales</Text>
+            <View style={styles.statsRow}>
+              {stats.map((stat, index) => (
+                <View
+                  key={stat.label}
+                  style={[
+                    styles.statCell,
+                    index === stats.length - 1 ? styles.statCellLast : {},
+                  ]}
+                >
+                  <Text style={styles.statLabel}>{stat.label}</Text>
+                  <Text style={styles.statValue}>{stat.value}</Text>
+                </View>
+              ))}
             </View>
-          ))}
-        </View>
+          </>
+        ) : null}
 
         <Text style={styles.sectionLabel}>Condiciones de venta</Text>
         <View style={styles.conditionsBlock}>
-          <View style={styles.conditionRow}>
-            <Text style={styles.conditionLabel}>Precio de lista</Text>
-            <Text
-              style={
-                hasDiscount ? styles.conditionValueMuted : styles.conditionValue
-              }
-            >
-              {formatCurrencyPdf(property.list_price)}
-            </Text>
-          </View>
+          {property ? (
+            <View style={styles.conditionRow}>
+              <Text style={styles.conditionLabel}>Precio de lista</Text>
+              <Text
+                style={
+                  hasDiscount ? styles.conditionValueMuted : styles.conditionValue
+                }
+              >
+                {formatCurrencyPdf(property.list_price)}
+              </Text>
+            </View>
+          ) : null}
 
           {hasDiscount ? (
             <View style={styles.conditionRow}>
@@ -525,6 +535,7 @@ export function QuoteDocument({
       </Page>
 
       {/* ============================== Página 2 — Galería y plano ============================== */}
+      {property ? (
       <Page size="A4" style={styles.darkPage}>
         <View style={styles.darkHeader}>
           <View>
@@ -564,6 +575,7 @@ export function QuoteDocument({
           {tenantName} · Dossier generado vía {BRAND.name} · Folio {folio}
         </Text>
       </Page>
+      ) : null}
     </Document>
   );
 }

@@ -27,10 +27,10 @@ async function toJpegDataUrl(url: string): Promise<string | null> {
 export async function buildQuotePdf(snapshot: QuoteSnapshot): Promise<Blob> {
   const [{ pdf }, { QuoteDocument }] = await Promise.all([import("@react-pdf/renderer"), import("@/pdf/QuoteDocument")]);
   const { property } = snapshot;
-  const plan = property.floor_plan_url && !property.floor_plan_url.toLowerCase().endsWith(".pdf") ? property.floor_plan_url : null;
+  const plan = property?.floor_plan_url && !property.floor_plan_url.toLowerCase().endsWith(".pdf") ? property.floor_plan_url : null;
 
   const [images, floorPlan, logo] = await Promise.all([
-    Promise.all(property.images.slice(0, 9).map(toJpegDataUrl)),
+    Promise.all((property?.images.slice(0, 9) ?? []).map(toJpegDataUrl)),
     plan ? toJpegDataUrl(plan) : Promise.resolve(null),
     snapshot.tenantLogoUrl ? toJpegDataUrl(snapshot.tenantLogoUrl) : Promise.resolve(null),
   ]);
@@ -44,7 +44,7 @@ export async function buildQuotePdf(snapshot: QuoteSnapshot): Promise<Blob> {
     quoteNumber: snapshot.number,
     clientName: snapshot.clientName,
     clientPhone: snapshot.clientPhone,
-    property: { ...property, images: images.filter((u): u is string => u !== null), floor_plan_url: floorPlan },
+    property: property && { ...property, images: images.filter((u): u is string => u !== null), floor_plan_url: floorPlan },
     breakdown: snapshot.breakdown,
     installmentsCount: snapshot.installmentsCount,
     notes: snapshot.notes,

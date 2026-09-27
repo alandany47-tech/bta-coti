@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { requireTenantAccess } from "@/lib/auth/api";
-import { rootOrigin } from "@/lib/auth/redirects";
+import { tenantOrigin } from "@/lib/auth/redirects";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { calculatePricing } from "@/lib/pricing";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
@@ -115,7 +115,7 @@ export async function POST(
   }
 
   const host = request.headers.get("host") ?? "";
-  const quoteUrl = `${rootOrigin(host)}/q/${created.shareToken}`;
+  const quoteUrl = `${tenantOrigin(slug, host)}/q/${created.shareToken}`;
   const whatsappUrl = buildWhatsAppUrl({
     tenantName: tenant.name,
     clientName: client.full_name,

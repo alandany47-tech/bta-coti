@@ -28,10 +28,22 @@ describe("import de propiedades", () => {
     sheet.addRow([]);
     sheet.addRow(["B-3", "Casa 2", 100, { formula: "A1", result: 1800000 }]);
     const buffer = await workbook.xlsx.writeBuffer();
-    const rows = await readWorkbookRows(buffer as ArrayBuffer);
-    expect(rows.map((r) => [r.unit_number, r.m2_total, r.list_price])).toEqual([
+    const parsed = await readWorkbookRows(buffer as ArrayBuffer);
+    expect(parsed.truncated).toBe(false);
+    expect(parsed.rows.map((r) => [r.unit_number, r.m2_total, r.list_price])).toEqual([
       ["B-2", 120, 2500000],
       ["B-3", 100, 1800000],
     ]);
+  });
+
+  it("avisa cuando el archivo trae más filas de las permitidas, en vez de truncar en silencio", async () => {
+    const workbook = new Workbook();
+    const sheet = workbook.addWorksheet("Cartera");
+    sheet.addRow(["Unidad", "Titulo", "Precio"]);
+    for (let i = 0; i < 2001; i += 1) sheet.addRow([`U-${i}`, "Casa", 1000000]);
+    const buffer = await workbook.xlsx.writeBuffer();
+    const parsed = await readWorkbookRows(buffer as ArrayBuffer);
+    expect(parsed.truncated).toBe(true);
+    expect(parsed.rows).toHaveLength(2000);
   });
 });

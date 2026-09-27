@@ -93,18 +93,26 @@ export function rowsToImport(rows: unknown[][]): PropertyImportRow[] {
   });
 }
 
-/** Lee la primera hoja de un .xlsx en el navegador (ExcelJS se carga solo al importar). */
-export async function readWorkbookRows(buffer: ArrayBuffer): Promise<PropertyImportRow[]> {
+export type ImportedWorkbook = { rows: PropertyImportRow[]; truncated: boolean };
+
+/**
+ * Lee la primera hoja de un .xlsx en el navegador (ExcelJS se carga solo al importar). Convierte
+ * TODAS las filas antes de recortar, para poder avisar si el archivo trae más de `MAX_IMPORT_ROWS`
+ * en vez de importar solo las primeras en silencio.
+ */
+export async function readWorkbookRows(buffer: ArrayBuffer): Promise<ImportedWorkbook> {
   const { Workbook } = await import("exceljs");
   const workbook = new Workbook();
   await workbook.xlsx.load(buffer);
   const sheet = workbook.worksheets[0];
-  if (!sheet) return [];
+  if (!sheet) return { rows: [], truncated: false };
 
-  const rows: unknown[][] = [];
+  const rawRows: unknown[][] = [];
   sheet.eachRow({ includeEmpty: false }, (row) => {
     // row.values es 1-indexado: el primer elemento siempre está vacío.
-    rows.push((row.values as unknown[]).slice(1));
+    rawRows.push((row.values as unknown[]).slice(1));
   });
-  return rowsToImport(rows.slice(0, MAX_IMPORT_ROWS + 1));
+  const rows = rowsToImport(rawRows);
+  const truncated = rows.length > MAX_IMPORT_ROWS;
+  return { rows: truncated ? rows.slice(0, MAX_IMPORT_ROWS) : rows, truncated };
 }

@@ -56,7 +56,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0016 (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
+- Migraciones 0001 → 0017 (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
   con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.
@@ -68,13 +68,16 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `effective_limit`: en prueba manda el tope de `plans.trial`); `usage.storage_bytes` lo mantiene
   `trg_media_usage`. Llaves `t/<tenant>/<item|_>/<uuid>-{full|thumb}.webp`. El navegador convierte a
   WebP (full ≤ 2000 px y ~380 KB, thumb 480 px) antes de subir (`lib/image-client.ts`,
-  `lib/media-client.ts`). react-pdf no lee WebP: `lib/pdf-images.ts` lo pasa a JPEG solo para URLs
-  del CDN del propio tenant. `aws4fetch` no ata el tamaño a la firma: por eso el HEAD.
+  `lib/media-client.ts`). react-pdf no lee WebP; el PDF ya no se genera en el servidor (T15), así que
+  la conversión a JPEG vive en `lib/pdf-client.ts`. `aws4fetch` no ata el tamaño a la firma por sí
+  solo: `presignPut` firma también `Content-Type`/`Content-Length`, y el HEAD al confirmar mide el
+  tamaño real.
 - Cotizaciones (T15): `quotes.snapshot` (`lib/quote-snapshot.ts`) congela todo lo que muestran la página
-  `/q/<token>` (dominio raíz, pública, rate limit `share`) y el PDF; editar el ítem no la cambia. Los
-  usuarios solo LEEN `quotes`: las crea `POST /api/[tenant]/quotes` con service role
-  (`lib/quote-store.ts`, montos recalculados; el trigger `quotes_quota_guard` da número consecutivo
-  y tope diario). `get_shared_quote(token)` (anon) suma vistas y marca `viewed`; vigencia 30 días.
+  `slug./q/<token>` (subdominio del tenant, pública, rate limit `share`; `app/q/[token]` en el dominio
+  raíz solo redirige ahí) y el PDF; editar el ítem no la cambia. Los usuarios solo LEEN `quotes`: las
+  crea `POST /api/[tenant]/quotes` con service role (`lib/quote-store.ts`, montos recalculados; el
+  trigger `quotes_quota_guard` da número consecutivo y tope diario). `get_shared_quote(token)` (anon)
+  suma vistas y marca `viewed`, y ya no devuelve el snapshot de una cotización vencida; vigencia 30 días.
 - Demo: `npm run seed:demo` (`scripts/seed-demo.mjs` + `supabase/seed/demo.sql`) crea 8 tenants `demo-*`
   (uno por plan/estado) con usuarios `rol.plan@demo.ayx.test`; ver `docs/DEMO.md` §4.1.
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
