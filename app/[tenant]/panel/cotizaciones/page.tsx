@@ -15,6 +15,13 @@ const STATUS_LABEL: Record<string, string> = {
 
 const dateTime = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
 
+/** `status` en la fila no se actualiza sola al vencer (0017): se deriva aquí para la lista. */
+function displayStatus(status: string, expiresAt: string | null): string {
+  const isOpen = status === "draft" || status === "sent" || status === "viewed";
+  if (isOpen && expiresAt && new Date(expiresAt) <= new Date()) return "expired";
+  return status;
+}
+
 export default async function QuotesPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params;
   const { supabase, tenant } = await getPanelContext(slug);
@@ -54,7 +61,7 @@ export default async function QuotesPage({ params }: { params: Promise<{ tenant:
                     <td className="p-3 text-ink">{quote.client_name}</td>
                     <td className="p-3 text-ink-2">{property ?? "—"}</td>
                     <td className="tabular p-3 text-right text-ink">{formatCurrency(Number(quote.total_amount))}</td>
-                    <td className="p-3 text-ink-2">{STATUS_LABEL[quote.status] ?? quote.status}</td>
+                    <td className="p-3 text-ink-2">{STATUS_LABEL[displayStatus(quote.status, quote.expires_at)] ?? quote.status}</td>
                     <td
                       className="tabular p-3 text-center text-ink-2"
                       title={quote.last_viewed_at ? `Última vista: ${dateTime.format(new Date(quote.last_viewed_at))}` : "Sin vistas"}

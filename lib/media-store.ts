@@ -11,10 +11,11 @@ export type MediaErrorCode =
   | "item_media_limit"
   | "tenant_not_operable"
   | "media_not_found"
+  | "media_in_use"
   | "error";
 
 function code(message: string): MediaErrorCode {
-  for (const known of ["storage_quota_exceeded", "item_media_limit", "tenant_not_operable", "media_not_found"] as const) {
+  for (const known of ["storage_quota_exceeded", "item_media_limit", "tenant_not_operable", "media_not_found", "media_in_use"] as const) {
     if (message.includes(known)) return known;
   }
   return "error";
@@ -69,10 +70,25 @@ export async function confirmMedia(id: string, tenantId: string, bytes: number, 
 }
 
 /** Borra la fila (el trigger descuenta usage) y devuelve las llaves para borrar en R2. */
-export async function deleteMedia(id: string, tenantId: string) {
+export type DeleteMediaResult =
+  | { ok: true; r2_key: string; thumb_key: string | null }
+  | { ok: false; code: MediaErrorCode };
+
+/**
+ * Borra la fila (el trigger descuenta usage) y devuelve las llaves para borrar en R2. Falla con
+ * `media_in_use` si el medio está en el snapshot de una cotización enviada y todavía vigente
+ * (docs/ROADMAP.md T15: editar un ítem no cambia una cotización ya enviada).
+ */
+export async function deleteMedia(id: string, tenantId: string): Promise<DeleteMediaResult> {
   const { data, error } = await createServiceRoleClient().rpc("delete_media", { p_id: id, p_tenant: tenantId });
-  if (error) console.error("delete_media falló", error.message);
-  return data?.[0] ?? null;
+  if (error) {
+    const errorCode = code(error.message);
+    if (errorCode === "error") console.error("delete_media falló", error.message);
+    return { ok: false, code: errorCode };
+  }
+  const row = data?.[0];
+  if (!row) return { ok: false, code: "media_not_found" };
+  return { ok: true, r2_key: row.r2_key, thumb_key: row.thumb_key };
 }
 
 export type PropertyMedia = { images: string[]; floor_plan_url: string | null };

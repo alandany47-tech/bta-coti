@@ -56,7 +56,9 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0018 (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
+- Migraciones 0001 → 0019 (0019: tope de plan también al cambiar `kind`; límite por IP dentro de la
+  base para las RPC de `anon` —`check_rpc_rate_limit`/`request_ip`, respaldo de lo que hace Upstash
+  si alguien llama la RPC directo; `delete_media` no borra un medio de una cotización sin vencer) (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
   con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.
@@ -78,6 +80,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   crea `POST /api/[tenant]/quotes` con service role (`lib/quote-store.ts`, montos recalculados; el
   trigger `quotes_quota_guard` da número consecutivo y tope diario). `get_shared_quote(token)` (anon)
   suma vistas y marca `viewed`, y ya no devuelve el snapshot de una cotización vencida; vigencia 30 días.
+  El estado `expired` no se escribe solo: el panel de cotizaciones lo deriva de `expires_at` al listar.
 - Mensajes (T16): `message_templates` (tenant_id, module, channel='whatsapp', body ≤1000, sin HTML)
   con una fila por módulo del plan (`provision_tenant` las crea; solo editor escribe, solo servicio
   agrega/quita módulos). `lib/message-templates.ts` (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve
