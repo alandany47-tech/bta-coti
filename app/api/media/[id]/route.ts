@@ -14,10 +14,18 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const access = await requireTenantAccess(slug, "editor");
   if (access instanceof NextResponse) return access;
 
-  const keys = await deleteMedia(id, access.tenant.id);
-  if (!keys) return NextResponse.json({ error: "Archivo no encontrado." }, { status: 404 });
+  const deleted = await deleteMedia(id, access.tenant.id);
+  if (!deleted.ok) {
+    if (deleted.code === "media_in_use") {
+      return NextResponse.json(
+        { error: "No se puede borrar: está en una cotización enviada y todavía vigente." },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ error: "Archivo no encontrado." }, { status: 404 });
+  }
 
-  await detachMediaUrl(access.tenant.id, mediaUrl(keys.r2_key));
-  if (r2Configured()) await deleteObjects([keys.r2_key, keys.thumb_key]);
+  await detachMediaUrl(access.tenant.id, mediaUrl(deleted.r2_key));
+  if (r2Configured()) await deleteObjects([deleted.r2_key, deleted.thumb_key]);
   return new NextResponse(null, { status: 204 });
 }

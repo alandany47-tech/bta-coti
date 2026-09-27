@@ -24,8 +24,8 @@ export async function POST(request: Request) {
   if (!media) return NextResponse.json({ error: "Archivo no encontrado." }, { status: 404 });
 
   const discard = async () => {
-    await deleteMedia(media.id, tenant.id);
-    await deleteObjects([media.r2_key, media.thumb_key]);
+    const deleted = await deleteMedia(media.id, tenant.id);
+    if (deleted.ok) await deleteObjects([deleted.r2_key, deleted.thumb_key]);
   };
 
   // El tamaño que cuenta es el real en R2, no el que declaró el navegador.
@@ -67,11 +67,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "No se pudo ligar el archivo a la propiedad." }, { status: 500 });
   }
 
-  // Un plano nuevo reemplaza al anterior: se borra el archivo viejo para no pagar almacenamiento.
+  // Un plano nuevo reemplaza al anterior: se borra el archivo viejo para no pagar almacenamiento,
+  // salvo que una cotización enviada y vigente todavía lo referencie (media_in_use).
   if (media.kind === "plan" && media.item_id) {
     for (const old of await listItemMedia(tenant.id, media.item_id, "plan", media.id)) {
-      await deleteMedia(old.id, tenant.id);
-      await deleteObjects([old.r2_key, old.thumb_key]);
+      const deleted = await deleteMedia(old.id, tenant.id);
+      if (deleted.ok) await deleteObjects([deleted.r2_key, deleted.thumb_key]);
     }
   }
 

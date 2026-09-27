@@ -74,8 +74,10 @@ export async function PUT(
     for (const url of removedUrls) {
       const match = byUrl.get(url);
       if (!match) continue; // URL legada de Storage: no hay fila en `media` que limpiar.
-      const keys = await deleteMedia(match.id, tenant.id);
-      if (keys && r2Configured()) await deleteObjects([keys.r2_key, keys.thumb_key]);
+      // Si la referencia una cotización enviada y vigente (media_in_use), se deja: el archivo ya no
+      // aparece en la galería, pero la cotización compartida no debe perder su imagen.
+      const deleted = await deleteMedia(match.id, tenant.id);
+      if (deleted.ok && r2Configured()) await deleteObjects([deleted.r2_key, deleted.thumb_key]);
     }
   }
 

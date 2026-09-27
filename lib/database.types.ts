@@ -494,6 +494,27 @@ export type Database = {
           },
         ]
       }
+      rpc_rate_limit: {
+        Row: {
+          bucket: string
+          hits: number
+          key: string
+          window_start: string
+        }
+        Insert: {
+          bucket: string
+          hits?: number
+          key: string
+          window_start: string
+        }
+        Update: {
+          bucket?: string
+          hits?: number
+          key?: string
+          window_start?: string
+        }
+        Relationships: []
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -660,6 +681,15 @@ export type Database = {
         Args: { p_min_role?: string; p_tenant_id: string }
         Returns: boolean
       }
+      check_rpc_rate_limit: {
+        Args: {
+          p_bucket: string
+          p_key: string
+          p_limit: number
+          p_window_seconds: number
+        }
+        Returns: boolean
+      }
       confirm_media: {
         Args: {
           p_bytes: number
@@ -725,6 +755,7 @@ export type Database = {
         }
         Returns: string
       }
+      request_ip: { Args: never; Returns: string }
       reserve_media: {
         Args: {
           p_bytes: number
