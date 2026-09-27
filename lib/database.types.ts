@@ -658,6 +658,28 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _demo_image: { Args: { p_n: number; p_slug: string }; Returns: string }
+      _demo_quote: {
+        Args: {
+          p_client: string
+          p_creator: string
+          p_days_ago: number
+          p_discount: number
+          p_down: number
+          p_final: number
+          p_n: number
+          p_notes: string
+          p_sku: string
+          p_status: string
+          p_tenant: string
+          p_views: number
+        }
+        Returns: undefined
+      }
+      _demo_user: {
+        Args: { p_email: string; p_name: string; p_password: string }
+        Returns: string
+      }
       _slug_forms: { Args: { p_text: string }; Returns: string[] }
       _terms_hit: { Args: { p_forms: string[] }; Returns: boolean }
       admin_user_id_by_email: { Args: { p_email: string }; Returns: string }
@@ -689,6 +711,10 @@ export type Database = {
           p_window_seconds: number
         }
         Returns: boolean
+      }
+      clone_demo_items: {
+        Args: { p_source: string; p_target: string }
+        Returns: number
       }
       confirm_media: {
         Args: {
@@ -773,6 +799,7 @@ export type Database = {
           thumb_key: string
         }[]
       }
+      reset_demo_data: { Args: { p_password: string }; Returns: undefined }
       set_tenant_status: {
         Args: {
           p_actor: string

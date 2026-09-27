@@ -16,6 +16,7 @@ export type Tenant = {
   stripe_subscription_id: string | null;
   trial_ends_at: string | null;
   notes: string | null;
+  is_demo: boolean;
   created_at: string;
 };
 

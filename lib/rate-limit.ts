@@ -2,7 +2,7 @@ import "server-only";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 
-type Bucket = "register" | "slug" | "login" | "api" | "media" | "share";
+type Bucket = "register" | "slug" | "login" | "api" | "media" | "share" | "demo" | "demo_quote";
 type Window = Parameters<typeof Ratelimit.slidingWindow>[1];
 
 const LIMITS: Record<Bucket, [number, Window][]> = {
@@ -18,6 +18,8 @@ const LIMITS: Record<Bucket, [number, Window][]> = {
   api: [[300, "1 m"]],
   media: [[60, "1 m"]],
   share: [[120, "1 m"]],
+  demo: [[20, "1 m"]],
+  demo_quote: [[30, "1 h"]],
 };
 
 const redis =

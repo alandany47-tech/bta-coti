@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/admin-auth";
-import { listTenantsForAdmin } from "@/lib/admin-tenants";
+import { listTenantsForAdmin, listDemoTenantsForAdmin } from "@/lib/admin-tenants";
+import { DemoSection } from "@/components/admin/demo-section";
 import { AdminConsole } from "@/components/admin/admin-console";
 import { LogoutButton } from "@/components/admin/logout-button";
 import { BRAND } from "@/lib/brand";
@@ -9,7 +10,7 @@ export default async function AdminPage() {
   const admin = await getAdminUser();
   if (!admin) redirect("/login?next=/admin");
 
-  const tenants = await listTenantsForAdmin();
+  const [tenants, demoTenants] = await Promise.all([listTenantsForAdmin(), listDemoTenantsForAdmin()]);
   const rootDomain = BRAND.domain;
 
   return (
@@ -26,6 +27,7 @@ export default async function AdminPage() {
         </div>
       </header>
       <main className="flex flex-1 flex-col gap-4 p-6">
+        <DemoSection initialTenants={demoTenants} rootDomain={rootDomain} />
         <AdminConsole initialTenants={tenants} rootDomain={rootDomain} />
       </main>
     </div>

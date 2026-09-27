@@ -26,6 +26,25 @@ export type NewClient = {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
+export type CloneProspectInput = { name?: unknown; slug?: unknown; ownerEmail?: unknown };
+export type CloneProspect = { name: string; slug: string; ownerEmail: string };
+
+/** Validación de "Clonar demo como prospecto-x" (docs/DEMO.md §4): mismas reglas que el nombre/slug/correo del alta manual. */
+export function validateCloneProspect(
+  input: CloneProspectInput,
+): { ok: true; value: CloneProspect } | { ok: false; error: string } {
+  const name = String(input.name ?? "").trim().replace(/\s+/g, " ");
+  const slug = normalizeSlugInput(String(input.slug ?? ""));
+  const ownerEmail = String(input.ownerEmail ?? "").trim().toLowerCase();
+
+  if (name.length < 2 || name.length > 80) return { ok: false, error: "El nombre debe tener de 2 a 80 caracteres." };
+  const slugProblem = slugError(slug);
+  if (slugProblem) return { ok: false, error: slugProblem };
+  if (!EMAIL_RE.test(ownerEmail) || ownerEmail.length > 254) return { ok: false, error: "Correo del dueño inválido." };
+
+  return { ok: true, value: { name, slug, ownerEmail } };
+}
+
 export function validateNewClient(
   input: NewClientInput,
 ): { ok: true; value: NewClient } | { ok: false; error: string } {

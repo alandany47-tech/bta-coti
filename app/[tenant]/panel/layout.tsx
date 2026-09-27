@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { getPanelContext, hasRole } from "@/lib/auth/panel";
 import { rootOrigin } from "@/lib/auth/redirects";
 import { TenantMark } from "@/components/tenant-mark";
+import { DemoBanner } from "@/components/demo-banner";
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };
 
@@ -21,6 +22,7 @@ export default async function PanelLayout({
 
   return (
     <>
+      {tenant.is_demo ? <DemoBanner /> : null}
       <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border-subtle px-6 py-4">
         <TenantMark tenant={tenant} subtitle="Panel" />
         <nav className="flex gap-4 text-sm text-foreground-muted">

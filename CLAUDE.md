@@ -56,7 +56,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0019 (0019: tope de plan también al cambiar `kind`; límite por IP dentro de la
+- Migraciones 0001 → 0020 (0019: tope de plan también al cambiar `kind`; límite por IP dentro de la
   base para las RPC de `anon` —`check_rpc_rate_limit`/`request_ip`, respaldo de lo que hace Upstash
   si alguien llama la RPC directo; `delete_media` no borra un medio de una cotización sin vencer) (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
@@ -86,8 +86,13 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   agrega/quita módulos). `lib/message-templates.ts` (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve
   `{variable}` sin tocar las desconocidas; `POST /api/[tenant]/quotes` la usa para el link de wa.me.
   Editor en Panel → Mensajes (`tenant_modules(tenant_id)` dice qué módulos mostrar).
-- Demo: `npm run seed:demo` (`scripts/seed-demo.mjs` + `supabase/seed/demo.sql`) crea 8 tenants `demo-*`
-  (uno por plan/estado) con usuarios `rol.plan@demo.ayx.test`; ver `docs/DEMO.md` §4.1.
+- Demo (T26): `is_demo` en tenants, visible en las columnas públicas. `reset_demo_data(password)`
+  (0020) borra y recrea los 8 tenants `demo-*`; lo llaman `npm run seed:demo` (dueño), el cron
+  `/api/cron/reset-demo` (diario) y el botón "Resetear demo" en `/admin`. `DEMO_PASSWORD` debe ser
+  la misma en el seed y en el entorno de la app: `/demo/entrar` inicia sesión con ella como el
+  editor de `demo-broker` (la vitrina). `is_demo` bloquea subir/borrar medios; banner y modo
+  `?present=1` en `components/demo-banner.tsx`. Admin → "Clonar como prospecto" copia catálogo y
+  marca a un tenant nuevo en trial (`clone_demo_items`, docs/DEMO.md).
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La

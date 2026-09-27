@@ -19,6 +19,7 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables) 
 | `NEXT_PUBLIC_ROOT_DOMAIN` | `ayx.solutions` | `preview.ayx.solutions` |
 | `UPSTASH_REDIS_REST_URL`, `UPSTASH_REDIS_REST_TOKEN` | Redis prod | Redis dev |
 | `CRON_SECRET` | valor aleatorio largo | otro valor |
+| `DEMO_PASSWORD` | la misma que uses en `DEMO_PASSWORD=... npm run seed:demo` | otro valor de prueba |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | widget prod | clave de prueba de Cloudflare |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | número de soporte | — |
 
