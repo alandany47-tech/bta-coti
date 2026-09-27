@@ -5,8 +5,8 @@ import { DownloadPdfButton } from "@/components/quote/download-pdf-button";
 import { BRAND } from "@/lib/brand";
 import { tenantOrigin } from "@/lib/auth/redirects";
 import { parseQuoteSnapshot } from "@/lib/quote-snapshot";
+import { getSharedQuote } from "@/lib/public-rpc";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -37,8 +37,7 @@ export default async function SharedQuotePage({
     return <p className="p-8 text-center text-ink-2">Demasiadas solicitudes. Intenta de nuevo en un momento.</p>;
   }
 
-  const { data } = await createServerSupabaseClient().rpc("get_shared_quote", { p_token: token });
-  const row = data?.[0];
+  const row = await getSharedQuote(token);
   if (!row) notFound();
 
   // El token es global: si alguien entra por el subdominio de otro tenant, lo mandamos al suyo.

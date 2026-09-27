@@ -28,7 +28,30 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables) 
 ## 2b. Cloudflare R2 (medios, T12)
 1. R2 → crear el bucket (p. ej. `ayx-media`) y conectarle el dominio personalizado `media.ayx.solutions` (con proxy).
 2. R2 → Manage API tokens → token S3 con permiso Object Read & Write sobre ese bucket.
-3. CORS del bucket: permitir `PUT` desde `https://*.ayx.solutions` (y `http://*.localhost:3100` en desarrollo) con el header `Content-Type`, y `GET` desde `https://ayx.solutions` (y `http://localhost:3100`): la página `/q/<token>` baja las imágenes con `fetch` para armar el PDF en el navegador.
+3. CORS del bucket (R2 → Settings → CORS policy). `GET` también desde los subdominios: la página
+   compartida vive en `https://<slug>.ayx.solutions/q/<token>` y ahí `lib/pdf-client.ts` baja las
+   fotos, planos y logos con `fetch` para armar el PDF; sin el comodín el PDF sale sin imágenes de R2
+   (en silencio). `PUT` solo desde los subdominios (el panel sube desde `slug./panel`):
+
+   ```json
+   [
+     {
+       "AllowedOrigins": ["https://ayx.solutions", "https://*.ayx.solutions", "http://localhost:3100", "http://*.localhost:3100"],
+       "AllowedMethods": ["GET", "HEAD"],
+       "AllowedHeaders": ["*"],
+       "MaxAgeSeconds": 3600
+     },
+     {
+       "AllowedOrigins": ["https://*.ayx.solutions", "http://*.localhost:3100"],
+       "AllowedMethods": ["PUT"],
+       "AllowedHeaders": ["Content-Type"],
+       "MaxAgeSeconds": 3600
+     }
+   ]
+   ```
+
+   Verificación: en `https://<slug>.ayx.solutions/q/<token>` → "Descargar PDF" debe traer las fotos; en
+   la consola no debe aparecer ningún error de CORS contra `media.ayx.solutions`.
 4. Variables: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` y, si el dominio no es `media.<raíz>`, `NEXT_PUBLIC_MEDIA_BASE_URL`.
 5. Alerta de facturación de R2 en $5 USD (ABUSE-AND-LIMITS §1).
 

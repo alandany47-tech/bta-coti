@@ -51,16 +51,6 @@ export async function listDemoTenantsForAdmin(): Promise<AdminDemoTenantRow[]> {
   );
 }
 
-/** Código del plan (para clonar un tenant de demo con el mismo plan al aprovisionar el prospecto). */
-export async function getTenantPlanCode(tenantId: string): Promise<string | null> {
-  const { data } = await createServiceRoleClient()
-    .from("tenants")
-    .select("plans(code)")
-    .eq("id", tenantId)
-    .maybeSingle();
-  return one((data as unknown as { plans: { code: string } | { code: string }[] | null } | null)?.plans ?? null)?.code ?? null;
-}
-
 export async function getTenantForAdmin(id: string): Promise<AdminTenantRow | null> {
   const { data, error } = await createServiceRoleClient()
     .from("tenants")

@@ -45,9 +45,7 @@ export async function proxy(request: NextRequest) {
     // cookies de sesión renovadas en cada request, algo que un Server
     // Component no puede hacer por su cuenta.
     if (AUTH_PATHS.some((path) => url.pathname === path || url.pathname.startsWith(`${path}/`))) {
-      const { supabase, response } = refreshSession(request);
-      await supabase.auth.getUser();
-      return response;
+      return refreshSession(request);
     }
     return NextResponse.next();
   }
@@ -65,13 +63,9 @@ export async function proxy(request: NextRequest) {
   rewrittenUrl.search = url.search;
 
   // El panel usa la sesión compartida (cookie del dominio raíz): se refresca
-  // aquí y las cookies renovadas viajan en la respuesta del rewrite.
+  // aquí y las cookies renovadas viajan en la misma respuesta del rewrite.
   if (url.pathname === "/panel" || url.pathname.startsWith("/panel/")) {
-    const { supabase, response: sessionResponse } = refreshSession(request);
-    await supabase.auth.getUser();
-    const rewrite = NextResponse.rewrite(rewrittenUrl, { request });
-    sessionResponse.cookies.getAll().forEach((cookie) => rewrite.cookies.set(cookie));
-    return rewrite;
+    return refreshSession(request, () => NextResponse.rewrite(rewrittenUrl, { request }));
   }
 
   return NextResponse.rewrite(rewrittenUrl);

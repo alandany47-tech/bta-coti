@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminUser } from "@/lib/admin-auth";
-import { getTenantForAdmin, getTenantPlanCode } from "@/lib/admin-tenants";
+import { getTenantForAdmin } from "@/lib/admin-tenants";
 import { logAudit } from "@/lib/admin-status";
 import { validateCloneProspect } from "@/lib/admin-new-client";
 import { createServiceRoleClient } from "@/lib/supabase/server";
@@ -36,9 +36,6 @@ export async function POST(
     return NextResponse.json({ error: "Ese subdominio no está disponible." }, { status: 409 });
   }
 
-  const planCode = await getTenantPlanCode(tenantId);
-  if (!planCode) return NextResponse.json({ error: "No se pudo determinar el plan de la demo." }, { status: 500 });
-
   const { data: existingId } = await supabase.rpc("admin_user_id_by_email", { p_email: prospect.ownerEmail });
   let ownerId: string | null = existingId ?? null;
   let invited = false;
@@ -58,29 +55,33 @@ export async function POST(
     invited = true;
   }
 
-  const { data: tenantId2, error: provisionError } = await supabase.rpc("provision_tenant", {
+  // Alta + copia del catálogo en una sola transacción (0021): si la copia falla, tampoco queda el
+  // tenant, y el slug sigue libre para reintentar.
+  const { data: tenantId2, error: cloneError } = await supabase.rpc("clone_demo_tenant", {
+    p_source: tenantId,
     p_owner: ownerId,
     p_name: prospect.name,
     p_slug: prospect.slug,
-    p_plan_code: planCode,
-    p_status: "trialing",
     p_trial_days: TRIAL_DAYS,
-    p_source: "demo_clone",
-    p_billing_mode: "manual",
   });
 
-  if (provisionError || !tenantId2) {
+  if (cloneError || !tenantId2) {
     if (invited) await supabase.auth.admin.deleteUser(ownerId);
-    const taken = provisionError?.message.includes("slug_taken") || provisionError?.message.includes("slug_invalid");
-    if (!taken) console.error("provision_tenant (clonar demo) falló", provisionError?.message);
+    const message = cloneError?.message ?? "";
+    const taken = message.includes("slug_taken") || message.includes("slug_invalid");
+    const quota = message.includes("item_quota_exceeded");
+    if (!taken) console.error("clone_demo_tenant falló", message);
     return NextResponse.json(
-      { error: taken ? "Ese subdominio no está disponible." : "No se pudo crear el tenant." },
-      { status: taken ? 409 : 500 },
+      {
+        error: taken
+          ? "Ese subdominio no está disponible."
+          : quota
+            ? "El catálogo de esta demo no cabe en los límites del plan en prueba."
+            : "No se pudo crear el tenant.",
+      },
+      { status: taken || quota ? 409 : 500 },
     );
   }
-
-  const { error: cloneError } = await supabase.rpc("clone_demo_items", { p_source: tenantId, p_target: tenantId2 });
-  if (cloneError) console.error("clone_demo_items falló", cloneError.message);
 
   await logAudit("tenant.cloned_from_demo", tenantId2, admin.id, {
     source_tenant_id: tenantId,

@@ -37,7 +37,7 @@ Viven en `plans.limits` y los aplican triggers o el servidor, nunca solo la UI.
 | `/q/*` | 120 por minuto |
 | `/api/*` en general | 300 por minuto |
 
-**Implementación:** `lib/rate-limit.ts` (Upstash) aplica `slug` (20/min, 200/día) a `/api/slug-available`, con tope diario para acotar la RPC; `login` y `api` quedan listos para T02 y T04. En producción se duplican como reglas de Vercel Firewall (Rate Limiting) con las mismas rutas y topes, y las variables `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` van en Production y Preview. La lista de correos desechables se sincroniza con `scripts/sync-disposable-domains.ts` y `/api/cron/disposable-domains` (semanal, se programa en T17).
+**Implementación:** `lib/rate-limit.ts` (Upstash) aplica `slug` (20/min, 200/día) a `/api/slug-available`, con tope diario para acotar la RPC; `login` y `api` quedan listos para T02 y T04. En producción se duplican como reglas de Vercel Firewall (Rate Limiting) con las mismas rutas y topes, y las variables `UPSTASH_REDIS_REST_URL` y `UPSTASH_REDIS_REST_TOKEN` van en Production y Preview. Respaldo en la base (0019/0021): `slug_available`, `get_shared_quote` y `get_quote_tenant_slug` también topan por IP a quien las llame directo por REST con la anon key. El servidor de Next.js las llama con service role (`lib/public-rpc.ts`), que la base deja pasar sin ese tope: desde Vercel la IP que ve Supabase es la de salida de Vercel y todos los visitantes compartirían el cupo; el límite por visitante lo pone Upstash en la ruta antes de llamar. La lista de correos desechables se sincroniza con `scripts/sync-disposable-domains.ts` y `/api/cron/disposable-domains` (semanal, se programa en T17).
 
 ## 3. Antiphishing: bloqueo automático al registrarse
 

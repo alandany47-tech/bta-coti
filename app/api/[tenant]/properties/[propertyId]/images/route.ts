@@ -53,6 +53,13 @@ export async function PUT(
     if (property.floor_plan_url) removedUrls.push(property.floor_plan_url);
   }
 
+  // La demo es compartida por todos los visitantes (docs/DEMO.md §2): reordenar se permite, pero
+  // quitar fotos o el plano borraría la galería pública hasta el reset nocturno. La base lo impide
+  // también (0021, `items_demo_media_guard`) para quien use la sesión directo por REST.
+  if (tenant.is_demo && removedUrls.length > 0) {
+    return NextResponse.json({ error: "La demo no permite quitar imágenes ni planos." }, { status: 403 });
+  }
+
   const { data: updated, error } = await supabase
     .from("items")
     .update(patch)

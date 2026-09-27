@@ -2,7 +2,8 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient, createSessionSupabaseClient } from "@/lib/supabase/server";
+import { createSessionSupabaseClient } from "@/lib/supabase/server";
+import { slugAvailable } from "@/lib/public-rpc";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { isDisposableEmail } from "@/lib/abuse";
 import { rootOrigin, tenantOrigin } from "@/lib/auth/redirects";
@@ -28,8 +29,7 @@ function field(formData: FormData, name: string) {
 }
 
 async function slugIsFree(slug: string) {
-  const { data } = await createServerSupabaseClient().rpc("slug_available", { p_slug: slug });
-  return data === true;
+  return (await slugAvailable(slug)).available;
 }
 
 export async function register(_: RegisterState, formData: FormData): Promise<RegisterState> {

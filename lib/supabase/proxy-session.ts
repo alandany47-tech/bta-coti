@@ -9,9 +9,17 @@ import { cookieDomainFor } from "@/lib/auth/cookie-domain";
  * proxy.ts — reescriba las cookies renovadas en cada request, porque un
  * Server Component no puede hacer `cookies().set()` por su cuenta. No se
  * llama para el cotizador público (que no usa Supabase Auth).
+ *
+ * `makeResponse` arma la respuesta final (`NextResponse.next` o un rewrite). Se devuelve la
+ * respuesta DESPUÉS de `getUser()`: si el token venció, `setAll` crea una respuesta nueva con las
+ * cookies rotadas, y quedarse con la del principio las perdería (el navegador conservaría un
+ * refresh token ya usado y la sesión se caería en el siguiente request).
  */
-export function refreshSession(request: NextRequest) {
-  let response = NextResponse.next({ request });
+export async function refreshSession(
+  request: NextRequest,
+  makeResponse: () => NextResponse = () => NextResponse.next({ request }),
+): Promise<NextResponse> {
+  let response = makeResponse();
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,7 +34,7 @@ export function refreshSession(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value),
           );
-          response = NextResponse.next({ request });
+          response = makeResponse();
           cookiesToSet.forEach(({ name, value, options }) =>
             response.cookies.set(name, value, options),
           );
@@ -35,5 +43,6 @@ export function refreshSession(request: NextRequest) {
     },
   );
 
-  return { supabase, response };
+  await supabase.auth.getUser();
+  return response;
 }

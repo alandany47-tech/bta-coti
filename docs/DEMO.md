@@ -26,8 +26,10 @@ principal: es la que abre `/demo/entrar`.
    `editor` de `demo-broker` — sesión compartida por todos los visitantes, con `DEMO_PASSWORD`
    (mismo valor que sembró `reset_demo_data`). Redirige a `demo-broker.<dominio>/panel`. Puede
    crear cotizaciones, clientes y editar precios.
-   - **No puede:** subir ni borrar medios (`is_demo` lo bloquea en `/api/media/sign` y
-     `DELETE /api/media/[id]`). Cambiar marca, invitar usuarios y Facturación quedan bloqueados el
+   - **No puede:** subir ni borrar medios (`is_demo` lo bloquea en `/api/media/sign`,
+     `DELETE /api/media/[id]` y, para quitar fotos o el plano, en
+     `PUT /api/[tenant]/properties/[propertyId]/images`; reordenar sí). La base lo respalda con el
+     trigger `items_demo_media_guard` (0021) para quien use la sesión directo por REST. Cambiar marca, invitar usuarios y Facturación quedan bloqueados el
      día que existan (T23/T24/T21 aún no están construidos).
    - Banner fijo en el panel: "Estás en la demo. Los cambios se borran cada noche. **Crear mi
      cuenta gratis**" (`components/demo-banner.tsx`).
@@ -55,7 +57,9 @@ principal: es la que abre `/demo/entrar`.
   cualquier tenant `demo-*`. Copia su catálogo (`items`, sin clientes ni cotizaciones) y su marca
   (logo, color) a un tenant nuevo, real, en `trialing` de 7 días, con el dueño que escribas
   (invitación si no tiene cuenta). Sirve para la reunión con un cliente que ya tienes: le muestras
-  *su* cotizador. `POST /api/admin/tenants/[tenantId]/clone` + `clone_demo_items()` (0020).
+  *su* cotizador. `POST /api/admin/tenants/[tenantId]/clone` → `clone_demo_tenant()` (0021): alta y
+  copia del catálogo en una sola transacción, así que si la copia falla (p. ej. el catálogo no cabe
+  en los topes del plan) no queda un tenant vacío con el slug ocupado, y se puede reintentar.
 
 ## 4.1 Usuarios y tenants de demo por plan y estado
 

@@ -52,11 +52,15 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
    logueado (panel y `/api/[tenant]/*`). RLS con `is_member` / `can_write` es la barrera real.
 3. Service role (`createServiceRoleClient`): SOLO `app/api/admin/*`, webhooks, cron y
    provisión de tenants, más `lib/media-store.ts` (RPC de medios, solo tras validar sesión, rol
-   editor y el HEAD real en R2). Nunca en `app/api/[tenant]/*`.
+   editor y el HEAD real en R2) y `lib/public-rpc.ts` (solo `slug_available`/`get_shared_quote`/
+   `get_quote_tenant_slug`, tras el rate limit de Upstash: la base no topa por IP al service role
+   porque desde Vercel todos comparten la IP de salida). Nunca en `app/api/[tenant]/*`.
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0020 (0019: tope de plan también al cambiar `kind`; límite por IP dentro de la
+- Migraciones 0001 → 0021 (0021: `get_quote_tenant_slug` VOLATILE —PostgREST corre STABLE en
+  solo lectura y una RPC que escribe ahí falla—, `rpc_limit_ok`, `items_demo_media_guard`,
+  `clone_demo_tenant` atómico) (0019: tope de plan también al cambiar `kind`; límite por IP dentro de la
   base para las RPC de `anon` —`check_rpc_rate_limit`/`request_ip`, respaldo de lo que hace Upstash
   si alguien llama la RPC directo; `delete_media` no borra un medio de una cotización sin vencer) (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
@@ -100,6 +104,8 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 ## Auth y registro
 
+- `refreshSession` (`lib/supabase/proxy-session.ts`) devuelve la respuesta DESPUÉS de `getUser()`
+  (con un rewrite, pásale la fábrica): si se toma antes, se pierden las cookies rotadas.
 - Login único (`/login`: contraseña o magic link) y `/auth/callback` (acepta `code` y
   `token_hash`+`type`). Cookie de sesión en el dominio raíz (`lib/auth/cookie-domain.ts`) para
   que `slug./panel` la lea. Todo `next`/redirect pasa por `safeNext` (`lib/auth/redirects.ts`).

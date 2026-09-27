@@ -716,6 +716,16 @@ export type Database = {
         Args: { p_source: string; p_target: string }
         Returns: number
       }
+      clone_demo_tenant: {
+        Args: {
+          p_name: string
+          p_owner: string
+          p_slug: string
+          p_source: string
+          p_trial_days: number
+        }
+        Returns: string
+      }
       confirm_media: {
         Args: {
           p_bytes: number
@@ -800,6 +810,10 @@ export type Database = {
         }[]
       }
       reset_demo_data: { Args: { p_password: string }; Returns: undefined }
+      rpc_limit_ok: {
+        Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
+        Returns: boolean
+      }
       set_tenant_status: {
         Args: {
           p_actor: string

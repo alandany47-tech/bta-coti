@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { slugAvailable } from "@/lib/public-rpc";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
@@ -18,10 +18,9 @@ export async function GET(request: Request) {
     return NextResponse.json({ available: false });
   }
 
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("slug_available", { p_slug: slug });
+  const { available, error } = await slugAvailable(slug);
   if (error) {
     return NextResponse.json({ available: false }, { status: 502 });
   }
-  return NextResponse.json({ available: data === true });
+  return NextResponse.json({ available });
 }
