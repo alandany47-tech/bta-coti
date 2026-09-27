@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { deleteObjects, headObject, presignPut, r2Configured } from "./r2";
+import { deleteObjects, headObject, listObjects, presignPut, r2Configured } from "./r2";
 
 beforeEach(() => {
   process.env.R2_ACCOUNT_ID = "acct123";
@@ -46,5 +46,45 @@ describe("r2", () => {
     vi.stubGlobal("fetch", fetchMock);
     await deleteObjects(["a", null, "b"]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("cuenta las llaves cuyo DELETE falló (404 no cuenta)", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 404 }))
+      .mockResolvedValueOnce(new Response(null, { status: 403 }));
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(await deleteObjects(["a", "b", "c"])).toBe(1);
+  });
+
+  it("lista una página de ListObjectsV2 con su token de continuación", async () => {
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult><Name>media-test</Name><Prefix>t/</Prefix><KeyCount>2</KeyCount><MaxKeys>1000</MaxKeys>
+<IsTruncated>true</IsTruncated><NextContinuationToken>abc&amp;123</NextContinuationToken>
+<Contents><Key>t/uno/_/a-full.webp</Key><LastModified>2026-09-01T10:00:00.000Z</LastModified><Size>120</Size></Contents>
+<Contents><Key>t/dos/_/b&amp;c-thumb.webp</Key><LastModified>2026-09-02T10:00:00.000Z</LastModified><Size>30</Size></Contents>
+</ListBucketResult>`;
+    const fetchMock = vi.fn().mockResolvedValue(new Response(xml, { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const page = await listObjects("t/", "prev-token");
+    expect(page.next).toBe("abc&123");
+    expect(page.objects).toEqual([
+      { key: "t/uno/_/a-full.webp", lastModified: new Date("2026-09-01T10:00:00.000Z"), bytes: 120 },
+      { key: "t/dos/_/b&c-thumb.webp", lastModified: new Date("2026-09-02T10:00:00.000Z"), bytes: 30 },
+    ]);
+    const requested = new URL((fetchMock.mock.calls[0][0] as Request).url);
+    expect(requested.pathname).toBe("/media-test");
+    expect(requested.searchParams.get("list-type")).toBe("2");
+    expect(requested.searchParams.get("prefix")).toBe("t/");
+    expect(requested.searchParams.get("continuation-token")).toBe("prev-token");
+  });
+
+  it("la última página no trae token", async () => {
+    const xml = "<ListBucketResult><IsTruncated>false</IsTruncated></ListBucketResult>";
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(xml, { status: 200 })));
+    expect(await listObjects("t/")).toEqual({ objects: [], next: null });
   });
 });

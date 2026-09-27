@@ -751,6 +751,13 @@ export type Database = {
         Args: { p_key: string; p_tenant: string }
         Returns: number
       }
+      expire_trials: {
+        Args: never
+        Returns: {
+          slug: string
+          tenant_id: string
+        }[]
+      }
       get_quote_tenant_slug: { Args: { p_token: string }; Returns: string }
       get_shared_quote: {
         Args: { p_token: string }
@@ -778,6 +785,7 @@ export type Database = {
       is_slug_valid: { Args: { p_slug: string }; Returns: boolean }
       is_text_flagged: { Args: { p_text: string }; Returns: boolean }
       normalize_slug: { Args: { p_text: string }; Returns: string }
+      orphan_media_keys: { Args: { p_keys: string[] }; Returns: string[] }
       provision_tenant: {
         Args: {
           p_billing_mode?: string
@@ -790,6 +798,13 @@ export type Database = {
           p_trial_days: number
         }
         Returns: string
+      }
+      purge_stale_pending_media: {
+        Args: { p_older_than?: unknown }
+        Returns: {
+          r2_key: string
+          thumb_key: string
+        }[]
       }
       request_ip: { Args: never; Returns: string }
       reserve_media: {
@@ -810,6 +825,7 @@ export type Database = {
         }[]
       }
       reset_demo_data: { Args: { p_password: string }; Returns: undefined }
+      reset_monthly_quotes: { Args: never; Returns: number }
       rpc_limit_ok: {
         Args: { p_bucket: string; p_limit: number; p_window_seconds: number }
         Returns: boolean

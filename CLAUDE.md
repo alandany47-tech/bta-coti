@@ -58,7 +58,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0021 (0021: `get_quote_tenant_slug` VOLATILE —PostgREST corre STABLE en
+- Migraciones 0001 → 0022 (0022: cron diario de T17) (0021: `get_quote_tenant_slug` VOLATILE —PostgREST corre STABLE en
   solo lectura y una RPC que escribe ahí falla—, `rpc_limit_ok`, `items_demo_media_guard`,
   `clone_demo_tenant` atómico) (0019: tope de plan también al cambiar `kind`; límite por IP dentro de la
   base para las RPC de `anon` —`check_rpc_rate_limit`/`request_ip`, respaldo de lo que hace Upstash
@@ -97,6 +97,12 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   editor de `demo-broker` (la vitrina). `is_demo` bloquea subir/borrar medios; banner y modo
   `?present=1` en `components/demo-banner.tsx`. Admin → "Clonar como prospecto" copia catálogo y
   marca a un tenant nuevo en trial (`clone_demo_items`, docs/DEMO.md).
+- Cron diario (T17): `/api/cron/daily` (`lib/daily-cron.ts`, 0022) corre 3 tareas independientes e
+  idempotentes: `expire_trials()` (trial vencido sin Stripe y no demo → `suspended`/`trial_expired`,
+  auditado, y `revalidateTag`), `reset_monthly_quotes()` y el barrido de R2 (`purge_stale_pending_media`
+  + `listObjects('t/')` → `orphan_media_keys`, solo objetos de más de 24 h). `orphan_media_keys` busca
+  referencias en TODOS los tenants (un clon de demo apunta a llaves de otro) y da por usada la miniatura
+  de un `-full.webp` usado. Todo cron valida con `isCronRequest` (`lib/cron-auth.ts`).
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La

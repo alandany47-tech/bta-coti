@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
+import { isCronRequest } from "@/lib/cron-auth";
 import { resetDemoData } from "@/lib/demo";
 
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
+  if (!isCronRequest(request)) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 

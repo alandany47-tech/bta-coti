@@ -66,7 +66,7 @@ dominio.com/registro
 | `suspended` | Página de suspendido | Solo Facturación (para pagar y reactivar) | ✖ |
 | `canceled` | 404 | Solo exportar datos y reactivar | ✖ |
 
-- **Cron diario:** los tenants `trialing` con `trial_ends_at < now()` y sin suscripción pasan a `suspended` con `status_reason = 'trial_expired'`. Se mandan correos al día 5, al día 7 y al vencer (Resend).
+- **Cron diario** (T17, `/api/cron/daily` → `expire_trials()`, 0022): los tenants `trialing` con `trial_ends_at <= now()`, sin `stripe_subscription_id` y que no son demo pasan a `suspended` con `status_reason = 'trial_expired'`, con auditoría (`tenant.status_changed`, `by: cron`) e invalidación del caché. Los correos del día 5, día 7 y al vencer (Resend) son T25.
 - Todo cambio de estado invalida el caché `tenant:<slug>` (`revalidateTag`).
 
 ## 6. Roles

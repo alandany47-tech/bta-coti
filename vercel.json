@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/cron/disposable-domains", "schedule": "0 6 * * 1" },
+    { "path": "/api/cron/daily", "schedule": "0 8 * * *" },
     { "path": "/api/cron/reset-demo", "schedule": "0 9 * * *" }
   ]
 }

@@ -1,6 +1,6 @@
 # Despliegue: Vercel, dominio y entornos (T10)
 
-Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables) y las variables de `.env.example`. Lo demás son pasos en tus cuentas, en este orden.
+Lo que ya está en el repo: `vercel.json` (crons: correos desechables semanal, `/api/cron/daily` a las 08:00 UTC —vence pruebas, reinicia `quotes_this_month`, limpia huérfanos de R2— y reset de la demo a las 09:00 UTC; todos exigen `Authorization: Bearer $CRON_SECRET`) y las variables de `.env.example`. Lo demás son pasos en tus cuentas, en este orden.
 
 ## 1. Supabase de producción (aparte del de desarrollo)
 1. Crear el proyecto Pro `cotizador-prod` (el actual es de desarrollo y cambia libremente).
@@ -67,7 +67,7 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables) 
 - `https://cualquier.ayx.solutions` responde con SSL (un slug inexistente muestra 404 de la app, no error de certificado).
 - `https://ayx.solutions/login` inicia sesión y `https://<slug>.ayx.solutions/panel` conserva la sesión (cookie `.ayx.solutions`).
 - Un preview usa el Supabase de desarrollo: `NEXT_PUBLIC_SUPABASE_URL` distinto al de producción en Settings → Environment Variables.
-- El cron aparece en Vercel → Settings → Cron Jobs y responde 200 al ejecutarlo a mano.
+- Los 3 crons aparecen en Vercel → Settings → Cron Jobs y responden 200 al ejecutarlos a mano. `/api/cron/daily` devuelve el resumen de cada tarea (`trials.expired`, `quotes.reset`, `r2.deleted`); `r2.complete: false` solo significa que el barrido de R2 se cortó a los 4 min y sigue al día siguiente. El token de R2 necesita permiso de listar (Object Read & Write lo incluye).
 
 ## 5. Ligar un dueño a un tenant existente (pilotos previos a 0004)
 Los tenants creados antes de la membresía no tienen dueño y su panel responde 404/403 hasta ligarlos. Con el usuario ya creado en Supabase Auth:
