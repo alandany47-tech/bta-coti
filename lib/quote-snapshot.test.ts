@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { calculatePricing } from "./pricing";
 import { buildQuoteSnapshot, parseQuoteSnapshot } from "./quote-snapshot";
-import { buildWhatsAppMessage } from "./whatsapp";
+import { buildWhatsAppUrl } from "./whatsapp";
+import { DEFAULT_TEMPLATES, renderMessage } from "./message-templates";
 import type { Property } from "./types";
 
 const property: Property = {
@@ -38,10 +39,12 @@ describe("snapshot de cotización", () => {
   });
 
   it("el mensaje de WhatsApp lleva el enlace de la cotización", () => {
-    const message = buildWhatsAppMessage({
-      tenantName: "Negocio", clientName: "Ana", propertyTitle: "Depto", propertyUnitNumber: "A1",
-      breakdown, installmentsCount: 12, quoteUrl: "https://ayx.solutions/q/abc",
+    const message = renderMessage(DEFAULT_TEMPLATES.broker, {
+      cliente: "Ana", negocio: "Negocio", propiedad: "Depto", unidad: "A1", plazo: "12",
+      total: "$900,000.00", enganche: "$180,000.00", mensualidad: "$60,000.00",
+      link: "https://slug.ayx.solutions/q/abc",
     });
-    expect(message).toContain("https://ayx.solutions/q/abc");
+    expect(message).toContain("https://slug.ayx.solutions/q/abc");
+    expect(buildWhatsAppUrl("55 1234 5678", message)).toContain("https://wa.me/5512345678?text=");
   });
 });

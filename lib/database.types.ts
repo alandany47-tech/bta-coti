@@ -320,6 +320,38 @@ export type Database = {
           },
         ]
       }
+      message_templates: {
+        Row: {
+          body: string
+          channel: string
+          module: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          channel?: string
+          module: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          channel?: string
+          module?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_templates_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plans: {
         Row: {
           code: string
@@ -637,6 +669,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      default_message_template: { Args: { p_module: string }; Returns: string }
       delete_media: {
         Args: { p_id: string; p_tenant: string }
         Returns: {
@@ -652,14 +685,19 @@ export type Database = {
         Args: { p_key: string; p_tenant: string }
         Returns: number
       }
+      get_quote_tenant_slug: { Args: { p_token: string }; Returns: string }
       get_shared_quote: {
         Args: { p_token: string }
         Returns: {
+          brand_color: string
           expired: boolean
           expires_at: string
           number: number
           snapshot: Json
           status: string
+          tenant_logo_url: string
+          tenant_name: string
+          tenant_slug: string
           views: number
         }[]
       }
@@ -715,6 +753,7 @@ export type Database = {
       }
       slug_available: { Args: { p_slug: string }; Returns: boolean }
       tenant_from_path: { Args: { p_name: string }; Returns: string }
+      tenant_modules: { Args: { p_tenant: string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never
