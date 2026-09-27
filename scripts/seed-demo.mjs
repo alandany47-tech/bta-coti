@@ -1,26 +1,31 @@
-// Crea (o recrea) los tenants y usuarios de demo en el proyecto de Supabase enlazado.
-//   node scripts/seed-demo.mjs               → aplica y muestra las credenciales
-//   node scripts/seed-demo.mjs --rollback    → ejecuta todo y lo revierte (validación en seco)
-//   DEMO_PASSWORD=... node scripts/seed-demo.mjs   → usa esa contraseña en vez de una aleatoria
-import { randomBytes } from "node:crypto";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+// Reset de los tenants y usuarios de demo (docs/DEMO.md §3): llama a `reset_demo_data` en la base
+// (migración 0020), la misma función que usan el cron nocturno y el botón "Resetear demo" del
+// admin. DEMO_PASSWORD debe ser la misma que usa la app en /demo/entrar (.env.local / Vercel).
+//   node scripts/seed-demo.mjs               → aplica de verdad
+//   node scripts/seed-demo.mjs --rollback    → corre todo y lo revierte, para validar sin dejar nada
+import { readFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const rollback = process.argv.includes("--rollback");
-const password = process.env.DEMO_PASSWORD ?? randomBytes(9).toString("base64url");
+const password = process.env.DEMO_PASSWORD;
+if (!password) {
+  throw new Error(
+    "Falta DEMO_PASSWORD en el entorno. Debe ser la misma contraseña que la app lee en /demo/entrar (ponla en .env.local y en Vercel).",
+  );
+}
 if (!/^[A-Za-z0-9_.-]{10,}$/.test(password)) {
   throw new Error("DEMO_PASSWORD: mínimo 10 caracteres, solo letras, números, _ . -");
 }
 
 const root = fileURLToPath(new URL("..", import.meta.url));
-let sql = readFileSync(join(root, "supabase/seed/demo.sql"), "utf8").replaceAll("__DEMO_PASSWORD__", password);
-if (rollback) sql += "\ndo $$ begin raise exception 'ROLLBACK_OK'; end $$;\n";
+let sql = `select public.reset_demo_data('${password}');\n`;
+if (rollback) sql = `begin;\n${sql}do $$ begin raise exception 'ROLLBACK_OK'; end $$;\n`;
 
 const dir = mkdtempSync(join(tmpdir(), "seed-demo-"));
-const file = join(dir, "demo.sql");
+const file = join(dir, "reset.sql");
 writeFileSync(file, sql);
 const run = spawnSync("supabase", ["db", "query", "--linked", "-f", file], { cwd: root, encoding: "utf8" });
 rmSync(dir, { recursive: true, force: true });
@@ -34,7 +39,6 @@ if (rollback ? !output.includes("ROLLBACK_OK") : run.status !== 0) {
 const accounts = JSON.parse(readFileSync(join(root, "supabase/seed/demo-accounts.json"), "utf8"));
 const domain = process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "ayx.solutions";
 console.log(rollback ? "Validación en seco correcta (todo revertido).\n" : "Demo lista.\n");
-console.log(`Contraseña de todos los usuarios: ${password}\n`);
 for (const tenant of accounts) {
   console.log(`${tenant.name}  [${tenant.plan} · ${tenant.status}]`);
   console.log(`  http://${tenant.slug}.localhost:3100  |  https://${tenant.slug}.${domain}`);

@@ -22,6 +22,10 @@ export async function POST(request: Request) {
   if (access instanceof NextResponse) return access;
   const { supabase, tenant } = access;
 
+  if (tenant.is_demo) {
+    return NextResponse.json({ error: "La demo no permite subir archivos." }, { status: 403 });
+  }
+
   const limit = await checkRateLimit("media", tenant.id);
   if (!limit.ok) {
     return NextResponse.json(

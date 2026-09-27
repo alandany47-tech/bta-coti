@@ -26,13 +26,39 @@ function toRow({ plans, usage, ...tenant }: Joined): AdminTenantRow {
  * Tenants con su plan y los conteos de `usage`. Vía service role: quien llame
  * a esto YA debe haber validado getAdminUser(); aquí no hay otra barrera.
  */
+/** Clientes reales: los tenants de demo se excluyen (docs/DEMO.md §1: fuera de los KPIs del admin). */
 export async function listTenantsForAdmin(): Promise<AdminTenantRow[]> {
   const { data, error } = await createServiceRoleClient()
     .from("tenants")
     .select(SELECT)
+    .eq("is_demo", false)
     .order("created_at", { ascending: false });
   if (error) throw new Error(`No se pudieron cargar los tenants: ${error.message}`);
   return ((data ?? []) as unknown as Joined[]).map(toRow);
+}
+
+export type AdminDemoTenantRow = { id: string; name: string; slug: string; status: string; plan_name: string };
+
+export async function listDemoTenantsForAdmin(): Promise<AdminDemoTenantRow[]> {
+  const { data, error } = await createServiceRoleClient()
+    .from("tenants")
+    .select("id, name, slug, status, plans(name)")
+    .eq("is_demo", true)
+    .order("slug", { ascending: true });
+  if (error) throw new Error(`No se pudieron cargar los tenants de demo: ${error.message}`);
+  return ((data ?? []) as unknown as { id: string; name: string; slug: string; status: string; plans: { name: string } | { name: string }[] | null }[]).map(
+    (row) => ({ id: row.id, name: row.name, slug: row.slug, status: row.status, plan_name: one(row.plans)?.name ?? "—" }),
+  );
+}
+
+/** Código del plan (para clonar un tenant de demo con el mismo plan al aprovisionar el prospecto). */
+export async function getTenantPlanCode(tenantId: string): Promise<string | null> {
+  const { data } = await createServiceRoleClient()
+    .from("tenants")
+    .select("plans(code)")
+    .eq("id", tenantId)
+    .maybeSingle();
+  return one((data as unknown as { plans: { code: string } | { code: string }[] | null } | null)?.plans ?? null)?.code ?? null;
 }
 
 export async function getTenantForAdmin(id: string): Promise<AdminTenantRow | null> {

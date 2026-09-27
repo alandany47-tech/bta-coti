@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { requireTenantAccess } from "@/lib/auth/api";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { tenantOrigin } from "@/lib/auth/redirects";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { DEFAULT_TEMPLATES, renderMessage } from "@/lib/message-templates";
@@ -29,6 +30,16 @@ export async function POST(
   const access = await requireTenantAccess(slug, "viewer");
   if (access instanceof NextResponse) return access;
   const { supabase, tenant, user } = access;
+
+  if (tenant.is_demo) {
+    const limit = await checkRateLimit("demo_quote", getClientIp(request.headers));
+    if (!limit.ok) {
+      return NextResponse.json(
+        { error: "Ya generaste varias cotizaciones de prueba. Espera un momento o crea tu cuenta gratis." },
+        { status: 429, headers: { "Retry-After": String(limit.retryAfter) } },
+      );
+    }
+  }
 
   const body = (await request.json().catch(() => ({}))) as Partial<QuoteRequestBody>;
 

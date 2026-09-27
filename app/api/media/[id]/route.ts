@@ -14,6 +14,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
   const access = await requireTenantAccess(slug, "editor");
   if (access instanceof NextResponse) return access;
 
+  if (access.tenant.is_demo) {
+    return NextResponse.json({ error: "La demo no permite borrar archivos." }, { status: 403 });
+  }
+
   const deleted = await deleteMedia(id, access.tenant.id);
   if (!deleted.ok) {
     if (deleted.code === "media_in_use") {

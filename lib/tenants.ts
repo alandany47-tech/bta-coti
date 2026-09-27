@@ -19,7 +19,7 @@ export const OPERABLE_TENANT_STATUSES = ["active", "trialing", "past_due"] as co
  * denied for column" — hay que listarlas explícitamente.
  */
 const PUBLIC_TENANT_COLUMNS =
-  "id, name, slug, logo_url, brand_color, status, trial_ends_at, created_at";
+  "id, name, slug, logo_url, brand_color, status, trial_ends_at, created_at, is_demo";
 
 /** TTL de respaldo: la invalidación real es por tag (`revalidateTag`) al cambiar el tenant. */
 const TENANT_CACHE_SECONDS = 300;
