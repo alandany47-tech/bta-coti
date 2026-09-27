@@ -15,7 +15,7 @@ export type QuoteSnapshot = {
   advisorName: string | null;
   clientName: string;
   clientPhone: string;
-  property: Property;
+  property: Property | null;
   breakdown: PricingBreakdown;
   installmentsCount: number;
   notes: string | null;
@@ -30,7 +30,7 @@ export function buildQuoteSnapshot(input: {
   advisorName: string | null;
   clientName: string;
   clientPhone: string;
-  property: Property;
+  property: Property | null;
   breakdown: PricingBreakdown;
   installmentsCount: number;
   notes: string | null;
@@ -46,7 +46,7 @@ export function buildQuoteSnapshot(input: {
     advisorName: input.advisorName,
     clientName: input.clientName,
     clientPhone: input.clientPhone,
-    property: { ...input.property, images: input.property.images.slice(0, MAX_SNAPSHOT_IMAGES) },
+    property: input.property && { ...input.property, images: input.property.images.slice(0, MAX_SNAPSHOT_IMAGES) },
     breakdown: input.breakdown,
     installmentsCount: input.installmentsCount,
     notes: input.notes,
@@ -62,8 +62,7 @@ export function parseQuoteSnapshot(value: unknown): QuoteSnapshot | null {
     s.version !== 1 ||
     typeof s.tenantName !== "string" ||
     typeof s.clientName !== "string" ||
-    !s.property ||
-    typeof s.property.title !== "string" ||
+    (s.property !== null && (!s.property || typeof s.property.title !== "string")) ||
     !s.breakdown ||
     typeof s.breakdown.effectivePrice !== "number"
   ) {
@@ -76,6 +75,6 @@ export function parseQuoteSnapshot(value: unknown): QuoteSnapshot | null {
     brandColor: s.brandColor ?? null,
     advisorName: s.advisorName ?? null,
     notes: s.notes ?? null,
-    property: { ...s.property, images: s.property.images ?? [], floor_plan_url: s.property.floor_plan_url ?? null },
+    property: s.property ? { ...s.property, images: s.property.images ?? [], floor_plan_url: s.property.floor_plan_url ?? null } : null,
   };
 }

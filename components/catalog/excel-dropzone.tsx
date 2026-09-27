@@ -29,13 +29,12 @@ export function ExcelDropzone({ tenantSlug }: { tenantSlug: string }) {
           setState({ status: "error", fileName: file.name, message: "El archivo pesa más de 5 MB." });
           return;
         }
-        const rows = (await readWorkbookRows(await file.arrayBuffer())).filter(
-          (row) => row.unit_number && row.title,
-        );
-        if (rows.length > MAX_IMPORT_ROWS) {
-          setState({ status: "error", fileName: file.name, message: `Máximo ${MAX_IMPORT_ROWS} filas por archivo.` });
+        const parsed = await readWorkbookRows(await file.arrayBuffer());
+        if (parsed.truncated) {
+          setState({ status: "error", fileName: file.name, message: `El archivo trae más de ${MAX_IMPORT_ROWS} filas. Divídelo en partes más chicas.` });
           return;
         }
+        const rows = parsed.rows.filter((row) => row.unit_number && row.title);
 
         if (rows.length === 0) {
           setState({

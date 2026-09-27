@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { CopyLinkButton } from "@/components/quote/copy-link-button";
 import { getPanelContext } from "@/lib/auth/panel";
-import { rootOrigin } from "@/lib/auth/redirects";
+import { tenantOrigin } from "@/lib/auth/redirects";
 import { formatCurrency } from "@/lib/utils";
 
 const STATUS_LABEL: Record<string, string> = {
@@ -18,7 +18,7 @@ const dateTime = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeSty
 export default async function QuotesPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params;
   const { supabase, tenant } = await getPanelContext(slug);
-  const origin = rootOrigin((await headers()).get("host") ?? "");
+  const origin = tenantOrigin(slug, (await headers()).get("host") ?? "");
 
   const { data: quotes } = await supabase
     .from("quotes")

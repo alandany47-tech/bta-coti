@@ -18,8 +18,17 @@ describe("snapshot de cotización", () => {
   });
 
   it("congela hasta 9 imágenes y los montos calculados", () => {
-    expect(snapshot.property.images).toHaveLength(9);
+    expect(snapshot.property?.images).toHaveLength(9);
     expect(snapshot.breakdown.effectivePrice).toBe(900000);
+  });
+
+  it("acepta una cotización sin propiedad (legado sin ítem)", () => {
+    const withoutProperty = buildQuoteSnapshot({
+      quoteId: "q2", tenant: { name: "Negocio", logo_url: null, brand_color: "#000000" }, advisorName: null,
+      clientName: "Ana", clientPhone: "55", property: null, breakdown, installmentsCount: 12, notes: null, createdAt: "2026-01-01T00:00:00Z",
+    });
+    expect(withoutProperty.property).toBeNull();
+    expect(parseQuoteSnapshot(JSON.parse(JSON.stringify(withoutProperty)))?.property).toBeNull();
   });
 
   it("sobrevive un ida y vuelta por JSON y rechaza formas inválidas", () => {
