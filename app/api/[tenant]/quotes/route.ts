@@ -3,6 +3,8 @@ import { randomUUID } from "node:crypto";
 import { requireTenantAccess } from "@/lib/auth/api";
 import { tenantOrigin } from "@/lib/auth/redirects";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { DEFAULT_TEMPLATES, renderMessage } from "@/lib/message-templates";
+import { formatCurrency } from "@/lib/utils";
 import { calculatePricing } from "@/lib/pricing";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 import { buildQuoteSnapshot } from "@/lib/quote-snapshot";
@@ -116,16 +118,27 @@ export async function POST(
 
   const host = request.headers.get("host") ?? "";
   const quoteUrl = `${tenantOrigin(slug, host)}/q/${created.shareToken}`;
-  const whatsappUrl = buildWhatsAppUrl({
-    tenantName: tenant.name,
-    clientName: client.full_name,
-    clientPhone: client.phone,
-    propertyTitle: property.title,
-    propertyUnitNumber: property.unit_number,
-    breakdown,
-    installmentsCount,
-    quoteUrl,
+
+  const { data: template } = await supabase
+    .from("message_templates")
+    .select("body")
+    .eq("tenant_id", tenant.id)
+    .eq("module", "broker")
+    .maybeSingle();
+  const message = renderMessage(template?.body ?? DEFAULT_TEMPLATES.broker, {
+    cliente: client.full_name,
+    negocio: tenant.name,
+    total: formatCurrency(breakdown.effectivePrice),
+    link: quoteUrl,
+    vendedor: snapshot.advisorName ?? "",
+    fecha: new Date(snapshot.createdAt).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" }),
+    propiedad: property.title,
+    unidad: property.unit_number,
+    enganche: formatCurrency(breakdown.downPaymentAmount),
+    mensualidad: formatCurrency(breakdown.monthlyPaymentAmount),
+    plazo: String(installmentsCount),
   });
+  const whatsappUrl = buildWhatsAppUrl(client.phone, message);
 
   return NextResponse.json({ quoteId, number: created.number, quoteUrl, whatsappUrl, breakdown });
 }

@@ -56,7 +56,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0017 (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
+- Migraciones 0001 → 0018 (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
   con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.
@@ -78,6 +78,11 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   crea `POST /api/[tenant]/quotes` con service role (`lib/quote-store.ts`, montos recalculados; el
   trigger `quotes_quota_guard` da número consecutivo y tope diario). `get_shared_quote(token)` (anon)
   suma vistas y marca `viewed`, y ya no devuelve el snapshot de una cotización vencida; vigencia 30 días.
+- Mensajes (T16): `message_templates` (tenant_id, module, channel='whatsapp', body ≤1000, sin HTML)
+  con una fila por módulo del plan (`provision_tenant` las crea; solo editor escribe, solo servicio
+  agrega/quita módulos). `lib/message-templates.ts` (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve
+  `{variable}` sin tocar las desconocidas; `POST /api/[tenant]/quotes` la usa para el link de wa.me.
+  Editor en Panel → Mensajes (`tenant_modules(tenant_id)` dice qué módulos mostrar).
 - Demo: `npm run seed:demo` (`scripts/seed-demo.mjs` + `supabase/seed/demo.sql`) crea 8 tenants `demo-*`
   (uno por plan/estado) con usuarios `rol.plan@demo.ayx.test`; ver `docs/DEMO.md` §4.1.
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
