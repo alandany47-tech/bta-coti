@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("slug_available", { p_slug: slug, p_ip: ip });
+  const { data, error } = await supabase.rpc("slug_available", { p_slug: slug });
   if (error) {
     return NextResponse.json({ available: false }, { status: 502 });
   }

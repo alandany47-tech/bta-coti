@@ -39,7 +39,7 @@ export default async function SharedQuotePage({
     return <p className="p-8 text-center text-ink-2">Demasiadas solicitudes. Intenta de nuevo en un momento.</p>;
   }
 
-  const { data } = await createServerSupabaseClient().rpc("get_shared_quote", { p_token: token, p_ip: ip });
+  const { data } = await createServerSupabaseClient().rpc("get_shared_quote", { p_token: token });
   const row = data?.[0];
   if (!row) notFound();
 
