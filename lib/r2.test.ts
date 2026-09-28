@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { deleteObjects, headObject, presignPut, r2Configured } from "./r2";
+import { deleteObjects, headObject, parseListObjectsPage, presignPut, r2Configured } from "./r2";
 
 beforeEach(() => {
   process.env.R2_ACCOUNT_ID = "acct123";
@@ -46,5 +46,62 @@ describe("r2", () => {
     vi.stubGlobal("fetch", fetchMock);
     await deleteObjects(["a", null, "b"]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+const LIST_PAGE = `<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult>
+  <IsTruncated>true</IsTruncated>
+  <NextContinuationToken>abc123</NextContinuationToken>
+  <Contents>
+    <Key>t/tenant-1/item-1/uuid-full.webp</Key>
+    <LastModified>2026-09-01T10:00:00.000Z</LastModified>
+    <Size>1234</Size>
+  </Contents>
+  <Contents>
+    <Key>t/tenant-1/_/uuid&amp;special-thumb.webp</Key>
+    <LastModified>2026-09-02T10:00:00.000Z</LastModified>
+    <Size>5678</Size>
+  </Contents>
+</ListBucketResult>`;
+
+const LIST_LAST_PAGE = `<?xml version="1.0" encoding="UTF-8"?>
+<ListBucketResult>
+  <IsTruncated>false</IsTruncated>
+  <Contents>
+    <Key>t/tenant-2/item-2/uuid-full.webp</Key>
+    <LastModified>2026-09-03T10:00:00.000Z</LastModified>
+  </Contents>
+</ListBucketResult>`;
+
+describe("parseListObjectsPage", () => {
+  it("saca key y lastModified de cada <Contents>", () => {
+    const { objects } = parseListObjectsPage(LIST_PAGE);
+    expect(objects).toHaveLength(2);
+    expect(objects[0].key).toBe("t/tenant-1/item-1/uuid-full.webp");
+    expect(objects[0].lastModified.toISOString()).toBe("2026-09-01T10:00:00.000Z");
+  });
+
+  it("decodifica entidades XML en la llave", () => {
+    const { objects } = parseListObjectsPage(LIST_PAGE);
+    expect(objects[1].key).toBe("t/tenant-1/_/uuid&special-thumb.webp");
+  });
+
+  it("da el token de continuación cuando IsTruncated es true", () => {
+    const { nextToken } = parseListObjectsPage(LIST_PAGE);
+    expect(nextToken).toBe("abc123");
+  });
+
+  it("token null en la última página", () => {
+    const { nextToken, objects } = parseListObjectsPage(LIST_LAST_PAGE);
+    expect(nextToken).toBeNull();
+    expect(objects).toHaveLength(1);
+  });
+
+  it("XML sin <Contents> no truena", () => {
+    expect(parseListObjectsPage("<ListBucketResult></ListBucketResult>")).toEqual({
+      objects: [],
+      nextToken: null,
+    });
   });
 });

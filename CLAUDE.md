@@ -97,6 +97,12 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   editor de `demo-broker` (la vitrina). `is_demo` bloquea subir/borrar medios; banner y modo
   `?present=1` en `components/demo-banner.tsx`. Admin → "Clonar como prospecto" copia catálogo y
   marca a un tenant nuevo en trial (`clone_demo_items`, docs/DEMO.md).
+- Cron diario (T17): `/api/cron/daily` (protegido con `CRON_SECRET`, igual que los otros cron) llama
+  `expire_trials()` (trialing + `trial_ends_at` vencido + sin `stripe_subscription_id`, sin tocar
+  `is_demo` → `suspended` con `status_reason='trial_expired'`), `reset_monthly_quote_counters()`
+  (nadie incrementa `usage.quotes_this_month` todavía; queda listo para T20/T21) y
+  `cleanupOrphanedMedia()` (`lib/media-cleanup.ts`: borra filas `media` `pending` sin confirmar y,
+  con `lib/r2.ts#listObjects`, objetos de R2 con más de una hora sin fila que los respalde).
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La
