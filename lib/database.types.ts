@@ -741,9 +741,12 @@ export type Database = {
         Args: { p_key: string; p_tenant: string }
         Returns: number
       }
-      get_quote_tenant_slug: { Args: { p_token: string }; Returns: string }
+      get_quote_tenant_slug: {
+        Args: { p_ip?: string; p_token: string }
+        Returns: string
+      }
       get_shared_quote: {
-        Args: { p_token: string }
+        Args: { p_ip?: string; p_token: string }
         Returns: {
           brand_color: string
           expired: boolean
@@ -809,7 +812,10 @@ export type Database = {
         }
         Returns: string
       }
-      slug_available: { Args: { p_slug: string }; Returns: boolean }
+      slug_available: {
+        Args: { p_ip?: string; p_slug: string }
+        Returns: boolean
+      }
       tenant_from_path: { Args: { p_name: string }; Returns: string }
       tenant_modules: { Args: { p_tenant: string }; Returns: string[] }
     }

@@ -27,14 +27,15 @@ function field(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
 }
 
-async function slugIsFree(slug: string) {
-  const { data } = await createServerSupabaseClient().rpc("slug_available", { p_slug: slug });
+async function slugIsFree(slug: string, ip: string) {
+  const { data } = await createServerSupabaseClient().rpc("slug_available", { p_slug: slug, p_ip: ip });
   return data === true;
 }
 
 export async function register(_: RegisterState, formData: FormData): Promise<RegisterState> {
   const h = await headers();
-  const limit = await checkRateLimit("register", getClientIp(h));
+  const ip = getClientIp(h);
+  const limit = await checkRateLimit("register", ip);
   if (!limit.ok) return { error: RATE_LIMITED };
 
   const parsed = validateRegistration({
@@ -51,7 +52,7 @@ export async function register(_: RegisterState, formData: FormData): Promise<Re
   if (await isDisposableEmail(email)) {
     return { errors: { email: "Usa un correo que no sea temporal o desechable." } };
   }
-  if (!(await slugIsFree(pending.slug))) return { errors: { slug: SLUG_TAKEN } };
+  if (!(await slugIsFree(pending.slug, ip))) return { errors: { slug: SLUG_TAKEN } };
 
   const captchaToken = field(formData, "cf-turnstile-response");
   if (process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY && !captchaToken) {
@@ -87,7 +88,8 @@ export async function register(_: RegisterState, formData: FormData): Promise<Re
 
 export async function chooseSlug(_: RegisterState, formData: FormData): Promise<RegisterState> {
   const h = await headers();
-  const limit = await checkRateLimit("register", getClientIp(h));
+  const ip = getClientIp(h);
+  const limit = await checkRateLimit("register", ip);
   if (!limit.ok) return { error: RATE_LIMITED };
 
   const supabase = await createSessionSupabaseClient();
@@ -102,7 +104,7 @@ export async function chooseSlug(_: RegisterState, formData: FormData): Promise<
   const slug = normalizeSlugInput(field(formData, "slug"));
   const problem = slugError(slug);
   if (problem) return { errors: { slug: problem } };
-  if (!(await slugIsFree(slug))) return { errors: { slug: SLUG_TAKEN } };
+  if (!(await slugIsFree(slug, ip))) return { errors: { slug: SLUG_TAKEN } };
 
   const result = await provisionTenant(user.id, { ...current, slug });
   const host = h.get("host") ?? "";

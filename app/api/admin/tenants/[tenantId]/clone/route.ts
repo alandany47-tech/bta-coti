@@ -80,7 +80,12 @@ export async function POST(
   }
 
   const { error: cloneError } = await supabase.rpc("clone_demo_items", { p_source: tenantId, p_target: tenantId2 });
-  if (cloneError) console.error("clone_demo_items falló", cloneError.message);
+  if (cloneError) {
+    console.error("clone_demo_items falló", cloneError.message);
+    await supabase.from("tenants").delete().eq("id", tenantId2);
+    if (invited) await supabase.auth.admin.deleteUser(ownerId);
+    return NextResponse.json({ error: "No se pudo copiar el catálogo de la demo." }, { status: 500 });
+  }
 
   await logAudit("tenant.cloned_from_demo", tenantId2, admin.id, {
     source_tenant_id: tenantId,

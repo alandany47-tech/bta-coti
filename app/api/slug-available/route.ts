@@ -5,7 +5,8 @@ import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 export const runtime = "nodejs";
 
 export async function GET(request: Request) {
-  const limit = await checkRateLimit("slug", getClientIp(request.headers));
+  const ip = getClientIp(request.headers);
+  const limit = await checkRateLimit("slug", ip);
   if (!limit.ok) {
     return NextResponse.json(
       { available: false },
@@ -19,7 +20,7 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.rpc("slug_available", { p_slug: slug });
+  const { data, error } = await supabase.rpc("slug_available", { p_slug: slug, p_ip: ip });
   if (error) {
     return NextResponse.json({ available: false }, { status: 502 });
   }
