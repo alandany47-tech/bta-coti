@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { tenantOrigin } from "@/lib/auth/redirects";
+import { getClientIp } from "@/lib/rate-limit";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 /**
@@ -9,9 +10,13 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
  */
 export default async function RootSharedQuoteRedirect({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const { data: slug } = await createServerSupabaseClient().rpc("get_quote_tenant_slug", { p_token: token });
+  const h = await headers();
+  const { data: slug } = await createServerSupabaseClient().rpc("get_quote_tenant_slug", {
+    p_token: token,
+    p_ip: getClientIp(h),
+  });
   if (!slug) notFound();
 
-  const host = (await headers()).get("host") ?? "";
+  const host = h.get("host") ?? "";
   redirect(`${tenantOrigin(slug, host)}/q/${token}`);
 }

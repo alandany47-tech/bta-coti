@@ -31,13 +31,15 @@ export default async function SharedQuotePage({
   params: Promise<{ tenant: string; token: string }>;
 }) {
   const { tenant: slug, token } = await params;
-  const host = (await headers()).get("host") ?? "";
-  const limit = await checkRateLimit("share", getClientIp(await headers()));
+  const h = await headers();
+  const host = h.get("host") ?? "";
+  const ip = getClientIp(h);
+  const limit = await checkRateLimit("share", ip);
   if (!limit.ok) {
     return <p className="p-8 text-center text-ink-2">Demasiadas solicitudes. Intenta de nuevo en un momento.</p>;
   }
 
-  const { data } = await createServerSupabaseClient().rpc("get_shared_quote", { p_token: token });
+  const { data } = await createServerSupabaseClient().rpc("get_shared_quote", { p_token: token, p_ip: ip });
   const row = data?.[0];
   if (!row) notFound();
 

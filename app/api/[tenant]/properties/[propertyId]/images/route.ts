@@ -23,6 +23,10 @@ export async function PUT(
   if (access instanceof NextResponse) return access;
   const { supabase, tenant } = access;
 
+  if (tenant.is_demo) {
+    return NextResponse.json({ error: "La demo no permite editar la galería." }, { status: 403 });
+  }
+
   const body = (await request.json().catch(() => null)) as { images?: unknown; floor_plan_url?: unknown } | null;
   const clearPlan = body?.floor_plan_url === null;
   const hasImages = Array.isArray(body?.images) && body.images.every((u) => typeof u === "string");
