@@ -741,6 +741,7 @@ export type Database = {
         Args: { p_key: string; p_tenant: string }
         Returns: number
       }
+      expire_trials: { Args: never; Returns: string[] }
       get_quote_tenant_slug: {
         Args: { p_ip?: string; p_token: string }
         Returns: string
@@ -803,6 +804,7 @@ export type Database = {
         }[]
       }
       reset_demo_data: { Args: { p_password: string }; Returns: undefined }
+      reset_monthly_quote_counters: { Args: never; Returns: number }
       set_tenant_status: {
         Args: {
           p_actor: string

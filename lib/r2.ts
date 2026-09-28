@@ -65,3 +65,60 @@ export async function deleteObjects(keys: (string | null | undefined)[]): Promis
     }),
   );
 }
+
+function decodeXmlEntities(value: string): string {
+  return value
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+export type R2ObjectInfo = { key: string; lastModified: Date };
+
+/**
+ * Saca `Key`/`LastModified` de una página de `ListObjectsV2` con regex (sin SDK de AWS en el
+ * proyecto). El bucket solo tiene las llaves que genera `reserve_media`, nunca contenido de un
+ * usuario, así que no hay XML adversarial que parsear. Exportada aparte para probarla sin red.
+ */
+export function parseListObjectsPage(xml: string): { objects: R2ObjectInfo[]; nextToken: string | null } {
+  const objects: R2ObjectInfo[] = [];
+  for (const block of xml.split("<Contents>").slice(1)) {
+    const key = block.match(/<Key>([\s\S]*?)<\/Key>/)?.[1];
+    const modified = block.match(/<LastModified>([\s\S]*?)<\/LastModified>/)?.[1];
+    if (key && modified) objects.push({ key: decodeXmlEntities(key), lastModified: new Date(modified) });
+  }
+  const nextToken = /<IsTruncated>true<\/IsTruncated>/.test(xml)
+    ? (xml.match(/<NextContinuationToken>([\s\S]*?)<\/NextContinuationToken>/)?.[1] ?? null)
+    : null;
+  return { objects, nextToken };
+}
+
+/** Lista el bucket completo, paginando `ListObjectsV2`. Para el cron de huérfanos (T17). */
+export async function listObjects(prefix = ""): Promise<R2ObjectInfo[]> {
+  const cfg = env();
+  if (!cfg) throw new Error("R2 no está configurado");
+  const client = new AwsClient({
+    accessKeyId: cfg.accessKeyId,
+    secretAccessKey: cfg.secretAccessKey,
+    service: "s3",
+    region: "auto",
+  });
+  const base = `https://${cfg.accountId}.r2.cloudflarestorage.com/${cfg.bucket}`;
+
+  const objects: R2ObjectInfo[] = [];
+  let token: string | null = null;
+  do {
+    const params = new URLSearchParams({ "list-type": "2", "max-keys": "1000" });
+    if (prefix) params.set("prefix", prefix);
+    if (token) params.set("continuation-token", token);
+    const response = await client.fetch(`${base}?${params.toString()}`, { method: "GET" });
+    if (!response.ok) throw new Error(`R2 ListObjectsV2 ${response.status}`);
+    const page = parseListObjectsPage(await response.text());
+    objects.push(...page.objects);
+    token = page.nextToken;
+  } while (token);
+
+  return objects;
+}
