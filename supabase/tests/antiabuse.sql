@@ -57,7 +57,7 @@ select lives_ok($$select public.provision_tenant('00000000-0000-0000-0000-000000
 -- privilegios
 select is(has_function_privilege('anon', 'public.is_slug_blocked(text)', 'execute'), false, 'anon no ejecuta is_slug_blocked');
 select is(has_function_privilege('authenticated', 'public.is_text_flagged(text)', 'execute'), false, 'authenticated no ejecuta is_text_flagged');
-select is(has_function_privilege('anon', 'public.slug_available(text, text)', 'execute'), true, 'anon ejecuta slug_available');
+select is(has_function_privilege('anon', 'public.slug_available(text)', 'execute'), true, 'anon ejecuta slug_available');
 select is(has_function_privilege('anon', 'public.is_disposable_email(text)', 'execute'), true, 'anon ejecuta is_disposable_email');
 select is(has_function_privilege('anon', 'public.provision_tenant(uuid,text,text,text,text,int,text,text)', 'execute'), false, 'anon no ejecuta provision_tenant');
 
