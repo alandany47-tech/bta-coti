@@ -22,7 +22,7 @@ export default async function PanelLayout({
 
   return (
     <>
-      {tenant.is_demo ? <DemoBanner /> : null}
+      {tenant.is_demo ? <DemoBanner registroUrl={`${rootOrigin(host)}/registro`} /> : null}
       <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border-subtle px-6 py-4">
         <TenantMark tenant={tenant} subtitle="Panel" />
         <nav className="flex gap-4 text-sm text-foreground-muted">

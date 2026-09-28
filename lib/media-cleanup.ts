@@ -45,9 +45,15 @@ async function fetchAllMediaKeys(supabase: ReturnType<typeof createServiceRoleCl
 
 /**
  * Limpieza diaria de medios (T17): borra filas `media` `pending` abandonadas (nadie llamó
- * `/confirm`) y, de lo que quede en R2 sin fila que lo respalde, los objetos con más de una hora.
+ * `/confirm`), reintenta los medios que se desprendieron de un ítem pero quedaron bloqueados por
+ * `media_in_use` (0024: la cotización que los bloqueaba ya pudo vencer) y, de lo que quede en R2
+ * sin fila que lo respalde, borra los objetos con más de una hora.
  */
-export async function cleanupOrphanedMedia(): Promise<{ deletedPendingRows: number; deletedObjects: number }> {
+export async function cleanupOrphanedMedia(): Promise<{
+  deletedPendingRows: number;
+  retriedDetachedRows: number;
+  deletedObjects: number;
+}> {
   const supabase = createServiceRoleClient();
 
   const { data: stale, error: staleError } = await supabase
@@ -62,7 +68,12 @@ export async function cleanupOrphanedMedia(): Promise<{ deletedPendingRows: numb
     if (error) throw error;
   }
 
-  if (!r2Configured()) return { deletedPendingRows: staleIds.length, deletedObjects: 0 };
+  const { data: retried, error: retryError } = await supabase.rpc("retry_detached_media_deletes");
+  if (retryError) throw retryError;
+
+  if (!r2Configured()) {
+    return { deletedPendingRows: staleIds.length, retriedDetachedRows: retried ?? 0, deletedObjects: 0 };
+  }
 
   const keep = await fetchAllMediaKeys(supabase);
   const objects = await listObjects();
@@ -70,5 +81,5 @@ export async function cleanupOrphanedMedia(): Promise<{ deletedPendingRows: numb
   const orphans = objects.filter((o) => !keep.has(o.key) && o.lastModified.getTime() < cutoff).map((o) => o.key);
   if (orphans.length > 0) await deleteObjects(orphans);
 
-  return { deletedPendingRows: staleIds.length, deletedObjects: orphans.length };
+  return { deletedPendingRows: staleIds.length, retriedDetachedRows: retried ?? 0, deletedObjects: orphans.length };
 }

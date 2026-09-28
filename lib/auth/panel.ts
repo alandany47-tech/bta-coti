@@ -21,13 +21,15 @@ const RANK: Record<TenantRole, number> = { viewer: 1, editor: 2, owner: 3 };
 /** Sesión + membresía del panel: sin sesión va al login; sin membresía, 404. */
 export const getPanelContext = cache(async (slug: string): Promise<PanelContext> => {
   const supabase = await createSessionSupabaseClient();
-  const host = (await headers()).get("host") ?? "";
+  const h = await headers();
+  const host = h.get("host") ?? "";
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (!user) {
-    const next = `${tenantOrigin(slug, host)}/panel`;
+    const path = h.get("x-tenant-pathname") || "/panel";
+    const next = `${tenantOrigin(slug, host)}${path}`;
     redirect(`${rootOrigin(host)}/login?next=${encodeURIComponent(next)}`);
   }
 

@@ -52,18 +52,25 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
    logueado (panel y `/api/[tenant]/*`). RLS con `is_member` / `can_write` es la barrera real.
 3. Service role (`createServiceRoleClient`): SOLO `app/api/admin/*`, webhooks, cron y
    provisión de tenants, más `lib/media-store.ts` (RPC de medios, solo tras validar sesión, rol
-   editor y el HEAD real en R2). Nunca en `app/api/[tenant]/*`.
+   editor y el HEAD real en R2), más `slug_available`/`get_shared_quote`/`get_quote_tenant_slug`
+   (`/registro`, `/api/slug-available`, `slug./q/[token]`, `/q/[token]`): son lecturas ya públicas
+   por sí mismas (RPC `security definer`) y usan la llave de servicio solo para que su propio
+   respaldo por IP (0024) no confunda la IP de salida de Vercel con la del visitante — Upstash ya
+   limita por la IP real antes de llegar aquí. Nunca en `app/api/[tenant]/*`.
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0023 (0023: revierte el `p_ip` de 0021 —como esas RPC las ejecuta `anon`,
-  quien llama por REST directo controlaba su propia llave de límite y podía saltárselo o agotarle
-  el cupo a otra IP; el límite por IP de las RPC públicas vuelve a usar solo `request_ip()`, sin
-  parámetro; `get_quote_tenant_slug` sigue sin `stable`, eso no se revirtió) (0019: tope de plan
-  también al cambiar `kind`; `check_rpc_rate_limit`/`request_ip` como respaldo del límite de
-  Upstash; `delete_media` no borra un medio de una cotización sin vencer) (0015: topes de plan por
-  kind y cotizaciones/día en triggers; `media.item_id` con FK) en `supabase/migrations`; se aplican
-  con `supabase db push --linked`.
+- Migraciones 0001 → 0024 (0024: `slug_available`/`get_shared_quote`/`get_quote_tenant_slug` se
+  saltan su propio respaldo por IP cuando `auth.role() = 'service_role'` —la app ya las llama con
+  `createServiceRoleClient()` desde estas 4 rutas específicas, porque Upstash con la IP real del
+  visitante ya las limita bien; un llamador anónimo por REST sigue viendo el límite de siempre.
+  `media.detached_at` + `mark_media_detached`/`retry_detached_media_deletes`: un medio que se
+  desprende de un ítem pero queda bloqueado por `media_in_use` ya no se pierde para siempre, el
+  cron diario (T17) lo reintenta hasta que la cotización que lo bloquea venza) (0023: revierte el
+  `p_ip` de 0021 por la razón de arriba; `get_quote_tenant_slug` sigue sin `stable`) (0019: tope de
+  plan también al cambiar `kind`; `check_rpc_rate_limit`/`request_ip` como respaldo del límite de
+  Upstash) (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en
+  `supabase/migrations`; se aplican con `supabase db push --linked`.
   Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
   con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.

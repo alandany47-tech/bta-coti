@@ -6,7 +6,7 @@ import { BRAND } from "@/lib/brand";
 import { tenantOrigin } from "@/lib/auth/redirects";
 import { parseQuoteSnapshot } from "@/lib/quote-snapshot";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -39,7 +39,9 @@ export default async function SharedQuotePage({
     return <p className="p-8 text-center text-ink-2">Demasiadas solicitudes. Intenta de nuevo en un momento.</p>;
   }
 
-  const { data } = await createServerSupabaseClient().rpc("get_shared_quote", { p_token: token });
+  // Service role a propósito: Upstash (arriba) ya limita por IP real; el límite en la base es
+  // solo el respaldo para quien se salte la app, y se salta a sí mismo con la llave de servicio.
+  const { data } = await createServiceRoleClient().rpc("get_shared_quote", { p_token: token });
   const row = data?.[0];
   if (!row) notFound();
 

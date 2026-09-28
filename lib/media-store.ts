@@ -91,6 +91,16 @@ export async function deleteMedia(id: string, tenantId: string): Promise<DeleteM
   return { ok: true, r2_key: row.r2_key, thumb_key: row.thumb_key };
 }
 
+/**
+ * Cuando `deleteMedia` falla con `media_in_use`, el medio ya se quitó de `item.images` pero se
+ * queda en la base: márcalo para que el cron diario (T17) reintente borrarlo una vez que venza la
+ * cotización que lo bloquea (`retry_detached_media_deletes`, 0024).
+ */
+export async function markMediaDetached(id: string, tenantId: string) {
+  const { error } = await createServiceRoleClient().rpc("mark_media_detached", { p_id: id, p_tenant: tenantId });
+  if (error) console.error("mark_media_detached falló", error.message);
+}
+
 export type PropertyMedia = { images: string[]; floor_plan_url: string | null };
 
 /** Liga la URL del CDN a `items.images` / `floor_plan_url` (0012) y devuelve el estado resultante. */
