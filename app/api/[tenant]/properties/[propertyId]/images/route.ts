@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireTenantAccess } from "@/lib/auth/api";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 import { isUuid, mediaUrl } from "@/lib/media";
-import { deleteMedia } from "@/lib/media-store";
+import { deleteMedia, markMediaDetached } from "@/lib/media-store";
 import { deleteObjects, r2Configured } from "@/lib/r2";
 
 /**
@@ -78,10 +78,14 @@ export async function PUT(
     for (const url of removedUrls) {
       const match = byUrl.get(url);
       if (!match) continue; // URL legada de Storage: no hay fila en `media` que limpiar.
-      // Si la referencia una cotización enviada y vigente (media_in_use), se deja: el archivo ya no
-      // aparece en la galería, pero la cotización compartida no debe perder su imagen.
       const deleted = await deleteMedia(match.id, tenant.id);
-      if (deleted.ok && r2Configured()) await deleteObjects([deleted.r2_key, deleted.thumb_key]);
+      if (deleted.ok && r2Configured()) {
+        await deleteObjects([deleted.r2_key, deleted.thumb_key]);
+      } else if (!deleted.ok && deleted.code === "media_in_use") {
+        // La cotización enviada y vigente que la referencia no debe perder su imagen: se deja el
+        // medio, pero marcado para que el cron diario (T17) reintente borrarlo cuando venza.
+        await markMediaDetached(match.id, tenant.id);
+      }
     }
   }
 

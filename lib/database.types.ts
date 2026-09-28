@@ -259,6 +259,7 @@ export type Database = {
           bytes: number
           content_type: string
           created_at: string
+          detached_at: string | null
           height: number | null
           id: string
           item_id: string | null
@@ -275,6 +276,7 @@ export type Database = {
           bytes: number
           content_type: string
           created_at?: string
+          detached_at?: string | null
           height?: number | null
           id?: string
           item_id?: string | null
@@ -291,6 +293,7 @@ export type Database = {
           bytes?: number
           content_type?: string
           created_at?: string
+          detached_at?: string | null
           height?: number | null
           id?: string
           item_id?: string | null
@@ -768,6 +771,10 @@ export type Database = {
       is_slug_reserved: { Args: { p_slug: string }; Returns: boolean }
       is_slug_valid: { Args: { p_slug: string }; Returns: boolean }
       is_text_flagged: { Args: { p_text: string }; Returns: boolean }
+      mark_media_detached: {
+        Args: { p_id: string; p_tenant: string }
+        Returns: undefined
+      }
       normalize_slug: { Args: { p_text: string }; Returns: string }
       provision_tenant: {
         Args: {
@@ -802,6 +809,7 @@ export type Database = {
       }
       reset_demo_data: { Args: { p_password: string }; Returns: undefined }
       reset_monthly_quote_counters: { Args: never; Returns: number }
+      retry_detached_media_deletes: { Args: never; Returns: number }
       set_tenant_status: {
         Args: {
           p_actor: string

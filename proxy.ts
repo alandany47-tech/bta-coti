@@ -67,7 +67,11 @@ export async function proxy(request: NextRequest) {
   // aquí y las cookies renovadas viajan en la respuesta del rewrite.
   if (url.pathname === "/panel" || url.pathname.startsWith("/panel/")) {
     const { response: sessionResponse } = await refreshSession(request);
-    const rewrite = NextResponse.rewrite(rewrittenUrl, { request });
+    // La ruta original (antes del rewrite a /[tenant]/panel/...) para que, si no hay sesión,
+    // getPanelContext pueda mandar de vuelta a la página exacta que se pidió (lib/auth/panel.ts).
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-tenant-pathname", url.pathname + url.search);
+    const rewrite = NextResponse.rewrite(rewrittenUrl, { request: { headers: requestHeaders } });
     sessionResponse.cookies.getAll().forEach((cookie) => rewrite.cookies.set(cookie));
     return rewrite;
   }

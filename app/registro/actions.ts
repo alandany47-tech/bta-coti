@@ -2,7 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { createServerSupabaseClient, createSessionSupabaseClient } from "@/lib/supabase/server";
+import { createServiceRoleClient, createSessionSupabaseClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { isDisposableEmail } from "@/lib/abuse";
 import { rootOrigin, tenantOrigin } from "@/lib/auth/redirects";
@@ -27,8 +27,13 @@ function field(formData: FormData, name: string) {
   return String(formData.get(name) ?? "");
 }
 
+/**
+ * Service role a propósito: la app ya limita esto con Upstash e IP real (lib/rate-limit.ts); el
+ * límite en la base con `request_ip()` es solo el respaldo para quien se salte la app, y ese
+ * respaldo se salta a sí mismo cuando ve la llave de servicio (supabase/migrations/0024).
+ */
 async function slugIsFree(slug: string) {
-  const { data } = await createServerSupabaseClient().rpc("slug_available", { p_slug: slug });
+  const { data } = await createServiceRoleClient().rpc("slug_available", { p_slug: slug });
   return data === true;
 }
 
