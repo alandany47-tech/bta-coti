@@ -104,6 +104,13 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   (nadie incrementa `usage.quotes_this_month` todavía; queda listo para T20/T21) y
   `cleanupOrphanedMedia()` (`lib/media-cleanup.ts`: borra filas `media` `pending` sin confirmar y,
   con `lib/r2.ts#listObjects`, objetos de R2 con más de una hora sin fila que los respalde).
+- Monitoreo (T19): `GET /api/health` (200 fijo) y `GET /api/health/deep` (header `x-health-token` =
+  `HEALTH_CHECK_TOKEN`; Supabase + `HEAD` a `R2_HEALTH_KEY` en R2, se salta si R2 no está
+  configurado; Stripe queda pendiente de T20). Sentry (`@sentry/nextjs`) en `instrumentation.ts` +
+  `instrumentation-client.ts` + `sentry.{server,edge}.config.ts`; sin `SENTRY_DSN`/
+  `NEXT_PUBLIC_SENTRY_DSN` no manda nada. `lib/heartbeat.ts#pingHeartbeat` en los tres cron
+  (`HEARTBEAT_URL_DAILY`/`_RESET_DEMO`/`_DISPOSABLE_DOMAINS`, para Better Stack); sin URL no hace
+  nada. `withSentryConfig` va en `@sentry/nextjs/config`, no en el paquete raíz (cambió en v11).
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La

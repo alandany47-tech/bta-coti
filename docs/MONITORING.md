@@ -7,7 +7,7 @@ Objetivo: enterarte antes que el cliente. Todo con planes gratuitos.
 | Ruta | Revisa | Respuesta |
 |---|---|---|
 | `GET /api/health` | La app responde | 200 `{ok:true, version}` |
-| `GET /api/health/deep` (header `x-health-token`) | Consulta a Supabase (`select 1`), `HEAD` a un objeto fijo en R2, lectura de Stripe (`balance.retrieve`, con caché de 5 min) | 200 si todo está bien; 503 con el detalle si algo falla |
+| `GET /api/health/deep` (header `x-health-token`) | Consulta a Supabase, `HEAD` a un objeto fijo en R2 (se salta si R2 no está configurado); Stripe (`balance.retrieve`, con caché de 5 min) queda pendiente de T20 | 200 si todo está bien; 503 con el detalle si algo falla |
 
 ## 2. Uptime (Better Stack Uptime, gratis: 10 monitores, cada 3 minutos)
 

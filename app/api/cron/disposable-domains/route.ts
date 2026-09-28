@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { syncDisposableDomains } from "@/lib/disposable-domains";
+import { pingHeartbeat } from "@/lib/heartbeat";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,7 @@ export async function GET(request: Request) {
 
   try {
     const total = await syncDisposableDomains(createServiceRoleClient());
+    await pingHeartbeat(process.env.HEARTBEAT_URL_DISPOSABLE_DOMAINS);
     return NextResponse.json({ ok: true, total });
   } catch (error) {
     console.error("cron disposable-domains falló", error);

@@ -27,7 +27,7 @@
 | T14 | `properties` → `items` (kind = property, attrs) + adaptar selector, calculadora e import de Excel (cambiar `xlsx` por `exceljs` o el build CDN de SheetJS) | CC | T01 | El cotizador broker funciona igual. Sin advisory de `xlsx` en `npm audit` | 🟨 |
 | T15 | Cotizaciones: `snapshot`, `share_token`, página `/q/[token]`, PDF en el navegador, contador de vistas. Retirar el PDF del servidor y el bucket `quotes` | CC | T14 | Editar un ítem no cambia cotizaciones ya enviadas. El PDF se descarga en móvil | 🟨 |
 | T16 | Mensajes de WhatsApp configurables: `message_templates`, editor con chips y vista previa, `renderMessage()` | CX | T01 | Variables reemplazadas. "Restaurar original" funciona. Máximo 1,000 caracteres | ✅ |
-| T19 | Monitoreo: `/api/health` y `/deep`, Sentry, heartbeats de cron y webhooks, alertas de negocio (ver `MONITORING.md`) | CX | T12 | Una llave rota de Supabase dispara la alerta en menos de 10 minutos | ⬜ |
+| T19 | Monitoreo: `/api/health` y `/deep`, Sentry, heartbeats de cron y webhooks, alertas de negocio (ver `MONITORING.md`) | CX | T12 | Una llave rota de Supabase dispara la alerta en menos de 10 minutos | 🟨 |
 | T26 | Demo: `is_demo`, seeds, `/demo/entrar`, restricciones, reset nocturno, clonar demo para prospecto (ver `DEMO.md`) | CC | T15, T16 | Demo usable sin registro. El reset deja los datos iguales. Clonar crea `prospecto-x` en trial | 🟨 |
 | T17 | Cron de Vercel diario: vence pruebas, limpia huérfanos de R2, resetea `quotes_this_month` | CX | T12 | Idempotente. Protegido con `CRON_SECRET` | ✅ |
 

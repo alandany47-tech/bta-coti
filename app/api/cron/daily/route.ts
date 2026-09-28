@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { expireTrials } from "@/lib/trials";
 import { resetMonthlyQuoteCounters } from "@/lib/monthly-usage";
 import { cleanupOrphanedMedia } from "@/lib/media-cleanup";
+import { pingHeartbeat } from "@/lib/heartbeat";
 
 export const runtime = "nodejs";
 
@@ -16,6 +17,7 @@ export async function GET(request: Request) {
     const expiredTrials = await expireTrials();
     const resetUsageRows = await resetMonthlyQuoteCounters();
     const media = await cleanupOrphanedMedia();
+    await pingHeartbeat(process.env.HEARTBEAT_URL_DAILY);
     return NextResponse.json({ ok: true, expiredTrials: expiredTrials.length, resetUsageRows, ...media });
   } catch (error) {
     console.error("cron daily falló", error);

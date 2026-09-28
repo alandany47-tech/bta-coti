@@ -22,6 +22,10 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables, 
 | `DEMO_PASSWORD` | la misma que uses en `DEMO_PASSWORD=... npm run seed:demo` | otro valor de prueba |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY` | widget prod | clave de prueba de Cloudflare |
 | `NEXT_PUBLIC_SUPPORT_WHATSAPP` | número de soporte | — |
+| `SENTRY_DSN`, `NEXT_PUBLIC_SENTRY_DSN` | del proyecto en Sentry | mismo o vacío |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | solo para que el build suba source maps | — |
+| `HEALTH_CHECK_TOKEN` | valor aleatorio largo | otro valor |
+| `HEARTBEAT_URL_DAILY`, `HEARTBEAT_URL_RESET_DEMO`, `HEARTBEAT_URL_DISPOSABLE_DOMAINS` | URL de cada heartbeat de Better Stack | — |
 
 3. La service role nunca lleva prefijo `NEXT_PUBLIC_`.
 
@@ -31,6 +35,14 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables, 
 3. CORS del bucket: permitir `PUT` y `GET` desde `https://*.ayx.solutions` (y `http://*.localhost:3100` en desarrollo) con el header `Content-Type`: la página compartida `slug.ayx.solutions/q/<token>` baja las imágenes con `fetch` para armar el PDF en el navegador, así que el `GET` también necesita el comodín de subdominio (no solo la raíz).
 4. Variables: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` y, si el dominio no es `media.<raíz>`, `NEXT_PUBLIC_MEDIA_BASE_URL`.
 5. Alerta de facturación de R2 en $5 USD (ABUSE-AND-LIMITS §1).
+
+## 2c. Sentry, salud y heartbeats (T19, docs/MONITORING.md)
+1. Crear un proyecto de Next.js en [sentry.io](https://sentry.io) (plan gratis) → copiar el DSN a `SENTRY_DSN` y `NEXT_PUBLIC_SENTRY_DSN` (mismo valor; el DSN es público por diseño).
+2. Settings → Auth Tokens: crear uno con scope `project:releases` → `SENTRY_AUTH_TOKEN`; el slug de la organización y del proyecto van en `SENTRY_ORG`/`SENTRY_PROJECT`. Sin esto el build sigue funcionando, solo no sube source maps.
+3. `HEALTH_CHECK_TOKEN`: cualquier valor largo y aleatorio. Better Stack → Monitors → HTTP(S) con método GET, header `x-health-token: <ese valor>`, apuntando a `https://ayx.solutions/api/health/deep`.
+4. Sube una vez cualquier archivo a R2 con la llave `health/ping.txt` (o la que pongas en `R2_HEALTH_KEY`): `/api/health/deep` le hace `HEAD` para confirmar que el bucket responde.
+5. Better Stack → Monitors → Heartbeats: crea uno por cada cron (`daily`, `reset-demo`, `disposable-domains`) y pon sus URLs en `HEARTBEAT_URL_DAILY`, `HEARTBEAT_URL_RESET_DEMO`, `HEARTBEAT_URL_DISPOSABLE_DOMAINS`. Alerta si no llega uno en el intervalo esperado (26 h para `daily`, por ejemplo).
+6. El resto de `docs/MONITORING.md` (Stripe en `/api/health/deep`, heartbeat de webhooks, alertas de negocio por correo) espera a T20/T25.
 
 ## 3. Dominio (Cloudflare, DNS-only)
 1. Comprar `ayx.solutions` en Cloudflare Registrar (o apuntar sus nameservers a Cloudflare).
