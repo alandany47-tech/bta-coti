@@ -124,13 +124,23 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   (`HEARTBEAT_URL_DAILY`/`_RESET_DEMO`/`_DISPOSABLE_DOMAINS`, para Better Stack); sin URL no hace
   nada. `withSentryConfig` va en `@sentry/nextjs/config`, no en el paquete raíz (cambió en v11).
 - Stripe (T20, `docs/STRIPE.md`): `lib/stripe.ts` (`getStripe`/`stripeConfigured`, sin `apiVersion`
-  fija — usa la que trae el SDK instalado). `npm run stripe:sync` (`lib/stripe-sync.ts`) crea/actualiza
-  Products+Prices por `lookup_key` y guarda los IDs en `plans`. `POST /api/[tenant]/billing/{checkout,portal}`
-  usan el cliente de sesión (nunca service role ahí); `checkout` bloquea un downgrade con
-  `plan_usage_overages` si el uso ya no cabe. `/api/stripe/webhook` (`lib/stripe-webhook.ts`) verifica
-  firma y despacha con idempotencia por `stripe_events`. Pendiente antes de cerrarlo: `days_until_due`
-  de OXXO/SPEI contra Stripe real (Checkout no lo acepta directo) y el correo de `invoice.finalized`/
-  alerta de disputas (sin proveedor de correo transaccional todavía; por ahora solo `audit_log` + log).
+  fija). `npm run stripe:sync` (`lib/stripe-sync.ts`) crea/actualiza Products+Prices por `lookup_key`.
+  `POST /api/[tenant]/billing/{checkout,portal}` (`anyStatus: true` en `requireTenantAccess`: un
+  tenant suspended/canceled justo necesita pagar) usan el cliente de sesión (nunca service role ahí);
+  `checkout` rechaza si ya hay `stripe_subscription_id` (cambios de plan van por el Portal) y bloquea
+  un downgrade con `plan_usage_overages`. **OXXO no sirve para cobro recurrente** (verificado contra
+  Stripe real: lo rechaza en Checkout y en la API de suscripciones) — solo tarjeta (Checkout) y SPEI
+  (`stripe.subscriptions.create` con `send_invoice` + `invoices.finalizeInvoice`, nunca Checkout, que
+  también rechaza `customer_balance` en `mode: "subscription"`). `/api/stripe/webhook`
+  (`lib/stripe-webhook.ts`): idempotencia por `stripe_events` marcada DESPUÉS de los efectos (no
+  antes, o un reintento de Stripe chocaría con la PK sin completar lo que faltó);
+  `checkout.session.completed` solo activa si `payment_status === "paid"`; `setTenantStatus` revienta
+  el webhook si falla (para que Stripe reintente en vez de responder 200 desincronizado);
+  `customer.subscription.created/updated` es lo único que liga `stripe_customer_id`/`plan_id`
+  (dispara para Checkout y para SPEI directo por igual). `expire_past_due()` en el cron diario
+  deriva la suspensión por 7 días en `past_due` de `status_changed_at` (Stripe no manda ese webhook).
+  Pendiente antes de cerrarlo: proveedor de correo transaccional para `invoice.finalized`/disputas
+  (por ahora solo `audit_log` + log).
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La

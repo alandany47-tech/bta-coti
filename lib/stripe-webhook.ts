@@ -13,12 +13,27 @@ function customerId(customer: string | Stripe.Customer | Stripe.DeletedCustomer 
   return typeof customer === "string" ? customer : customer.id;
 }
 
-/** `true` si ya se procesó este evento (idempotencia, docs/STRIPE.md §6): inserta y detecta el choque de PK. */
+/**
+ * Idempotencia (docs/STRIPE.md §6): se revisa antes de procesar y se marca DESPUÉS de procesar con
+ * éxito (`markProcessed`, al final de `handleStripeEvent`) — nunca antes. Si se marcara antes y el
+ * procesamiento reventara a la mitad, un reintento de Stripe chocaría con la primary key y saldría
+ * sin volver a intentar los efectos que sí faltaban.
+ */
 async function alreadyProcessed(supabase: SupabaseClient, event: Stripe.Event): Promise<boolean> {
+  const { data } = await supabase.from("stripe_events").select("id").eq("id", event.id).maybeSingle();
+  return Boolean(data);
+}
+
+async function markProcessed(supabase: SupabaseClient, event: Stripe.Event): Promise<void> {
   const { error } = await supabase.from("stripe_events").insert({ id: event.id, type: event.type });
-  if (!error) return false;
-  if (error.code === "23505") return true;
-  throw error;
+  if (error && error.code !== "23505") throw error;
+}
+
+/** Si `setTenantStatus` falla por un error transitorio, hay que reventar para que Stripe reintente
+ *  el webhook — devolver 200 con el tenant en el estado viejo desincroniza la cuenta en silencio. */
+async function requireStatusChange(...args: Parameters<typeof setTenantStatus>): Promise<void> {
+  const result = await setTenantStatus(...args);
+  if (!result.ok) throw new Error(`setTenantStatus falló (${result.code}) para ${args[0]}`);
 }
 
 async function planIdForPrice(supabase: SupabaseClient, priceId: string): Promise<string | null> {
@@ -30,6 +45,13 @@ async function planIdForPrice(supabase: SupabaseClient, priceId: string): Promis
   return (data as { id: string } | null)?.id ?? null;
 }
 
+/**
+ * `customer.subscription.created`/`updated` es lo único que dispara tanto para Checkout (tarjeta)
+ * como para la suscripción creada directo con la API (SPEI, `app/api/[tenant]/billing/checkout`
+ * no puede usar Checkout Sessions para SPEI/OXXO: Stripe las rechaza en `mode: "subscription"`),
+ * así que aquí es donde se liga `stripe_customer_id`/`plan_id` al tenant, no en
+ * `checkout.session.completed` (que para SPEI ni existe).
+ */
 async function upsertSubscription(supabase: SupabaseClient, tenantId: string, sub: Stripe.Subscription) {
   const item = sub.items.data[0];
   const { error } = await supabase.from("subscriptions").upsert(
@@ -49,10 +71,12 @@ async function upsertSubscription(supabase: SupabaseClient, tenantId: string, su
   if (error) throw error;
 
   const planId = await planIdForPrice(supabase, item.price.id);
-  if (planId) {
-    const { error: planError } = await supabase.from("tenants").update({ plan_id: planId }).eq("id", tenantId);
-    if (planError) throw planError;
-  }
+  const patch: Record<string, string> = { stripe_subscription_id: sub.id };
+  const custId = customerId(sub.customer);
+  if (custId) patch.stripe_customer_id = custId;
+  if (planId) patch.plan_id = planId;
+  const { error: tenantError } = await supabase.from("tenants").update(patch).eq("id", tenantId);
+  if (tenantError) throw tenantError;
 }
 
 /**
@@ -85,19 +109,15 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
 
   switch (event.type) {
     case "checkout.session.completed": {
+      // Ligar customer/subscription al tenant lo hace `upsertSubscription` (dispara con
+      // customer.subscription.created para toda suscripción, venga de Checkout o no). Esta rama
+      // solo activa — y solo si ya se pagó: para medios asíncronos `payment_status` puede seguir
+      // `unpaid` aquí (la instrucción de pago se mandó, pero nadie pagó todavía); activar de una vez
+      // daría acceso pagado antes de que el dinero llegue. `invoice.paid` activa cuando sí se pagó.
       const session = event.data.object as Stripe.Checkout.Session;
       const tenantId = session.client_reference_id ?? tenantIdFromMetadata(session.metadata);
-      if (!tenantId) break;
-      const patch: Record<string, string> = {};
-      const custId = customerId(session.customer);
-      if (custId) patch.stripe_customer_id = custId;
-      const subId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
-      if (subId) patch.stripe_subscription_id = subId;
-      if (Object.keys(patch).length > 0) {
-        const { error } = await supabase.from("tenants").update(patch).eq("id", tenantId);
-        if (error) throw error;
-      }
-      await setTenantStatus(tenantId, "active", null, null);
+      if (!tenantId || session.payment_status !== "paid") break;
+      await requireStatusChange(tenantId, "active", null, null);
       break;
     }
 
@@ -116,7 +136,7 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
       if (!tenantId) break;
       const { error } = await supabase.from("subscriptions").update({ status: "canceled" }).eq("stripe_subscription_id", sub.id);
       if (error) throw error;
-      await setTenantStatus(tenantId, "canceled", "subscription_deleted", null);
+      await requireStatusChange(tenantId, "canceled", "subscription_deleted", null);
       break;
     }
 
@@ -124,7 +144,7 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
       const invoice = event.data.object as Stripe.Invoice;
       const tenantId = await tenantIdFromSubscriptionId(supabase, invoiceSubscriptionId(invoice));
       if (!tenantId) break;
-      await setTenantStatus(tenantId, "active", null, null);
+      await requireStatusChange(tenantId, "active", null, null);
       break;
     }
 
@@ -132,12 +152,12 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
       const invoice = event.data.object as Stripe.Invoice;
       const tenantId = await tenantIdFromSubscriptionId(supabase, invoiceSubscriptionId(invoice));
       if (!tenantId) break;
-      await setTenantStatus(tenantId, "past_due", "payment_failed", null);
+      await requireStatusChange(tenantId, "past_due", "payment_failed", null);
       break;
     }
 
     case "invoice.finalized": {
-      // OXXO/SPEI: correo propio con la ficha/CLABE (docs/STRIPE.md §6). No hay proveedor de correo
+      // SPEI: correo propio con la CLABE (docs/STRIPE.md §6). No hay proveedor de correo
       // transaccional en el proyecto todavía (pendiente decidir antes de live); por ahora solo se
       // registra que el evento llegó, sin bloquear la idempotencia de los demás.
       console.warn(`stripe webhook: invoice.finalized ${event.id} sin envío de correo (infra pendiente)`);
@@ -146,8 +166,6 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
 
     case "charge.dispute.created": {
       const dispute = event.data.object as Stripe.Dispute;
-      const subId = null; // una disputa no trae subscription; se identifica por charge/customer
-      void subId;
       console.warn(`stripe webhook: charge.dispute.created ${event.id} sin alerta por correo/WhatsApp (infra pendiente)`);
       await logAudit("stripe.dispute_created", null, null, { dispute_id: dispute.id, amount: dispute.amount, charge: dispute.charge });
       break;
@@ -156,4 +174,6 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
     default:
       break;
   }
+
+  await markProcessed(supabase, event);
 }

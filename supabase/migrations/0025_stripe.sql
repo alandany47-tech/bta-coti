@@ -12,7 +12,7 @@
 
 alter table public.tenants add column status_changed_at timestamptz not null default now();
 
-grant select (plan_id, stripe_customer_id) on public.tenants to authenticated;
+grant select (plan_id, stripe_customer_id, stripe_subscription_id) on public.tenants to authenticated;
 
 create or replace function public.set_tenant_status(
   p_tenant uuid,

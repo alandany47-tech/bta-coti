@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { requireTenantAccess } from "@/lib/auth/api";
 import { isUuid, MEDIA_LIMITS, mediaUrl } from "@/lib/media";
 import { deleteObjects, headObject, r2Configured } from "@/lib/r2";
-import { attachMediaUrl, confirmMedia, deleteMedia, getPendingMedia, listItemMedia } from "@/lib/media-store";
+import { attachMediaUrl, confirmMedia, deleteMedia, getPendingMedia, listItemMedia, markMediaDetached } from "@/lib/media-store";
 
 export const runtime = "nodejs";
 
@@ -68,11 +68,14 @@ export async function POST(request: Request) {
   }
 
   // Un plano nuevo reemplaza al anterior: se borra el archivo viejo para no pagar almacenamiento,
-  // salvo que una cotización enviada y vigente todavía lo referencie (media_in_use).
+  // salvo que una cotización enviada y vigente todavía lo referencie (media_in_use) — ahí se marca
+  // desprendido para que el cron diario (T17/T20) lo reintente cuando esa cotización venza; si no,
+  // la fila se queda "ready" para siempre y sigue contando en la cuota sin que nada la revise.
   if (media.kind === "plan" && media.item_id) {
     for (const old of await listItemMedia(tenant.id, media.item_id, "plan", media.id)) {
       const deleted = await deleteMedia(old.id, tenant.id);
       if (deleted.ok) await deleteObjects([deleted.r2_key, deleted.thumb_key]);
+      else if (deleted.code === "media_in_use") await markMediaDetached(old.id, tenant.id);
     }
   }
 

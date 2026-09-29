@@ -10,7 +10,8 @@ import { getStripe, stripeConfigured } from "@/lib/stripe";
  */
 export async function POST(request: Request, { params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params;
-  const access = await requireTenantAccess(slug, "owner");
+  // anyStatus: un tenant suspended/canceled es justo el que necesita pagar para reactivarse.
+  const access = await requireTenantAccess(slug, "owner", { anyStatus: true });
   if (access instanceof NextResponse) return access;
   const { supabase, tenant } = access;
 

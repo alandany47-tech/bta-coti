@@ -1,8 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type Stripe from "stripe";
 
+type StatusResult = { ok: true; slug: string } | { ok: false; code: "reason_required" | "not_found" | "error" };
+
 const { setTenantStatus, logAudit } = vi.hoisted(() => ({
-  setTenantStatus: vi.fn(async () => ({ ok: true, slug: "tenant-x" })),
+  setTenantStatus: vi.fn(async (): Promise<StatusResult> => ({ ok: true, slug: "tenant-x" })),
   logAudit: vi.fn(async () => {}),
 }));
 vi.mock("@/lib/admin-status", () => ({ setTenantStatus, logAudit }));
@@ -76,25 +78,21 @@ describe("handleStripeEvent", () => {
     expect(setTenantStatus).not.toHaveBeenCalled();
   });
 
-  it("checkout.session.completed liga customer/subscription y activa el tenant", async () => {
+  it("checkout.session.completed activa el tenant solo si ya se pagó", async () => {
     const supabase = fakeSupabase({ tenants: [{ id: "tenant-1" }] });
-    const session = {
-      client_reference_id: "tenant-1",
-      customer: "cus_1",
-      subscription: "sub_1",
-      metadata: {},
-    };
+    const session = { client_reference_id: "tenant-1", payment_status: "paid", metadata: {} };
     await handleStripeEvent(fakeEvent("evt_2", "checkout.session.completed", session), supabase);
-
-    expect((supabase as never as { tables: { tenants: Row[] } }).tables.tenants[0]).toMatchObject({
-      id: "tenant-1",
-      stripe_customer_id: "cus_1",
-      stripe_subscription_id: "sub_1",
-    });
     expect(setTenantStatus).toHaveBeenCalledWith("tenant-1", "active", null, null);
   });
 
-  it("customer.subscription.updated guarda la fila y actualiza el plan del tenant", async () => {
+  it("checkout.session.completed NO activa si el pago sigue pendiente (OXXO/SPEI vía voucher)", async () => {
+    const supabase = fakeSupabase({ tenants: [{ id: "tenant-1" }] });
+    const session = { client_reference_id: "tenant-1", payment_status: "unpaid", metadata: {} };
+    await handleStripeEvent(fakeEvent("evt_2b", "checkout.session.completed", session), supabase);
+    expect(setTenantStatus).not.toHaveBeenCalled();
+  });
+
+  it("customer.subscription.updated guarda la fila y liga customer/plan al tenant (Checkout o SPEI directo)", async () => {
     const supabase = fakeSupabase({
       plans: [{ id: "plan-esencial", stripe_price_month: "price_esencial_month", stripe_price_year: "price_esencial_year" }],
       tenants: [{ id: "tenant-1" }],
@@ -112,7 +110,7 @@ describe("handleStripeEvent", () => {
 
     const tables = (supabase as never as { tables: { subscriptions: Row[]; tenants: Row[] } }).tables;
     expect(tables.subscriptions[0]).toMatchObject({ tenant_id: "tenant-1", stripe_subscription_id: "sub_1", status: "active" });
-    expect(tables.tenants[0]).toMatchObject({ plan_id: "plan-esencial" });
+    expect(tables.tenants[0]).toMatchObject({ plan_id: "plan-esencial", stripe_customer_id: "cus_1", stripe_subscription_id: "sub_1" });
   });
 
   it("customer.subscription.deleted cancela la suscripción y el tenant", async () => {
@@ -144,5 +142,28 @@ describe("handleStripeEvent", () => {
     const dispute = { id: "dp_1", amount: 50000, charge: "ch_1" };
     await handleStripeEvent(fakeEvent("evt_7", "charge.dispute.created", dispute), supabase);
     expect(logAudit).toHaveBeenCalledWith("stripe.dispute_created", null, null, { dispute_id: "dp_1", amount: 50000, charge: "ch_1" });
+  });
+
+  it("solo marca el evento como procesado DESPUÉS de aplicar sus efectos, y no antes", async () => {
+    const supabase = fakeSupabase({ tenants: [{ id: "tenant-1" }] });
+    const session = { client_reference_id: "tenant-1", payment_status: "paid", metadata: {} };
+    const tables = (supabase as never as { tables: { stripe_events: Row[] } }).tables;
+
+    await handleStripeEvent(fakeEvent("evt_8", "checkout.session.completed", session), supabase);
+    expect(tables.stripe_events).toHaveLength(1);
+    expect(setTenantStatus).toHaveBeenCalledTimes(1);
+
+    // un reintento de Stripe con el mismo evento ya no vuelve a procesar
+    await handleStripeEvent(fakeEvent("evt_8", "checkout.session.completed", session), supabase);
+    expect(setTenantStatus).toHaveBeenCalledTimes(1);
+  });
+
+  it("si setTenantStatus falla, revienta y NO marca el evento como procesado (para que Stripe reintente)", async () => {
+    setTenantStatus.mockResolvedValueOnce({ ok: false, code: "error" });
+    const supabase = fakeSupabase({ tenants: [{ id: "tenant-1" }] });
+    const session = { client_reference_id: "tenant-1", payment_status: "paid", metadata: {} };
+
+    await expect(handleStripeEvent(fakeEvent("evt_9", "checkout.session.completed", session), supabase)).rejects.toThrow();
+    expect((supabase as never as { tables: { stripe_events: Row[] } }).tables.stripe_events).toHaveLength(0);
   });
 });
