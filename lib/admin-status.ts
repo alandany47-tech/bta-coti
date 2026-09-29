@@ -10,12 +10,16 @@ export const STATUSES_REQUIRING_REASON: TenantStatus[] = ["suspended", "canceled
 
 export type StatusResult = { ok: true; slug: string } | { ok: false; code: "reason_required" | "not_found" | "error" };
 
-/** Único camino para cambiar el estado de un tenant: actualiza, audita e invalida el caché. */
+/**
+ * Único camino para cambiar el estado de un tenant: actualiza, audita e invalida el caché.
+ * `actorId` es `null` para cambios automáticos (cron, webhooks de Stripe) — igual que ya hacían
+ * `expire_trials`/`expire_past_due` en SQL.
+ */
 export async function setTenantStatus(
   tenantId: string,
   status: TenantStatus,
   reason: string | null,
-  actorId: string,
+  actorId: string | null,
 ): Promise<StatusResult> {
   const { data, error } = await createServiceRoleClient().rpc("set_tenant_status", {
     p_tenant: tenantId,
@@ -36,7 +40,7 @@ export async function setTenantStatus(
 export async function logAudit(
   action: string,
   tenantId: string | null,
-  actorId: string,
+  actorId: string | null,
   payload: Record<string, unknown> = {},
 ) {
   const { error } = await createServiceRoleClient()

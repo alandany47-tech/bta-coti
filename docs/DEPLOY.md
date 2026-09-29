@@ -44,6 +44,14 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables, 
 5. Better Stack → Monitors → Heartbeats: crea uno por cada cron (`daily`, `reset-demo`, `disposable-domains`) y pon sus URLs en `HEARTBEAT_URL_DAILY`, `HEARTBEAT_URL_RESET_DEMO`, `HEARTBEAT_URL_DISPOSABLE_DOMAINS`. Alerta si no llega uno en el intervalo esperado (26 h para `daily`, por ejemplo).
 6. El resto de `docs/MONITORING.md` (Stripe en `/api/health/deep`, heartbeat de webhooks, alertas de negocio por correo) espera a T20/T25.
 
+## 2d. Stripe (T20, docs/STRIPE.md)
+1. Cuenta de Stripe (modo de prueba primero) → Developers → API keys → `STRIPE_SECRET_KEY` (`sk_test_...`) y `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (`pk_test_...`).
+2. `npm run stripe:sync` crea/actualiza los 4 Products y sus Prices (mensual/anual) en Stripe desde `plans` y guarda los Price IDs de vuelta en la tabla.
+3. Webhook: en prueba, `stripe listen --forward-to localhost:3100/api/stripe/webhook` imprime un `whsec_...` temporal para `STRIPE_WEBHOOK_SECRET`. En vivo: Dashboard → Webhooks → endpoint con los eventos de `docs/STRIPE.md` §6 → su signing secret.
+4. Dashboard → Settings → Billing → Customer portal: activar los toggles de `docs/STRIPE.md` §5 (actualizar método de pago, ver facturas, cambiar entre planes públicos, cancelar al fin del periodo; dejar apagado cambiar cantidad y pausar) — la sesión del Portal usa la configuración activa de la cuenta, no algo que fije el código.
+5. **OXXO no está disponible para el plan** (verificado contra Stripe de prueba real: rechaza `oxxo` tanto en Checkout `mode: "subscription"` como en la API de suscripciones — no ofrece OXXO recurrente hoy). Tarjeta y SPEI sí están probados de punta a punta contra Stripe de prueba real (Checkout con tarjeta y test card `4242...`; SPEI con `stripe.subscriptions.create` + `invoices.finalizeInvoice`, confirmando que activa, liga `plan_id`/`stripe_customer_id` y NO activa antes de que se pague).
+6. Pendiente antes de dar por cerrado T20: decidir el proveedor de correo transaccional para `invoice.finalized` (CLABE) y la alerta de disputas (hoy solo quedan en `audit_log` y en el log del servidor).
+
 ## 3. Dominio (Cloudflare, DNS-only)
 1. Comprar `ayx.solutions` en Cloudflare Registrar (o apuntar sus nameservers a Cloudflare).
 2. En Vercel → Domains agregar `ayx.solutions` y `*.ayx.solutions` al proyecto (el comodín exige que Vercel controle `_acme-challenge`).

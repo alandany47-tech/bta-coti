@@ -20,14 +20,21 @@
 
 ## 3. Métodos de pago
 
+> **Corrección (T20, verificado contra Stripe de prueba real, no solo contra la documentación):**
+> **OXXO no sirve para cobro recurrente.** Checkout rechaza `oxxo` en `mode: "subscription"`
+> ("cannot be used in `subscription` mode") y la API de suscripciones tampoco lo acepta en
+> `payment_settings.payment_method_types` — Stripe simplemente no ofrece OXXO para facturación
+> recurrente hoy. Se quitó como opción del plan; si algún día se agrega, sería solo para un pago
+> único (la plantilla premium de §1, Checkout `mode: "payment"`), no para la suscripción.
+
 | Método | Cómo | Notas |
 |---|---|---|
-| Tarjeta | Checkout, suscripción `charge_automatically` | Se cobra solo. 3DS automático. Radar activado con reglas por defecto |
-| OXXO | Suscripción `send_invoice` | Ficha con vencimiento de 3 días. **Tope aproximado de 10,000 MXN por pago (verificar)**: el anual de Broker Pro (11,990) no se ofrece por OXXO |
-| SPEI | Suscripción `send_invoice` + `customer_balance` (transferencia bancaria) | CLABE virtual por cliente. Se concilia sola. Sin tope práctico |
+| Tarjeta | Checkout (`mode: "subscription"`), `charge_automatically` | Se cobra solo. 3DS automático. Radar activado con reglas por defecto |
+| SPEI | Suscripción creada directo con la API (`collection_method: "send_invoice"`, `payment_settings.payment_method_types: ["customer_balance"]`) — **no por Checkout**, que también la rechaza en `mode: "subscription"`. Se manda al cliente al `hosted_invoice_url` de la primera factura ya finalizada (`stripe.invoices.finalizeInvoice`) | CLABE virtual por cliente. Se concilia sola. Sin tope práctico. El customer necesita correo (Stripe lo exige para `send_invoice`) |
 
-- En `/panel/facturacion` el cliente elige "Tarjeta (se renueva sola)" o "OXXO / Transferencia (pagas cada periodo)". Se recomienda el anual para OXXO y SPEI.
-- Para OXXO y SPEI, las facturas se generan **3 días antes** del fin del periodo (`days_until_due: 3`) y se mandan recordatorios al día −3, al 0 y al +3.
+- En `/panel/facturacion` el cliente elige "Tarjeta (se renueva sola)" o "SPEI (pagas cada periodo)".
+- Para SPEI, `days_until_due: 3` hace que cada factura (incluidas las de renovación) venza 3 días después de generarse; los recordatorios de Stripe (día −3/0/+3) se activan en Dashboard → Settings → Billing → Automations.
+- Un tenant con suscripción activa cambia de plan por el Portal (§5), nunca creando un segundo Checkout/suscripción — `app/api/[tenant]/billing/checkout` lo rechaza con 409 si `tenants.stripe_subscription_id` ya existe.
 
 ## 4. Cambios de plan
 
@@ -46,30 +53,31 @@
 
 | Evento | Acción |
 |---|---|
-| `checkout.session.completed` | Ligar el customer y la suscripción al tenant. Estado → `active` |
-| `customer.subscription.created` / `updated` | Sincronizar `subscriptions` (plan, periodo, `cancel_at_period_end`) y `tenants.plan_id` |
+| `checkout.session.completed` | Solo activa (estado → `active`), y solo si `payment_status === "paid"` — ligar customer/suscripción al tenant lo hace `customer.subscription.created` (dispara para toda suscripción, venga de Checkout o de la API directa de SPEI) |
+| `customer.subscription.created` / `updated` | Liga `stripe_customer_id`/`plan_id` al tenant y sincroniza `subscriptions` (plan, periodo, `cancel_at_period_end`) |
 | `customer.subscription.deleted` | Estado → `canceled` |
-| `invoice.finalized` | OXXO/SPEI: correo propio con la ficha o CLABE + link al `hosted_invoice_url` |
+| `invoice.finalized` | SPEI: correo propio con la CLABE + link al `hosted_invoice_url` (infra de correo pendiente, T20 solo deja el log) |
 | `invoice.paid` | Estado → `active` y se limpia `status_reason` |
-| `invoice.payment_failed` | Estado → `past_due` (7 días de gracia) y aviso |
-| `invoice.overdue` | Si pasaron 7 días en `past_due` → `suspended` (`payment_failed`) |
+| `invoice.payment_failed` | Tarjeta rechazada (`charge_automatically`). Estado → `past_due` |
+| `invoice.overdue` | Equivalente de `payment_failed` para SPEI/`send_invoice` (esas facturas nunca disparan `payment_failed` aunque nadie las pague). Estado → `past_due` |
 | `charge.dispute.created` | Alerta inmediata al admin (correo + WhatsApp de soporte) y marca en el tenant |
 
-- **Firma verificada** (`STRIPE_WEBHOOK_SECRET`). Tabla `stripe_events(id pk, type, processed_at)` para idempotencia: si el evento ya existe, se responde 200 sin hacer nada.
-- Todo cambio de estado pasa por `setTenantStatus()` (auditoría + invalidar caché).
+- `invoice.paid`/`invoice.payment_failed`/`invoice.overdue` resuelven el tenant primero por `invoice.parent.subscription_details.metadata.tenant_id` (foto fija de los metadata de la suscripción al facturar, no depende de que `customer.subscription.created` ya haya guardado la fila local — Stripe no garantiza el orden de entrega de los webhooks) y solo si falta caen a buscar en `subscriptions` por `stripe_subscription_id`.
+- Los 7 días de gracia en `past_due` (tanto por tarjeta como por SPEI) no los cuenta Stripe: el cron diario (`expire_past_due()`, T20) los deriva de `tenants.status_changed_at` y suspende (`payment_failed`) cuando se cumplen.
+- **Firma verificada** (`STRIPE_WEBHOOK_SECRET`). Tabla `stripe_events(id pk, type, processed_at)` para idempotencia — se marca DESPUÉS de aplicar los efectos del evento, nunca antes: si se marcara antes y el procesamiento reventara a la mitad, un reintento de Stripe chocaría con la primary key y saldría sin completar lo que faltaba.
+- Todo cambio de estado pasa por `setTenantStatus()` (auditoría + invalidar caché); si falla, el webhook revienta (500) para que Stripe reintente en vez de responder 200 con el tenant desincronizado.
 - **Reintentos de tarjeta:** Smart Retries activado (4 intentos en 2 semanas), con la regla de "marcar como unpaid" al final → `suspended`.
 
 ## 7. Pruebas
 
-- Stripe CLI: `stripe listen --forward-to localhost:3000/api/stripe/webhook`.
+- Stripe CLI: `stripe listen --forward-to localhost:3100/api/stripe/webhook` (3100 es el puerto de `.claude/launch.json`).
 - **Test Clocks** para simular renovación, fallo y cancelación sin esperar un mes.
 - Casos obligatorios:
-  - Pago con tarjeta OK.
+  - Pago con tarjeta OK (verificado: activa y sincroniza `plan_id`/`subscriptions`).
   - Tarjeta rechazada.
-  - OXXO pagado.
-  - OXXO vencido.
-  - SPEI pagado de más o de menos (el saldo queda a favor).
+  - SPEI: suscripción creada, factura finalizada (verificado), pagada de más o de menos (el saldo queda a favor), y vencida sin pagar (`invoice.overdue` → `past_due`, y a los 7 días ahí el cron suspende).
   - Upgrade, downgrade bloqueado por uso, cancelación y disputa.
+  - Un tenant con suscripción activa no puede crear otra desde `app/api/[tenant]/billing/checkout` (409, debe usar el Portal).
 
 ## 8. Checklist antes de modo live
 
