@@ -35,7 +35,7 @@
 
 | ID | Ticket | Agente | Depende de | Criterios de aceptación | Estado |
 |---|---|---|---|---|---|
-| T20 | Stripe según `STRIPE.md`: `stripe-sync`, Checkout con tarjeta, OXXO y SPEI, webhooks idempotentes (`stripe_events`), cambios de plan con validación de uso, Portal | CC | F1 | Probado con Stripe CLI: pago, falla, cancelación y factura OXXO pagada | 🟨 |
+| T20 | Stripe según `STRIPE.md`: `stripe-sync`, Checkout con tarjeta y SPEI (**OXXO no sirve para cobro recurrente, verificado contra Stripe real — se quitó**), webhooks idempotentes (`stripe_events`), cambios de plan con validación de uso, Portal | CC | F1 | Probado contra Stripe de prueba real: pago con tarjeta (✅ verificado), SPEI creado y facturado (✅ verificado), falla, cancelación y factura SPEI vencida | 🟨 |
 | T21 | Panel → Facturación | CX | T20 | Plan, días restantes, elegir plan, portal y facturas | ⬜ |
 | T22 | Web: Home, Precios, 3 landings, legales, OG images | CX + Figma | T00 | Lighthouse ≥ 95 en móvil. Pasa el checklist de BRAND §9 | ⬜ |
 | T23 | Onboarding de 3 pasos (logo y color → ítems → primera cotización) | CX | T04, T13 | Se puede saltar. Se marca completo en `tenants.settings` | ⬜ |
