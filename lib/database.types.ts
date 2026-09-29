@@ -518,6 +518,68 @@ export type Database = {
         }
         Relationships: []
       }
+      stripe_events: {
+        Row: {
+          id: string
+          processed_at: string
+          type: string
+        }
+        Insert: {
+          id: string
+          processed_at?: string
+          type: string
+        }
+        Update: {
+          id?: string
+          processed_at?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean
+          collection_method: string
+          current_period_end: string | null
+          status: string
+          stripe_customer_id: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean
+          collection_method: string
+          current_period_end?: string | null
+          status: string
+          stripe_customer_id: string
+          stripe_price_id: string
+          stripe_subscription_id: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean
+          collection_method?: string
+          current_period_end?: string | null
+          status?: string
+          stripe_customer_id?: string
+          stripe_price_id?: string
+          stripe_subscription_id?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -563,6 +625,7 @@ export type Database = {
           slug: string
           source: string | null
           status: string
+          status_changed_at: string
           status_reason: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
@@ -584,6 +647,7 @@ export type Database = {
           slug: string
           source?: string | null
           status?: string
+          status_changed_at?: string
           status_reason?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -605,6 +669,7 @@ export type Database = {
           slug?: string
           source?: string | null
           status?: string
+          status_changed_at?: string
           status_reason?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
@@ -744,6 +809,7 @@ export type Database = {
         Args: { p_key: string; p_tenant: string }
         Returns: number
       }
+      expire_past_due: { Args: never; Returns: string[] }
       expire_trials: { Args: never; Returns: string[] }
       get_quote_tenant_slug: { Args: { p_token: string }; Returns: string }
       get_shared_quote: {
@@ -776,6 +842,14 @@ export type Database = {
         Returns: undefined
       }
       normalize_slug: { Args: { p_text: string }; Returns: string }
+      plan_usage_overages: {
+        Args: { p_plan_code: string; p_tenant: string }
+        Returns: {
+          allowed: number
+          key: string
+          used: number
+        }[]
+      }
       provision_tenant: {
         Args: {
           p_billing_mode?: string

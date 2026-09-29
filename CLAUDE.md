@@ -59,8 +59,13 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
    limita por la IP real antes de llegar aquí. Nunca en `app/api/[tenant]/*`.
 
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
-  alcanza con RLS, hay que dejarla fuera del grant. `notes` y `stripe_*` nunca llegan a anon.
-- Migraciones 0001 → 0024 (0024: `slug_available`/`get_shared_quote`/`get_quote_tenant_slug` se
+  alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
+  `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
+- Migraciones 0001 → 0025 (0025, T20: `stripe_events` para idempotencia de webhooks;
+  `subscriptions` (una por tenant, la sincroniza el webhook); `status_changed_at` en tenants +
+  `expire_past_due()` en el cron diario, porque Stripe no manda un webhook "lleva 7 días en
+  past_due"; `plan_usage_overages` valida membresía ella misma —la llama el cliente de sesión desde
+  `app/api/[tenant]/billing/*`, nunca service role ahí (regla de abajo)) (0024: `slug_available`/`get_shared_quote`/`get_quote_tenant_slug` se
   saltan su propio respaldo por IP cuando `auth.role() = 'service_role'` —la app ya las llama con
   `createServiceRoleClient()` desde estas 4 rutas específicas, porque Upstash con la IP real del
   visitante ya las limita bien; un llamador anónimo por REST sigue viendo el límite de siempre.
@@ -118,6 +123,14 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `NEXT_PUBLIC_SENTRY_DSN` no manda nada. `lib/heartbeat.ts#pingHeartbeat` en los tres cron
   (`HEARTBEAT_URL_DAILY`/`_RESET_DEMO`/`_DISPOSABLE_DOMAINS`, para Better Stack); sin URL no hace
   nada. `withSentryConfig` va en `@sentry/nextjs/config`, no en el paquete raíz (cambió en v11).
+- Stripe (T20, `docs/STRIPE.md`): `lib/stripe.ts` (`getStripe`/`stripeConfigured`, sin `apiVersion`
+  fija — usa la que trae el SDK instalado). `npm run stripe:sync` (`lib/stripe-sync.ts`) crea/actualiza
+  Products+Prices por `lookup_key` y guarda los IDs en `plans`. `POST /api/[tenant]/billing/{checkout,portal}`
+  usan el cliente de sesión (nunca service role ahí); `checkout` bloquea un downgrade con
+  `plan_usage_overages` si el uso ya no cabe. `/api/stripe/webhook` (`lib/stripe-webhook.ts`) verifica
+  firma y despacha con idempotencia por `stripe_events`. Pendiente antes de cerrarlo: `days_until_due`
+  de OXXO/SPEI contra Stripe real (Checkout no lo acepta directo) y el correo de `invoice.finalized`/
+  alerta de disputas (sin proveedor de correo transaccional todavía; por ahora solo `audit_log` + log).
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La

@@ -12,3 +12,16 @@ export async function expireTrials(): Promise<string[]> {
   for (const slug of slugs) revalidateTag(tenantTag(slug), { expire: 0 });
   return slugs;
 }
+
+/**
+ * Suspende cuentas con más de 7 días en `past_due` (T20): Stripe no manda un webhook para esto
+ * (no existe `invoice.overdue`), así que se deriva de `tenants.status_changed_at` en el cron diario.
+ */
+export async function expirePastDue(): Promise<string[]> {
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase.rpc("expire_past_due");
+  if (error) throw error;
+  const slugs = data ?? [];
+  for (const slug of slugs) revalidateTag(tenantTag(slug), { expire: 0 });
+  return slugs;
+}

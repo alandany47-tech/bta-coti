@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { expireTrials } from "@/lib/trials";
+import { expirePastDue, expireTrials } from "@/lib/trials";
 import { resetMonthlyQuoteCounters } from "@/lib/monthly-usage";
 import { cleanupOrphanedMedia } from "@/lib/media-cleanup";
 import { pingHeartbeat } from "@/lib/heartbeat";
 
 export const runtime = "nodejs";
 
-/** T17: vence pruebas, resetea el contador mensual de cotizaciones y limpia medios huérfanos. */
+/** T17: vence pruebas, resetea el contador mensual de cotizaciones y limpia medios huérfanos.
+ *  T20: también suspende cuentas con más de 7 días en past_due (Stripe no manda webhook para eso). */
 export async function GET(request: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
@@ -15,10 +16,17 @@ export async function GET(request: Request) {
 
   try {
     const expiredTrials = await expireTrials();
+    const expiredPastDue = await expirePastDue();
     const resetUsageRows = await resetMonthlyQuoteCounters();
     const media = await cleanupOrphanedMedia();
     await pingHeartbeat(process.env.HEARTBEAT_URL_DAILY);
-    return NextResponse.json({ ok: true, expiredTrials: expiredTrials.length, resetUsageRows, ...media });
+    return NextResponse.json({
+      ok: true,
+      expiredTrials: expiredTrials.length,
+      expiredPastDue: expiredPastDue.length,
+      resetUsageRows,
+      ...media,
+    });
   } catch (error) {
     console.error("cron daily falló", error);
     return NextResponse.json({ ok: false }, { status: 500 });

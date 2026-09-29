@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "seed:demo": "node scripts/seed-demo.mjs"
+    "seed:demo": "node scripts/seed-demo.mjs",
+    "stripe:sync": "node --env-file=.env.local scripts/stripe-sync.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.9.0",
@@ -26,6 +27,7 @@
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
+    "stripe": "^22.6.2",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
