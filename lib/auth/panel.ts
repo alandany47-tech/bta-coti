@@ -18,8 +18,14 @@ export type PanelContext = {
 
 const RANK: Record<TenantRole, number> = { viewer: 1, editor: 2, owner: 3 };
 
-/** Sesión + membresía del panel: sin sesión va al login; sin membresía, 404. */
-export const getPanelContext = cache(async (slug: string): Promise<PanelContext> => {
+/**
+ * Sesión + membresía del panel: sin sesión va al login; sin membresía, 404.
+ * `anyStatus`: ver requireOperableTenant (lib/tenant-page.ts) — solo lo usa /panel/facturacion, y
+ * el layout debe llamarla con el mismo valor exacto para esa ruta (`React.cache` compara por
+ * argumento con `Object.is`: un booleano, no un objeto nuevo en cada llamada, para que layout y
+ * página compartan la misma consulta en vez de duplicarla).
+ */
+export const getPanelContext = cache(async (slug: string, anyStatus = false): Promise<PanelContext> => {
   const supabase = await createSessionSupabaseClient();
   const h = await headers();
   const host = h.get("host") ?? "";
@@ -33,7 +39,7 @@ export const getPanelContext = cache(async (slug: string): Promise<PanelContext>
     redirect(`${rootOrigin(host)}/login?next=${encodeURIComponent(next)}`);
   }
 
-  const tenant = await requireOperableTenant(slug);
+  const tenant = await requireOperableTenant(slug, { anyStatus });
 
   const { data: membership } = await supabase
     .from("tenant_members")

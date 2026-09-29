@@ -61,23 +61,15 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0025 (0025, T20: `stripe_events` para idempotencia de webhooks;
-  `subscriptions` (una por tenant, la sincroniza el webhook); `status_changed_at` en tenants +
-  `expire_past_due()` en el cron diario, porque Stripe no manda un webhook "lleva 7 días en
-  past_due"; `plan_usage_overages` valida membresía ella misma —la llama el cliente de sesión desde
-  `app/api/[tenant]/billing/*`, nunca service role ahí (regla de abajo)) (0024: `slug_available`/`get_shared_quote`/`get_quote_tenant_slug` se
-  saltan su propio respaldo por IP cuando `auth.role() = 'service_role'` —la app ya las llama con
-  `createServiceRoleClient()` desde estas 4 rutas específicas, porque Upstash con la IP real del
-  visitante ya las limita bien; un llamador anónimo por REST sigue viendo el límite de siempre.
-  `media.detached_at` + `mark_media_detached`/`retry_detached_media_deletes`: un medio que se
-  desprende de un ítem pero queda bloqueado por `media_in_use` ya no se pierde para siempre, el
-  cron diario (T17) lo reintenta hasta que la cotización que lo bloquea venza) (0023: revierte el
-  `p_ip` de 0021 por la razón de arriba; `get_quote_tenant_slug` sigue sin `stable`) (0019: tope de
-  plan también al cambiar `kind`; `check_rpc_rate_limit`/`request_ip` como respaldo del límite de
-  Upstash) (0015: topes de plan por kind y cotizaciones/día en triggers; `media.item_id` con FK) en
-  `supabase/migrations`; se aplican con `supabase db push --linked`.
-  Tests pgTAP en `supabase/tests` (sin Docker se corren por MCP/`supabase db query --linked -f`
-  con rollback forzado por un `DO` final que lanza `RES total=% failed=%`).
+- Migraciones 0001 → 0025 en `supabase/migrations` (detalle de cada una en su propio archivo; las
+  más recientes: 0024 saltan su respaldo por IP cuando `auth.role() = 'service_role'` y agregan
+  `media.detached_at`/`retry_detached_media_deletes`; 0025 (T20) agrega `stripe_events`,
+  `subscriptions`, `status_changed_at`+`expire_past_due()`, `plan_usage_overages` y
+  `reserve_stripe_checkout` — todas validan membresía ellas mismas porque las llama el cliente de
+  sesión, nunca service role, desde `app/api/[tenant]/billing/*`). Se aplican con
+  `supabase db push --linked`. Tests pgTAP en `supabase/tests` (sin Docker se corren por
+  MCP/`supabase db query --linked -f` con rollback forzado por un `DO` final que lanza
+  `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.
 - Storage de Supabase: ya sin buckets en uso (`quotes` se retiró en T15 con
   `scripts/remove-quotes-bucket.mjs`; `property-media` sin políticas desde 0012): los medios van a R2. Un trigger obliga a que `images`/`floor_plan_url`
@@ -152,6 +144,17 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   cree dos suscripciones antes de que el webhook guarde la real. Alta activa por Stripe desde
   `/admin` ahora sí genera y devuelve el link de Checkout (antes daba acceso pagado sin cobrar).
   Pendiente antes de cerrarlo: proveedor de correo transaccional para `invoice.finalized`/disputas.
+- Panel → Facturación (T21): `/panel/facturacion` es la ÚNICA página de `/panel/*` que un tenant
+  suspended/canceled puede ver (necesita pagar ahí para reactivarse) — `requireOperableTenant`
+  (`lib/tenant-page.ts`) y `getPanelContext` (`lib/auth/panel.ts`) toman un segundo argumento
+  `anyStatus`; el layout lo activa leyendo `x-tenant-pathname` y debe llamarlo con el mismo valor
+  exacto que la página (`React.cache` compara argumentos con `Object.is`, no una `{}` nueva cada
+  vez, si no se duplica la consulta en el caso normal). **Hallazgo aparte, no de este código:**
+  iniciar sesión y navegar a `slug.localhost:3100/panel` hace un loop infinito de redirects en
+  Chrome — la cookie con `Domain=localhost` (`lib/auth/cookie-domain.ts`) no se comparte con los
+  subdominios `*.localhost` porque Chrome trata `localhost` como si fuera un sufijo público; no
+  pasa con el dominio real (`.ayx.solutions`) en producción. No se intentó arreglar (no tiene
+  arreglo dentro de la cookie misma); toca probar el panel contra un preview de Vercel, no local.
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La

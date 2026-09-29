@@ -113,12 +113,17 @@ describe("handleStripeEvent", () => {
     expect(tables.tenants[0]).toMatchObject({ plan_id: "plan-esencial", stripe_customer_id: "cus_1", stripe_subscription_id: "sub_1" });
   });
 
-  it("customer.subscription.deleted cancela la suscripción y el tenant", async () => {
-    const supabase = fakeSupabase({ subscriptions: [{ tenant_id: "tenant-1", stripe_subscription_id: "sub_1", status: "active" }] });
+  it("customer.subscription.deleted cancela la suscripción, limpia el tenant y permite volver a suscribirse", async () => {
+    const supabase = fakeSupabase({
+      subscriptions: [{ tenant_id: "tenant-1", stripe_subscription_id: "sub_1", status: "active" }],
+      tenants: [{ id: "tenant-1", stripe_subscription_id: "sub_1" }],
+    });
     const sub = { id: "sub_1", metadata: { tenant_id: "tenant-1" } };
     await handleStripeEvent(fakeEvent("evt_4", "customer.subscription.deleted", sub), supabase);
 
-    expect((supabase as never as { tables: { subscriptions: Row[] } }).tables.subscriptions[0]).toMatchObject({ status: "canceled" });
+    const tables = (supabase as never as { tables: { subscriptions: Row[]; tenants: Row[] } }).tables;
+    expect(tables.subscriptions[0]).toMatchObject({ status: "canceled" });
+    expect(tables.tenants[0]).toMatchObject({ stripe_subscription_id: null });
     expect(setTenantStatus).toHaveBeenCalledWith("tenant-1", "canceled", "subscription_deleted", null);
   });
 

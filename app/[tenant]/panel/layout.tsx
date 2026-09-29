@@ -16,8 +16,14 @@ export default async function PanelLayout({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant: slug } = await params;
-  const { tenant, user, role } = await getPanelContext(slug);
-  const host = (await headers()).get("host") ?? "";
+  const h = await headers();
+  // /panel/facturacion es la única página que un tenant suspended/canceled puede ver (para pagar y
+  // reactivarse); el resto sigue mandando a /suspended. Debe llamarse con el mismo `anyStatus`
+  // exacto que la página (React.cache compara los argumentos con Object.is) para no duplicar la
+  // consulta en el caso normal.
+  const isBilling = (h.get("x-tenant-pathname") ?? "").startsWith("/panel/facturacion");
+  const { tenant, user, role } = isBilling ? await getPanelContext(slug, true) : await getPanelContext(slug);
+  const host = h.get("host") ?? "";
   const canEdit = hasRole(role, "editor");
 
   return (
@@ -45,6 +51,11 @@ export default async function PanelLayout({
               </Link>
             </>
           ) : null}
+          {tenant.is_demo ? null : (
+            <Link href="/panel/facturacion" className="hover:text-foreground">
+              Facturación
+            </Link>
+          )}
         </nav>
         <div className="ml-auto flex items-center gap-4 text-sm">
           <span className="hidden text-xs text-muted sm:inline">{user.email}</span>
