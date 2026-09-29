@@ -4,12 +4,15 @@ import { useState, useSyncExternalStore } from "react";
 import { ExternalLink } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { StatusBadge, STATUS_LABEL } from "@/components/admin/status-badge";
+import { formatBytes } from "@/lib/utils";
 import type { AdminTenantRow, TenantStatus } from "@/lib/types";
 
 const ALL_STATUSES = Object.keys(STATUS_LABEL) as TenantStatus[];
 const NEEDS_REASON: TenantStatus[] = ["suspended", "canceled"];
 const SOURCE_LABEL = { self_signup: "Registro", admin: "Admin", demo_clone: "Demo" } as const;
+const dateFormat = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", year: "numeric" });
 
 /** Nunca cambia después del mount: alcanza con un subscribe no-op. */
 function subscribeToNothing() {
@@ -151,8 +154,27 @@ export function TenantRow({
       <td className="p-3 text-sm text-foreground-muted">
         {tenant.source ? SOURCE_LABEL[tenant.source] : "—"}
       </td>
+      <td className="p-3">
+        <div className="flex min-w-[110px] flex-col gap-1">
+          <Progress value={tenant.storage_bytes} max={tenant.storage_limit} />
+          <span className="text-xs text-muted tabular">
+            {formatBytes(tenant.storage_bytes)}
+            {tenant.storage_limit != null ? ` / ${formatBytes(tenant.storage_limit)}` : ""}
+          </span>
+        </div>
+      </td>
       <td className="p-3 text-center text-sm text-foreground-muted tabular">{tenant.items_count}</td>
       <td className="p-3 text-center text-sm text-foreground-muted tabular">{tenant.quotes_month}</td>
+      <td className="p-3 text-sm text-foreground-muted tabular">{dateFormat.format(new Date(tenant.created_at))}</td>
+      <td className="p-3 text-sm text-foreground-muted tabular">
+        {tenant.status === "trialing"
+          ? tenant.trial_ends_at
+            ? dateFormat.format(new Date(tenant.trial_ends_at))
+            : "—"
+          : tenant.current_period_end
+            ? dateFormat.format(new Date(tenant.current_period_end))
+            : "—"}
+      </td>
       <td className="p-3">
         <Select
           value={tenant.status}

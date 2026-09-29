@@ -37,6 +37,11 @@ export type AdminTenantRow = Tenant & {
   status_reason: string | null;
   items_count: number;
   quotes_month: number;
+  /** T24: uso/límite de almacenamiento (para la barra) y vencimiento del periodo de cobro. */
+  storage_bytes: number;
+  storage_limit: number | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean | null;
 };
 
 export type PropertyStatus = "available" | "reserved" | "sold";
