@@ -67,6 +67,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
     );
   }
 
+  // Reserva atómica (docs/STRIPE.md §3): dos POST concurrentes o un reintento del navegador podrían
+  // ver `stripe_subscription_id` en null antes de que el webhook lo guarde y crear dos suscripciones
+  // (sobre todo SPEI, que crea la suscripción de una vez, sin esperar a que el cliente pague nada).
+  // Se libera sola a los 5 min si algo falla a la mitad; `upsertSubscription` la limpia al llegar.
+  const { data: reserved } = await supabase.rpc("reserve_stripe_checkout", { p_tenant: tenant.id });
+  if (!reserved) {
+    return NextResponse.json(
+      { error: "Ya hay un checkout en curso para este negocio. Espera un momento e intenta de nuevo." },
+      { status: 409 },
+    );
+  }
+
   if (currentTenant?.plan_id && currentTenant.plan_id !== plan.id) {
     const { data: currentPlan } = await supabase.from("plans").select("sort").eq("id", currentTenant.plan_id).maybeSingle();
     const isDowngrade = Boolean(currentPlan && plan.sort < currentPlan.sort);

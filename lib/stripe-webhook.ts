@@ -51,6 +51,14 @@ async function planIdForPrice(supabase: SupabaseClient, priceId: string): Promis
  * no puede usar Checkout Sessions para SPEI/OXXO: Stripe las rechaza en `mode: "subscription"`),
  * así que aquí es donde se liga `stripe_customer_id`/`plan_id` al tenant, no en
  * `checkout.session.completed` (que para SPEI ni existe).
+ *
+ * Nota (revisión de Codex): esto aplica `plan_id` sin llamar a `plan_usage_overages` — a propósito.
+ * `plan_usage_overages` protege el flujo propio de Checkout (docs/STRIPE.md §4, "antes del
+ * downgrade, validar uso"); un cambio de plan hecho por el Portal ya llegó aquí como un hecho
+ * consumado en Stripe (el Portal no expone ningún hook para bloquearlo antes). El respaldo para
+ * ESE caso ya está documentado y construido: "si se superan los límites por cualquier otra vía...
+ * la cuenta queda en solo lectura para crear ítems y subir medios" (§4) — lo hacen los triggers de
+ * cuota existentes (`items_quota_guard`, etc.), no este webhook.
  */
 async function upsertSubscription(supabase: SupabaseClient, tenantId: string, sub: Stripe.Subscription) {
   const item = sub.items.data[0];
@@ -71,7 +79,7 @@ async function upsertSubscription(supabase: SupabaseClient, tenantId: string, su
   if (error) throw error;
 
   const planId = await planIdForPrice(supabase, item.price.id);
-  const patch: Record<string, string> = { stripe_subscription_id: sub.id };
+  const patch: Record<string, string | null> = { stripe_subscription_id: sub.id, stripe_checkout_pending_at: null };
   const custId = customerId(sub.customer);
   if (custId) patch.stripe_customer_id = custId;
   if (planId) patch.plan_id = planId;
@@ -97,6 +105,20 @@ async function tenantIdFromSubscriptionId(supabase: SupabaseClient, subscription
     .eq("stripe_subscription_id", subscriptionId)
     .maybeSingle();
   return (data as { tenant_id: string } | null)?.tenant_id ?? null;
+}
+
+/**
+ * Stripe no garantiza el orden de entrega de los webhooks: si `invoice.paid`/`invoice.payment_failed`
+ * llega antes que `customer.subscription.created` haya guardado la fila en `subscriptions`, buscar
+ * por `stripe_subscription_id` ahí falla y el evento se pierde para siempre (queda marcado procesado
+ * igual). `subscription_details.metadata` es una foto de los metadata de la suscripción al momento
+ * de facturar (docs del SDK: "immutable snapshot... at the time of invoice finalization") — no
+ * depende de nuestra propia base, así que se prueba primero; la tabla queda solo de respaldo.
+ */
+async function tenantIdFromInvoice(supabase: SupabaseClient, invoice: Stripe.Invoice): Promise<string | null> {
+  const fromMetadata = tenantIdFromMetadata(invoice.parent?.subscription_details?.metadata);
+  if (fromMetadata) return fromMetadata;
+  return tenantIdFromSubscriptionId(supabase, invoiceSubscriptionId(invoice));
 }
 
 /**
@@ -142,15 +164,28 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
 
     case "invoice.paid": {
       const invoice = event.data.object as Stripe.Invoice;
-      const tenantId = await tenantIdFromSubscriptionId(supabase, invoiceSubscriptionId(invoice));
+      const tenantId = await tenantIdFromInvoice(supabase, invoice);
       if (!tenantId) break;
       await requireStatusChange(tenantId, "active", null, null);
       break;
     }
 
     case "invoice.payment_failed": {
+      // Solo dispara para `charge_automatically` (tarjeta): una tarjeta rechazada.
       const invoice = event.data.object as Stripe.Invoice;
-      const tenantId = await tenantIdFromSubscriptionId(supabase, invoiceSubscriptionId(invoice));
+      const tenantId = await tenantIdFromInvoice(supabase, invoice);
+      if (!tenantId) break;
+      await requireStatusChange(tenantId, "past_due", "payment_failed", null);
+      break;
+    }
+
+    case "invoice.overdue": {
+      // El equivalente de invoice.payment_failed para `send_invoice` (SPEI): una factura con
+      // `send_invoice` nunca dispara payment_failed aunque nadie la pague, así que sin esto una
+      // suscripción SPEI que nunca se paga se queda "active"/"trialing" para siempre — y además
+      // bloquea expire_trials() en cuanto queda guardado un stripe_subscription_id sin pagar nunca.
+      const invoice = event.data.object as Stripe.Invoice;
+      const tenantId = await tenantIdFromInvoice(supabase, invoice);
       if (!tenantId) break;
       await requireStatusChange(tenantId, "past_due", "payment_failed", null);
       break;

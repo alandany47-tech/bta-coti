@@ -68,19 +68,21 @@ export default async function SharedQuotePage({
   const number = row.number ?? snapshot.number;
   const snap = { ...snapshot, number };
   const { property, breakdown } = snap;
-  const accent = row.brand_color ?? undefined;
+  // Congelado a propósito (lib/quote-snapshot.ts): si el tenant cambia nombre/logo/color después,
+  // esta página no debe verse distinta del PDF que ya se descargó con la marca de ese momento.
+  const accent = snap.brandColor ?? undefined;
   const hasDiscount = breakdown.discountAmount > 0.009;
   const hasFinal = breakdown.finalPaymentAmount > 0.009;
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-8 sm:px-6">
       <header className="flex items-center gap-3 border-b-2 pb-4" style={{ borderColor: accent }}>
-        {row.tenant_logo_url ? (
+        {snap.tenantLogoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={row.tenant_logo_url} alt="" className="h-10 w-10 rounded object-contain" />
+          <img src={snap.tenantLogoUrl} alt="" className="h-10 w-10 rounded object-contain" />
         ) : null}
         <div className="flex flex-col leading-tight">
-          <span className="text-lg font-semibold text-ink">{row.tenant_name}</span>
+          <span className="text-lg font-semibold text-ink">{snap.tenantName}</span>
           <span className="text-xs text-ink-3">
             Cotización {number ? `#${String(number).padStart(4, "0")}` : ""} · {dateFormat.format(new Date(snap.createdAt))}
           </span>

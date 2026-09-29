@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
+import { CopyLinkButton } from "@/components/quote/copy-link-button";
 import { normalizeSlugInput } from "@/lib/auth/register-schema";
 import type { AdminTenantRow } from "@/lib/types";
 
@@ -36,6 +37,7 @@ export function NewClientForm({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<string | null>(null);
+  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,6 +45,7 @@ export function NewClientForm({
     setPending(true);
     setError(null);
     setDone(null);
+    setCheckoutUrl(null);
     try {
       const response = await fetch("/api/admin/tenants", {
         method: "POST",
@@ -57,6 +60,7 @@ export function NewClientForm({
           ? "Cliente creado. Enviamos la invitación al correo del dueño."
           : "Cliente creado. El correo ya tenía cuenta: entra con su contraseña actual.",
       );
+      if (payload.checkoutUrl) setCheckoutUrl(payload.checkoutUrl as string);
       (event.target as HTMLFormElement).reset();
       setStatus("trialing");
     } catch (err) {
@@ -124,6 +128,12 @@ export function NewClientForm({
         </Button>
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         {done ? <p className="text-sm text-ok">{done}</p> : null}
+        {checkoutUrl ? (
+          <p className="flex items-center gap-2 text-sm text-foreground-muted">
+            Activo por Stripe: mándale este link de pago —
+            <CopyLinkButton url={checkoutUrl} />
+          </p>
+        ) : null}
       </div>
     </form>
   );

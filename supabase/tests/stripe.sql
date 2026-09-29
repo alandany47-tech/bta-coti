@@ -105,5 +105,42 @@ select is(has_function_privilege('anon', 'public.plan_usage_overages(uuid, text)
 select is(has_function_privilege('authenticated', 'public.plan_usage_overages(uuid, text)', 'execute'), true, 'authenticated sí (valida membresía adentro)');
 select is(has_function_privilege('anon', 'public.expire_past_due()', 'execute'), false, 'anon no ejecuta expire_past_due');
 
+-- ============================================================
+-- 6) reserve_stripe_checkout: evita que dos POST a billing/checkout (sobre todo SPEI, que crea la
+--    suscripción de una vez) alcancen a crear dos suscripciones antes de que el webhook guarde
+--    `stripe_subscription_id` (tenant B sigue en broker_pro, sin suscripción propia real en tenants).
+-- ============================================================
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000f2","role":"authenticated"}', true);
+set local role authenticated;
+select is((select public.reserve_stripe_checkout(current_setting('t.tb')::uuid)), true, 'el dueño de B reserva el primer checkout');
+select is((select public.reserve_stripe_checkout(current_setting('t.tb')::uuid)), false, 'un segundo POST casi al mismo tiempo no logra reservar otra vez');
+reset role;
+select set_config('request.jwt.claims', null, true);
+
+-- pasados los 5 minutos, una reserva vieja ya no bloquea (simulando que algo falló a la mitad)
+update public.tenants set stripe_checkout_pending_at = now() - interval '6 minutes' where id = current_setting('t.tb')::uuid;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000f2","role":"authenticated"}', true);
+set local role authenticated;
+select is((select public.reserve_stripe_checkout(current_setting('t.tb')::uuid)), true, 'una reserva de hace 6 minutos ya expiró, se puede reservar de nuevo');
+reset role;
+select set_config('request.jwt.claims', null, true);
+
+-- un tenant que ya tiene suscripción real no se puede reservar (cambia de plan por el Portal)
+update public.tenants set stripe_subscription_id = 'sub_ya_existe', stripe_checkout_pending_at = null where id = current_setting('t.ta')::uuid;
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000f1","role":"authenticated"}', true);
+set local role authenticated;
+select is((select public.reserve_stripe_checkout(current_setting('t.ta')::uuid)), false, 'un tenant con suscripción real no se puede reservar otra vez');
+reset role;
+select set_config('request.jwt.claims', null, true);
+
+-- quien no es miembro del tenant no puede reservar nada (no es solo "no encontrado": es acceso)
+select set_config('request.jwt.claims', '{"sub":"00000000-0000-0000-0000-0000000000f1","role":"authenticated"}', true);
+set local role authenticated;
+select is((select public.reserve_stripe_checkout(current_setting('t.tb')::uuid)), false, 'el dueño de A no reserva un checkout de B');
+reset role;
+select set_config('request.jwt.claims', null, true);
+
+select is(has_function_privilege('anon', 'public.reserve_stripe_checkout(uuid)', 'execute'), false, 'anon no ejecuta reserve_stripe_checkout');
+
 select * from finish();
 rollback;

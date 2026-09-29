@@ -137,6 +137,22 @@ describe("handleStripeEvent", () => {
     expect(setTenantStatus).not.toHaveBeenCalled();
   });
 
+  it("invoice.paid resuelve el tenant por el metadata de la suscripción aunque no exista fila en `subscriptions` todavía", async () => {
+    // Stripe no garantiza el orden de entrega: esto simula que invoice.paid llegó ANTES que
+    // customer.subscription.created hubiera guardado la fila local.
+    const supabase = fakeSupabase();
+    const invoice = { parent: { subscription_details: { subscription: "sub_sin_fila", metadata: { tenant_id: "tenant-1" } } } };
+    await handleStripeEvent(fakeEvent("evt_6b", "invoice.paid", invoice), supabase);
+    expect(setTenantStatus).toHaveBeenCalledWith("tenant-1", "active", null, null);
+  });
+
+  it("invoice.overdue pone en past_due una suscripción SPEI que nunca se pagó", async () => {
+    const supabase = fakeSupabase({ subscriptions: [{ tenant_id: "tenant-1", stripe_subscription_id: "sub_spei" }] });
+    const invoice = { parent: { subscription_details: { subscription: "sub_spei" } } };
+    await handleStripeEvent(fakeEvent("evt_6c", "invoice.overdue", invoice), supabase);
+    expect(setTenantStatus).toHaveBeenCalledWith("tenant-1", "past_due", "payment_failed", null);
+  });
+
   it("charge.dispute.created deja auditoría sin tenant_id (no viaja en el objeto)", async () => {
     const supabase = fakeSupabase();
     const dispute = { id: "dp_1", amount: 50000, charge: "ch_1" };

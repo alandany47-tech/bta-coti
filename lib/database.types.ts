@@ -627,6 +627,7 @@ export type Database = {
           status: string
           status_changed_at: string
           status_reason: string | null
+          stripe_checkout_pending_at: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           theme: Json
@@ -649,6 +650,7 @@ export type Database = {
           status?: string
           status_changed_at?: string
           status_reason?: string | null
+          stripe_checkout_pending_at?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           theme?: Json
@@ -671,6 +673,7 @@ export type Database = {
           status?: string
           status_changed_at?: string
           status_reason?: string | null
+          stripe_checkout_pending_at?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           theme?: Json
@@ -881,6 +884,7 @@ export type Database = {
           thumb_key: string
         }[]
       }
+      reserve_stripe_checkout: { Args: { p_tenant: string }; Returns: boolean }
       reset_demo_data: { Args: { p_password: string }; Returns: undefined }
       reset_monthly_quote_counters: { Args: never; Returns: number }
       retry_detached_media_deletes: { Args: never; Returns: number }

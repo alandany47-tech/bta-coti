@@ -98,6 +98,9 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   trigger `quotes_quota_guard` da número consecutivo y tope diario). `get_shared_quote(token)` (anon)
   suma vistas y marca `viewed`, y ya no devuelve el snapshot de una cotización vencida; vigencia 30 días.
   El estado `expired` no se escribe solo: el panel de cotizaciones lo deriva de `expires_at` al listar.
+  `slug./q/<token>` pinta marca (`tenantName`/`tenantLogoUrl`/`brandColor`) desde `snap`, nunca desde
+  la fila viva de `tenants`: si el tenant cambia nombre/logo/color después, la página no debe verse
+  distinta del PDF ya descargado con la marca de ese momento.
 - Mensajes (T16): `message_templates` (tenant_id, module, channel='whatsapp', body ≤1000, sin HTML)
   con una fila por módulo del plan (`provision_tenant` las crea; solo editor escribe, solo servicio
   agrega/quita módulos). `lib/message-templates.ts` (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve
@@ -137,10 +140,18 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `checkout.session.completed` solo activa si `payment_status === "paid"`; `setTenantStatus` revienta
   el webhook si falla (para que Stripe reintente en vez de responder 200 desincronizado);
   `customer.subscription.created/updated` es lo único que liga `stripe_customer_id`/`plan_id`
-  (dispara para Checkout y para SPEI directo por igual). `expire_past_due()` en el cron diario
-  deriva la suspensión por 7 días en `past_due` de `status_changed_at` (Stripe no manda ese webhook).
-  Pendiente antes de cerrarlo: proveedor de correo transaccional para `invoice.finalized`/disputas
-  (por ahora solo `audit_log` + log).
+  (dispara para Checkout y para SPEI directo por igual; aplica el plan sin volver a validar uso — el
+  Portal no da forma de bloquear un downgrade antes, el respaldo son los triggers de cuota
+  existentes, docs/STRIPE.md §4). `invoice.overdue` SÍ existe (a diferencia de lo que se pensó al
+  principio) y es el equivalente de `payment_failed` para SPEI/`send_invoice`, que nunca dispara ese
+  evento; ambos resuelven el tenant primero por `invoice.parent.subscription_details.metadata`
+  (foto fija, no depende del orden de entrega de webhooks) y solo si falta caen a buscar en
+  `subscriptions`. `expire_past_due()` en el cron diario deriva la suspensión por 7 días en
+  `past_due` de `status_changed_at`. `reserve_stripe_checkout` (columna
+  `stripe_checkout_pending_at`, expira a los 5 min) evita que un POST duplicado a `billing/checkout`
+  cree dos suscripciones antes de que el webhook guarde la real. Alta activa por Stripe desde
+  `/admin` ahora sí genera y devuelve el link de Checkout (antes daba acceso pagado sin cobrar).
+  Pendiente antes de cerrarlo: proveedor de correo transaccional para `invoice.finalized`/disputas.
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La

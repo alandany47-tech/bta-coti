@@ -58,10 +58,12 @@
 | `customer.subscription.deleted` | Estado → `canceled` |
 | `invoice.finalized` | SPEI: correo propio con la CLABE + link al `hosted_invoice_url` (infra de correo pendiente, T20 solo deja el log) |
 | `invoice.paid` | Estado → `active` y se limpia `status_reason` |
-| `invoice.payment_failed` | Estado → `past_due` (7 días de gracia) y aviso |
+| `invoice.payment_failed` | Tarjeta rechazada (`charge_automatically`). Estado → `past_due` |
+| `invoice.overdue` | Equivalente de `payment_failed` para SPEI/`send_invoice` (esas facturas nunca disparan `payment_failed` aunque nadie las pague). Estado → `past_due` |
 | `charge.dispute.created` | Alerta inmediata al admin (correo + WhatsApp de soporte) y marca en el tenant |
 
-- **No existe un webhook `invoice.overdue`.** Los 7 días de gracia de `past_due` no los avisa Stripe: el cron diario (`expire_past_due()`, T20) los deriva de `tenants.status_changed_at` y suspende (`payment_failed`) cuando se cumplen.
+- `invoice.paid`/`invoice.payment_failed`/`invoice.overdue` resuelven el tenant primero por `invoice.parent.subscription_details.metadata.tenant_id` (foto fija de los metadata de la suscripción al facturar, no depende de que `customer.subscription.created` ya haya guardado la fila local — Stripe no garantiza el orden de entrega de los webhooks) y solo si falta caen a buscar en `subscriptions` por `stripe_subscription_id`.
+- Los 7 días de gracia en `past_due` (tanto por tarjeta como por SPEI) no los cuenta Stripe: el cron diario (`expire_past_due()`, T20) los deriva de `tenants.status_changed_at` y suspende (`payment_failed`) cuando se cumplen.
 - **Firma verificada** (`STRIPE_WEBHOOK_SECRET`). Tabla `stripe_events(id pk, type, processed_at)` para idempotencia — se marca DESPUÉS de aplicar los efectos del evento, nunca antes: si se marcara antes y el procesamiento reventara a la mitad, un reintento de Stripe chocaría con la primary key y saldría sin completar lo que faltaba.
 - Todo cambio de estado pasa por `setTenantStatus()` (auditoría + invalidar caché); si falla, el webhook revienta (500) para que Stripe reintente en vez de responder 200 con el tenant desincronizado.
 - **Reintentos de tarjeta:** Smart Retries activado (4 intentos en 2 semanas), con la regla de "marcar como unpaid" al final → `suspended`.
@@ -73,7 +75,7 @@
 - Casos obligatorios:
   - Pago con tarjeta OK (verificado: activa y sincroniza `plan_id`/`subscriptions`).
   - Tarjeta rechazada.
-  - SPEI: suscripción creada, factura finalizada (verificado), pagada de más o de menos (el saldo queda a favor), y vencida sin pagar (`past_due` a los 7 días vía el cron, no un webhook).
+  - SPEI: suscripción creada, factura finalizada (verificado), pagada de más o de menos (el saldo queda a favor), y vencida sin pagar (`invoice.overdue` → `past_due`, y a los 7 días ahí el cron suspende).
   - Upgrade, downgrade bloqueado por uso, cancelación y disputa.
   - Un tenant con suscripción activa no puede crear otra desde `app/api/[tenant]/billing/checkout` (409, debe usar el Portal).
 

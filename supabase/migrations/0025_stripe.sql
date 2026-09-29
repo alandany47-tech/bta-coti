@@ -3,12 +3,17 @@
 --    de procesarlo; si ya existe, responde 200 sin repetir nada.
 -- 2) `subscriptions` para lo que sincroniza `customer.subscription.created/updated` (plan, periodo,
 --    `cancel_at_period_end`) — T21 lo lee en Panel → Facturación.
--- 3) `status_changed_at` en tenants: Stripe no manda un webhook "lleva 7 días en past_due"
---    (no existe `invoice.overdue`); el cron diario lo deriva de este campo.
+-- 3) `status_changed_at` en tenants: Stripe no manda un webhook para "lleva 7 días en past_due" (ese
+--    plazo es nuestro, no de Stripe); `invoice.overdue` sí existe y avisa cuando una factura
+--    `send_invoice`/SPEI vence sin pagarse (lib/stripe-webhook.ts), pero el conteo de 7 días para
+--    pasar de past_due a suspended lo deriva el cron diario de este campo.
 -- 4) `plan_usage_overages`: qué límites del plan nuevo ya se rebasarían con el uso actual, para
 --    bloquear un downgrade desde nuestro propio flujo de Checkout con un mensaje claro.
 -- 5) `plan_id` de tenants seguía sin estar en el grant de columnas de 0004: ni el panel del propio
 --    tenant podía leer su plan actual con el cliente de sesión.
+-- 6) `stripe_checkout_pending_at` + `reserve_stripe_checkout`: reserva atómica para que dos POST
+--    concurrentes/reintentados a billing/checkout no creen dos suscripciones (sobre todo SPEI, que
+--    la crea de una vez, sin esperar a que el cliente pague nada).
 
 alter table public.tenants add column status_changed_at timestamptz not null default now();
 
@@ -182,3 +187,38 @@ $$;
 
 revoke execute on function public.expire_past_due() from public, anon, authenticated;
 grant execute on function public.expire_past_due() to service_role;
+
+-- ============================================================
+-- reserve_stripe_checkout: evita que dos POST concurrentes/reintentados a
+-- app/api/[tenant]/billing/checkout (sobre todo la rama SPEI, que crea la suscripción directo, sin
+-- esperar a que el usuario pague algo primero) alcancen a crear dos suscripciones antes de que el
+-- webhook guarde `stripe_subscription_id` — la reserva se libera sola a los 5 minutos si algo falló
+-- a la mitad, y `upsertSubscription` (lib/stripe-webhook.ts) la limpia en cuanto llega la real.
+-- ============================================================
+alter table public.tenants add column stripe_checkout_pending_at timestamptz;
+
+create or replace function public.reserve_stripe_checkout(p_tenant uuid)
+returns boolean
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count int;
+begin
+  if not public.is_member(p_tenant, 'owner') then
+    return false;
+  end if;
+
+  update public.tenants
+  set stripe_checkout_pending_at = now()
+  where id = p_tenant
+    and stripe_subscription_id is null
+    and (stripe_checkout_pending_at is null or stripe_checkout_pending_at < now() - interval '5 minutes');
+  get diagnostics v_count = row_count;
+  return v_count > 0;
+end;
+$$;
+
+revoke execute on function public.reserve_stripe_checkout(uuid) from public, anon;
+grant execute on function public.reserve_stripe_checkout(uuid) to authenticated;
