@@ -158,6 +158,14 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
       if (!tenantId) break;
       const { error } = await supabase.from("subscriptions").update({ status: "canceled" }).eq("stripe_subscription_id", sub.id);
       if (error) throw error;
+      // Se limpia stripe_subscription_id: si no, app/api/[tenant]/billing/checkout cree para siempre
+      // que ya hay una suscripción activa y nunca deja arrancar una nueva (un tenant cancelado de
+      // verdad tiene que poder volver a suscribirse, no solo cambiar de plan por el Portal).
+      const { error: tenantError } = await supabase
+        .from("tenants")
+        .update({ stripe_subscription_id: null })
+        .eq("id", tenantId);
+      if (tenantError) throw tenantError;
       await requireStatusChange(tenantId, "canceled", "subscription_deleted", null);
       break;
     }
