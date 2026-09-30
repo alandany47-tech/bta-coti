@@ -110,11 +110,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `suspended` con `status_reason='trial_expired'`), `reset_monthly_quote_counters()` y
   `cleanupOrphanedMedia()` (`lib/media-cleanup.ts`: borra `media` `pending` sin confirmar y, con
   `lib/r2.ts#listObjects`, objetos de R2 sin fila que los respalde tras una hora).
-- Monitoreo (T19): `GET /api/health` (200 fijo) y `GET /api/health/deep` (header `x-health-token` =
-  `HEALTH_CHECK_TOKEN`; Supabase + `HEAD` a `R2_HEALTH_KEY` en R2, salta si no está configurado).
-  Sentry (`@sentry/nextjs`, `instrumentation.ts` + `instrumentation-client.ts` +
-  `sentry.{server,edge}.config.ts`; sin `SENTRY_DSN`/`NEXT_PUBLIC_SENTRY_DSN` no manda nada) y
-  `lib/heartbeat.ts#pingHeartbeat` en los tres cron (Better Stack; sin URL no hace nada).
+- Monitoreo (T19): ver `docs/MONITORING.md` (health, Sentry, heartbeats de los cron).
 - Stripe (T20, `docs/STRIPE.md`): `lib/stripe.ts` (`getStripe`/`stripeConfigured`, sin `apiVersion`
   fija). `npm run stripe:sync` crea/actualiza Products+Prices. `POST /api/[tenant]/billing/{checkout,portal}`
   (`anyStatus: true`: suspended/canceled necesita pagar) usan el cliente de sesión, nunca service
