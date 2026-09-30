@@ -5,9 +5,10 @@ import { getTenantForAdmin, listTenantsForAdmin } from "@/lib/admin-tenants";
 import { logAudit } from "@/lib/admin-status";
 import { validateNewClient } from "@/lib/admin-new-client";
 import { createServiceRoleClient } from "@/lib/supabase/server";
-import { rootOrigin, tenantOrigin } from "@/lib/auth/redirects";
+import { rootOrigin } from "@/lib/auth/redirects";
 import { tenantTag } from "@/lib/tenants";
-import { getStripe, stripeConfigured } from "@/lib/stripe";
+import { stripeConfigured } from "@/lib/stripe";
+import { createAdminCheckoutSession } from "@/lib/admin-billing";
 
 export async function GET() {
   const admin = await getAdminUser();
@@ -114,23 +115,12 @@ export async function POST(request: Request) {
   // pide intervalo); el dueño puede cambiar a anual después desde el Portal.
   let checkoutUrl: string | null = null;
   if (client.billingMode === "stripe" && client.status === "active" && stripeConfigured()) {
-    const { data: plan } = await supabase.from("plans").select("stripe_price_month").eq("code", client.plan).maybeSingle();
-    if (plan?.stripe_price_month) {
-      const host = request.headers.get("host") ?? "";
-      const origin = tenantOrigin(client.slug, host);
-      const session = await getStripe().checkout.sessions.create({
-        mode: "subscription",
-        client_reference_id: tenantId,
-        payment_method_types: ["card"],
-        line_items: [{ price: plan.stripe_price_month, quantity: 1 }],
-        subscription_data: { metadata: { tenant_id: tenantId } },
-        metadata: { tenant_id: tenantId },
-        success_url: `${origin}/panel/facturacion?checkout=success`,
-        cancel_url: `${origin}/panel/facturacion?checkout=cancel`,
-      });
-      checkoutUrl = session.url;
+    const host = request.headers.get("host") ?? "";
+    const result = await createAdminCheckoutSession({ tenantId, planCode: client.plan, host });
+    if ("url" in result) {
+      checkoutUrl = result.url;
     } else {
-      console.error(`admin/tenants: plan ${client.plan} sin stripe_price_month, no se generó Checkout para ${tenantId}`);
+      console.error(`admin/tenants: ${result.error} (tenant ${tenantId})`);
     }
   }
 

@@ -12,6 +12,7 @@ export type Tenant = {
   logo_url: string | null;
   brand_color: string;
   status: TenantStatus;
+  billing_mode: "stripe" | "manual";
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   trial_ends_at: string | null;
@@ -21,13 +22,13 @@ export type Tenant = {
 };
 
 /**
- * Vista pública de un tenant: lo que la anon key puede leer. notes/stripe_*
- * están recortados por GRANT de columna (ver migración 0003) porque son
- * datos internos del admin — nunca deben llegar al storefront público.
+ * Vista pública de un tenant: lo que la anon key puede leer. notes, stripe_customer_id,
+ * stripe_subscription_id y billing_mode están recortados por GRANT de columna (ver migración
+ * 0003) porque son datos internos del admin — nunca deben llegar al storefront público.
  */
 export type PublicTenant = Omit<
   Tenant,
-  "stripe_customer_id" | "stripe_subscription_id" | "notes"
+  "stripe_customer_id" | "stripe_subscription_id" | "notes" | "billing_mode"
 >;
 
 /** Fila de tenants + plan y conteos de `usage` que arma el Panel de Administración Master. */

@@ -11,3 +11,9 @@ export function getStripe(): Stripe {
   client ??= new Stripe(process.env.STRIPE_SECRET_KEY);
   return client;
 }
+
+/** Link al dashboard de Stripe para un customer/subscription (Cliente-detalle, T24b). */
+export function stripeDashboardUrl(kind: "customers" | "subscriptions", id: string): string {
+  const test = process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_") ? "/test" : "";
+  return `https://dashboard.stripe.com${test}/${kind}/${id}`;
+}

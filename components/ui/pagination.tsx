@@ -13,12 +13,15 @@ export function Pagination({
   total,
   basePath,
   query,
+  label = "clientes",
 }: {
   page: number;
   pageSize: number;
   total: number;
   basePath: string;
   query: Record<string, string | undefined>;
+  /** Sustantivo para el conteo ("clientes", "registros"...). */
+  label?: string;
 }) {
   const router = useRouter();
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -33,13 +36,13 @@ export function Pagination({
   }
 
   if (totalPages <= 1) {
-    return <p className="text-sm text-muted">{total} clientes</p>;
+    return <p className="text-sm text-muted">{total} {label}</p>;
   }
 
   return (
     <div className="flex items-center justify-between text-sm text-muted">
       <span>
-        Página {page} de {totalPages} · {total} clientes
+        Página {page} de {totalPages} · {total} {label}
       </span>
       <div className="flex gap-2">
         <Button type="button" size="sm" variant="secondary" disabled={page <= 1} onClick={() => goTo(page - 1)}>
