@@ -54,7 +54,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
 
   const { data: currentTenant } = await supabase
     .from("tenants")
-    .select("plan_id, stripe_customer_id, stripe_subscription_id")
+    .select("plan_id, stripe_customer_id, stripe_subscription_id, stripe_checkout_session_id")
     .eq("id", tenant.id)
     .maybeSingle();
 
@@ -94,9 +94,24 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
   }
 
   if (paymentMethod === "card") {
+    const stripe = getStripe();
+    // La reserva de arriba se libera sola a los 5 min, pero una Checkout Session de tarjeta sigue
+    // viva hasta 24 h (default de Stripe): sin esto, un reintento tras esos 5 min podría terminar
+    // con dos sesiones válidas y, si el dueño completa ambas, dos suscripciones reales cobrando
+    // (hallazgo de Codex). Se expira la sesión anterior en Stripe antes de crear otra — best effort,
+    // que ya esté pagada/expirada/no exista no debe tumbar el intento nuevo.
+    if (currentTenant?.stripe_checkout_session_id) {
+      try {
+        const previous = await stripe.checkout.sessions.retrieve(currentTenant.stripe_checkout_session_id);
+        if (previous.status === "open") await stripe.checkout.sessions.expire(previous.id);
+      } catch {
+        // sesión ya vencida/inexistente: no bloquea el intento nuevo
+      }
+    }
+
     const host = request.headers.get("host") ?? "";
     const origin = tenantOrigin(slug, host);
-    const session = await getStripe().checkout.sessions.create({
+    const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       client_reference_id: tenant.id,
       customer: currentTenant?.stripe_customer_id ?? undefined,
@@ -108,6 +123,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
       success_url: `${origin}/panel/facturacion?checkout=success`,
       cancel_url: `${origin}/panel/facturacion?checkout=cancel`,
     });
+    await supabase.rpc("record_stripe_checkout_session", { p_tenant: tenant.id, p_session_id: session.id });
     return NextResponse.json({ url: session.url });
   }
 

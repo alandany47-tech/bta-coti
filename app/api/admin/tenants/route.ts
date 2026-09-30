@@ -64,13 +64,21 @@ export async function POST(request: Request) {
     invited = true;
   }
 
+  // Si el admin pide alta "active" con billing_mode "stripe", el acceso pagado real lo debe activar
+  // solo el webhook cuando Stripe confirme el pago (docs/STRIPE.md) — provisionar "active" de una
+  // vez regalaría acceso pagado sin cobrar nada si el cliente nunca completa el Checkout de abajo.
+  // Se aprovisiona como trialing con margen de sobra (30 días) mientras tanto.
+  const isUnpaidStripeActivation = client.billingMode === "stripe" && client.status === "active";
+  const provisionStatus = isUnpaidStripeActivation ? "trialing" : client.status;
+  const provisionTrialDays = isUnpaidStripeActivation ? 30 : client.trialDays;
+
   const { data: tenantId, error } = await supabase.rpc("provision_tenant", {
     p_owner: ownerId,
     p_name: client.name,
     p_slug: client.slug,
     p_plan_code: client.plan,
-    p_status: client.status,
-    p_trial_days: client.trialDays,
+    p_status: provisionStatus,
+    p_trial_days: provisionTrialDays,
     p_source: "admin",
     p_billing_mode: client.billingMode,
   });
@@ -91,6 +99,7 @@ export async function POST(request: Request) {
     slug: client.slug,
     plan: client.plan,
     status: client.status,
+    provisioned_status: provisionStatus,
     billing_mode: client.billingMode,
     owner_id: ownerId,
     owner_email: client.ownerEmail,

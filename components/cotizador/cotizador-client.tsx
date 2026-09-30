@@ -52,6 +52,13 @@ export function CotizadorClient({
     setIsSubmitting(true);
     setErrorMessage(null);
 
+    // Safari/iOS solo deja abrir una pestaña si window.open ocurre sincrónicamente dentro del clic;
+    // tras un await ya perdió la activación del usuario y la bloquea en silencio. Se abre en blanco
+    // aquí mismo y se navega después con la URL real (sin "noopener": con ese flag el propio open()
+    // devuelve null y no queda referencia para navegarla luego; el destino siempre es wa.me, así que
+    // el riesgo de reverse-tabnabbing no aplica).
+    const whatsappTab = window.open("", "_blank");
+
     try {
       const res = await fetch(`/api/${tenantSlug}/quotes`, {
         method: "POST",
@@ -71,16 +78,23 @@ export function CotizadorClient({
       const data = await res.json();
 
       if (!res.ok) {
+        whatsappTab?.close();
         setErrorMessage(data.error ?? "No se pudo generar la cotización.");
         return;
       }
 
-      window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
+      if (whatsappTab) {
+        whatsappTab.location.href = data.whatsappUrl;
+      } else {
+        // El navegador ya bloqueó el open en blanco (poco común): último intento directo.
+        window.open(data.whatsappUrl, "_blank", "noopener,noreferrer");
+      }
       setSelectedProperty(null);
       setSelectedClient(null);
       setInputs(DEFAULT_INPUTS);
       setNotes("");
     } catch {
+      whatsappTab?.close();
       setErrorMessage("Error de red al generar la cotización.");
     } finally {
       setIsSubmitting(false);

@@ -61,12 +61,13 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0025 en `supabase/migrations` (detalle de cada una en su propio archivo; las
+- Migraciones 0001 → 0026 en `supabase/migrations` (detalle de cada una en su propio archivo; las
   más recientes: 0024 saltan su respaldo por IP cuando `auth.role() = 'service_role'` y agregan
   `media.detached_at`/`retry_detached_media_deletes`; 0025 (T20) agrega `stripe_events`,
   `subscriptions`, `status_changed_at`+`expire_past_due()`, `plan_usage_overages` y
-  `reserve_stripe_checkout` — todas validan membresía ellas mismas porque las llama el cliente de
-  sesión, nunca service role, desde `app/api/[tenant]/billing/*`). Se aplican con
+  `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id` +
+  `record_stripe_checkout_session` — todas validan membresía ellas mismas porque las llama el
+  cliente de sesión, nunca service role, desde `app/api/[tenant]/billing/*`). Se aplican con
   `supabase db push --linked`. Tests pgTAP en `supabase/tests` (sin Docker se corren por
   MCP/`supabase db query --linked -f` con rollback forzado por un `DO` final que lanza
   `RES total=% failed=%`).
@@ -130,8 +131,11 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `stripe_customer_id`/`plan_id` sin revalidar uso (el respaldo son los triggers de cuota,
   docs/STRIPE.md §4); `.deleted` limpia `stripe_subscription_id` del tenant (si no, nunca puede
   volver a suscribirse). `invoice.overdue` SÍ existe (equivalente de `payment_failed` para SPEI).
-  `reserve_stripe_checkout` evita duplicar suscripciones por un doble POST. Pendiente: proveedor de
-  correo transaccional para `invoice.finalized`/disputas.
+  `reserve_stripe_checkout` evita duplicar suscripciones por un doble POST; para tarjeta además se
+  expira en Stripe la Checkout Session anterior (`stripe_checkout_session_id`, 0026) antes de crear
+  otra — la reserva sola dura 5 min pero la sesión de Stripe hasta 24 h, y completar ambas crearía
+  dos suscripciones reales (hallazgo de Codex). Pendiente: proveedor de correo transaccional para
+  `invoice.finalized`/disputas.
 - Panel → Facturación (T21): `/panel/facturacion` es la ÚNICA página de `/panel/*` que un tenant
   suspended/canceled puede ver (necesita pagar ahí para reactivarse) — `requireOperableTenant`
   (`lib/tenant-page.ts`) y `getPanelContext` (`lib/auth/panel.ts`) toman un segundo argumento
