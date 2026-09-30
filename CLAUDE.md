@@ -61,29 +61,28 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0026 en `supabase/migrations` (detalle de cada una en su propio archivo; las
-  más recientes: 0024 saltan su respaldo por IP cuando `auth.role() = 'service_role'` y agregan
-  `media.detached_at`/`retry_detached_media_deletes`; 0025 (T20) agrega `stripe_events`,
-  `subscriptions`, `status_changed_at`+`expire_past_due()`, `plan_usage_overages` y
-  `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id` +
-  `record_stripe_checkout_session` — todas validan membresía ellas mismas porque las llama el
-  cliente de sesión, nunca service role, desde `app/api/[tenant]/billing/*`). Se aplican con
+- Migraciones 0001 → 0027 en `supabase/migrations` (detalle de cada una en su propio archivo; las
+  más recientes: 0025 (T20) agrega `stripe_events`, `subscriptions`, `expire_past_due()` y
+  `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id`; 0027 (T23) agrega
+  `set_tenant_logo`/`update_tenant_branding`/`dismiss_onboarding` — todas validan membresía ellas
+  mismas porque las llama el cliente de sesión, nunca service role, salvo `set_tenant_logo`, que
+  solo la llama `/api/media/confirm` ya autenticado). Se aplican con
   `supabase db push --linked`. Tests pgTAP en `supabase/tests` (sin Docker se corren por
   MCP/`supabase db query --linked -f` con rollback forzado por un `DO` final que lanza
   `RES total=% failed=%`).
 - Tipos: `supabase gen types typescript --linked > lib/database.types.ts` tras cada migración.
-- Storage de Supabase: ya sin buckets en uso (`quotes` se retiró en T15 con
-  `scripts/remove-quotes-bucket.mjs`; `property-media` sin políticas desde 0012): los medios van a R2. Un trigger obliga a que `images`/`floor_plan_url`
-  escritas por usuarios existan ya en la propiedad; solo el servidor agrega URLs (`attach_media_url`).
+- Storage de Supabase: sin buckets en uso (`quotes` retirado en T15; `property-media` sin políticas
+  desde 0012) — los medios van a R2. Un trigger exige que `images`/`floor_plan_url` de usuarios ya
+  existan en el ítem; solo el servidor agrega URLs (`attach_media_url`, o `set_tenant_logo` para el
+  logo de tenant, T23).
 - Medios en R2 (T12): `/api/media/sign` → PUT directo a R2 → `/api/media/confirm` (HEAD real,
   `confirm_media`) y `DELETE /api/media/[id]`. Cuota por plan en BD (`reserve_media`,
   `effective_limit`: en prueba manda el tope de `plans.trial`); `usage.storage_bytes` lo mantiene
   `trg_media_usage`. Llaves `t/<tenant>/<item|_>/<uuid>-{full|thumb}.webp`. El navegador convierte a
-  WebP (full ≤ 2000 px y ~380 KB, thumb 480 px) antes de subir (`lib/image-client.ts`,
-  `lib/media-client.ts`). react-pdf no lee WebP; el PDF ya no se genera en el servidor (T15), así que
-  la conversión a JPEG vive en `lib/pdf-client.ts`. `aws4fetch` no ata el tamaño a la firma por sí
-  solo: `presignPut` firma también `Content-Type`/`Content-Length`, y el HEAD al confirmar mide el
-  tamaño real.
+  WebP antes de subir (`lib/image-client.ts`, `lib/media-client.ts`); react-pdf no lee WebP, así que
+  la conversión a JPEG del PDF (T15) vive en `lib/pdf-client.ts`. `presignPut` firma también
+  `Content-Type`/`Content-Length`; el HEAD al confirmar mide el tamaño real (nunca el que declaró
+  el navegador).
 - Cotizaciones (T15): `quotes.snapshot` (`lib/quote-snapshot.ts`) congela todo lo que muestran la página
   `slug./q/<token>` (subdominio del tenant, pública, rate limit `share`; `app/q/[token]` en el dominio
   raíz solo redirige ahí) y el PDF; editar el ítem no la cambia. Los usuarios solo LEEN `quotes`: las
@@ -106,19 +105,12 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   editor de `demo-broker` (la vitrina). `is_demo` bloquea subir/borrar medios; banner y modo
   `?present=1` en `components/demo-banner.tsx`. Admin → "Clonar como prospecto" copia catálogo y
   marca a un tenant nuevo en trial (`clone_demo_items`, docs/DEMO.md).
-- Cron diario (T17): `/api/cron/daily` (protegido con `CRON_SECRET`, igual que los otros cron) llama
-  `expire_trials()` (trialing + `trial_ends_at` vencido + sin `stripe_subscription_id`, sin tocar
-  `is_demo` → `suspended` con `status_reason='trial_expired'`), `reset_monthly_quote_counters()`
-  (nadie incrementa `usage.quotes_this_month` todavía; queda listo para T20/T21) y
-  `cleanupOrphanedMedia()` (`lib/media-cleanup.ts`: borra filas `media` `pending` sin confirmar y,
-  con `lib/r2.ts#listObjects`, objetos de R2 con más de una hora sin fila que los respalde).
-- Monitoreo (T19): `GET /api/health` (200 fijo) y `GET /api/health/deep` (header `x-health-token` =
-  `HEALTH_CHECK_TOKEN`; Supabase + `HEAD` a `R2_HEALTH_KEY` en R2, se salta si R2 no está
-  configurado; Stripe queda pendiente de T20). Sentry (`@sentry/nextjs`) en `instrumentation.ts` +
-  `instrumentation-client.ts` + `sentry.{server,edge}.config.ts`; sin `SENTRY_DSN`/
-  `NEXT_PUBLIC_SENTRY_DSN` no manda nada. `lib/heartbeat.ts#pingHeartbeat` en los tres cron
-  (`HEARTBEAT_URL_DAILY`/`_RESET_DEMO`/`_DISPOSABLE_DOMAINS`, para Better Stack); sin URL no hace
-  nada. `withSentryConfig` va en `@sentry/nextjs/config`, no en el paquete raíz (cambió en v11).
+- Cron diario (T17): `/api/cron/daily` (protegido con `CRON_SECRET`) llama `expire_trials()`
+  (trialing + `trial_ends_at` vencido + sin `stripe_subscription_id`, sin tocar `is_demo` →
+  `suspended` con `status_reason='trial_expired'`), `reset_monthly_quote_counters()` y
+  `cleanupOrphanedMedia()` (`lib/media-cleanup.ts`: borra `media` `pending` sin confirmar y, con
+  `lib/r2.ts#listObjects`, objetos de R2 sin fila que los respalde tras una hora).
+- Monitoreo (T19): ver `docs/MONITORING.md` (health, Sentry, heartbeats de los cron).
 - Stripe (T20, `docs/STRIPE.md`): `lib/stripe.ts` (`getStripe`/`stripeConfigured`, sin `apiVersion`
   fija). `npm run stripe:sync` crea/actualiza Products+Prices. `POST /api/[tenant]/billing/{checkout,portal}`
   (`anyStatus: true`: suspended/canceled necesita pagar) usan el cliente de sesión, nunca service
@@ -128,24 +120,22 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `invoices.finalizeInvoice`, nunca Checkout). `/api/stripe/webhook` (`lib/stripe-webhook.ts`):
   idempotencia por `stripe_events` marcada DESPUÉS de los efectos; `checkout.session.completed` solo
   activa si `payment_status === "paid"`; `.subscription.created/updated` liga `stripe_customer_id`/
-  `plan_id` (el respaldo de cuota son los triggers, docs/STRIPE.md §4); `.deleted` limpia
-  `stripe_subscription_id` (si no, nunca puede volver a suscribirse); `invoice.overdue` es el
-  equivalente SPEI de `payment_failed`. `reserve_stripe_checkout` evita duplicar suscripciones por
-  doble POST; para tarjeta también se expira en Stripe la Checkout Session anterior
-  (`stripe_checkout_session_id`, 0026) antes de crear otra — la reserva dura 5 min pero la sesión de
-  Stripe hasta 24 h (hallazgo de Codex). Pendiente: correo transaccional para `invoice.finalized`/disputas.
+  `plan_id` (respaldo de cuota: los triggers, docs/STRIPE.md §4); `.deleted` limpia
+  `stripe_subscription_id`; `invoice.overdue` es el equivalente SPEI de `payment_failed`.
+  `reserve_stripe_checkout` evita duplicar suscripciones por doble POST; para tarjeta también se
+  expira en Stripe la Checkout Session anterior (`stripe_checkout_session_id`, 0026) antes de crear
+  otra (hallazgo de Codex). Pendiente: correo transaccional para `invoice.finalized`/disputas.
 - Panel → Facturación (T21): `/panel/facturacion` es la ÚNICA página de `/panel/*` que un tenant
   suspended/canceled puede ver (necesita pagar ahí para reactivarse) — `requireOperableTenant`
   (`lib/tenant-page.ts`) y `getPanelContext` (`lib/auth/panel.ts`) toman un segundo argumento
   `anyStatus`; el layout lo activa leyendo `x-tenant-pathname` y debe llamarlo con el mismo valor
   exacto que la página (`React.cache` compara con `Object.is`, si no se duplica la consulta).
-  **Hallazgo aparte:** Chrome en `slug.localhost:3100/panel` hace loop de redirects (la cookie
-  `Domain=localhost` no cruza subdominios `*.localhost` ahí; no pasa en producción) — sin arreglo
-  posible en la cookie misma, toca probar el panel contra un preview de Vercel.
-- Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
-  `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
-  vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La
-  lectura pública oculta `status = 'hidden'`. Import de Excel: `exceljs` (`lib/import-properties.ts`).
+  **Hallazgo aparte:** `slug.localhost:3100/panel` hace loop de redirects en Chrome local (cookie
+  `Domain=localhost` no cruza `*.localhost`); no pasa en Vercel — prueba el panel ahí, no local.
+- Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/
+  `floor_plan_url`; `sku` único por tenant). La UI de propiedades sigue usando el tipo `Property`
+  (`lib/items.ts#itemToProperty`/`importRowToItem`); lectura pública oculta `status='hidden'`.
+  Import de Excel: `exceljs` (`lib/import-properties.ts`).
 
 ## Auth y registro
 
@@ -160,6 +150,14 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   escrituras solo en tenants operables se imponen en BD. Turnstile opcional por entorno.
 - Anti-abuso: `is_slug_blocked`, correos desechables, rate limits Upstash
   (`lib/rate-limit.ts`, fail-open sin Redis). El slug en vivo usa el bucket `slug`.
+- Onboarding (T23, `/panel/bienvenida`): wizard de 3 pasos (logo y color → ítems → primera
+  cotización); cada paso se marca completo con datos reales (`logo_url`, `usage.items_count`,
+  existe una cotización) — solo "saltar" se persiste, en `tenants.settings.onboarding_skipped`
+  (RPC `dismiss_onboarding`). El logo reusa el pipeline de medios con `kind: "logo"` e
+  `itemId: null` (ya contemplado desde T12/T13; solo faltaba ligar la URL confirmada a
+  `tenants.logo_url`, `set_tenant_logo`). El color pasa por `PATCH /api/[tenant]/branding` → RPC
+  `update_tenant_branding` (nunca RLS de tabla directa sobre `tenants`). `logo_url`/`brand_color`
+  son columnas públicas cacheadas: ambas rutas llaman `revalidateTag`.
 
 ## Admin (`/admin`)
 
@@ -174,16 +172,13 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   secciones. `lib/admin-kpis.ts#getAdminKpis` calcula MRR/conteos/conversión de prueba/almacenamiento
   en JS —sin migración nueva, la escala de hoy no la justifica—; `computeMrr`/`computeTrialConversion`
   son puras y con tests. `listTenantsForAdminPaged` (`lib/admin-tenants.ts`): búsqueda/filtros/`.range()`
-  server-side en `/admin/clientes`. Cliente-detalle (`/admin/clientes/[tenantId]`): cambiar plan y
-  extender prueba escriben directo con service role (PATCH extendido de
-  `app/api/admin/tenants/[tenantId]/route.ts`, sin RPC nueva); "entrar como soporte" es sesión
-  completa auditada, no solo-lectura (`.../impersonate` arma la URL de `/auth/callback` con
-  `generateLink().properties.hashed_token` — nunca su `action_link`, que apunta al verify hosteado
-  de Supabase); el uso mostrado es solo del mes en curso (no hay tabla histórica). Planes: CRUD real
-  (`/api/admin/plans*`), nunca DELETE — `public=false` "borra" un plan con clientes. Pagos: una sola
-  llamada a `stripe.invoices.list` (nunca por tenant) cruzada con `subscriptions` local. Auditoría
-  (`lib/admin-audit.ts`): paginada, resuelve el email del actor con `auth.admin.getUserById` (no hay
-  API de Supabase para pedir varios ids de una vez).
+  server-side en `/admin/clientes`. Cliente-detalle: cambiar plan/extender prueba escriben directo con
+  service role (PATCH extendido de `.../tenants/[tenantId]/route.ts`, sin RPC nueva); "entrar como
+  soporte" es sesión completa auditada (`.../impersonate` arma `/auth/callback` con
+  `generateLink().properties.hashed_token`, nunca el `action_link` hosteado de Supabase); uso = solo
+  mes en curso. Planes: CRUD real (`/api/admin/plans*`), nunca DELETE — `public=false` es "borrar".
+  Pagos: una sola llamada a `stripe.invoices.list` cruzada con `subscriptions` local. Auditoría
+  (`lib/admin-audit.ts`): paginada, resuelve el email del actor con `auth.admin.getUserById`.
 
 ## Entorno local
 

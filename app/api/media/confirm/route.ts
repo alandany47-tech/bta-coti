@@ -1,8 +1,19 @@
+import { revalidateTag } from "next/cache";
 import { NextResponse } from "next/server";
 import { requireTenantAccess } from "@/lib/auth/api";
 import { isUuid, MEDIA_LIMITS, mediaUrl } from "@/lib/media";
 import { deleteObjects, headObject, r2Configured } from "@/lib/r2";
-import { attachMediaUrl, confirmMedia, deleteMedia, getPendingMedia, listItemMedia, markMediaDetached } from "@/lib/media-store";
+import { tenantTag } from "@/lib/tenants";
+import {
+  attachMediaUrl,
+  confirmMedia,
+  deleteMedia,
+  getPendingMedia,
+  listItemMedia,
+  listTenantMedia,
+  markMediaDetached,
+  setTenantLogo,
+} from "@/lib/media-store";
 
 export const runtime = "nodejs";
 
@@ -66,13 +77,30 @@ export async function POST(request: Request) {
     await discard();
     return NextResponse.json({ error: "No se pudo ligar el archivo a la propiedad." }, { status: 500 });
   }
+  // T23: "logo" es el único kind sin item_id — se liga a tenants.logo_url en vez de items.images.
+  if (media.kind === "logo" && !media.item_id) {
+    const linked = await setTenantLogo(tenant.id, url);
+    if (!linked) {
+      await discard();
+      return NextResponse.json({ error: "No se pudo guardar el logo." }, { status: 500 });
+    }
+    revalidateTag(tenantTag(tenant.slug), { expire: 0 });
+  }
 
   // Un plano nuevo reemplaza al anterior: se borra el archivo viejo para no pagar almacenamiento,
   // salvo que una cotización enviada y vigente todavía lo referencie (media_in_use) — ahí se marca
   // desprendido para que el cron diario (T17/T20) lo reintente cuando esa cotización venza; si no,
   // la fila se queda "ready" para siempre y sigue contando en la cuota sin que nada la revise.
+  // Un logo nuevo reemplaza al anterior con el mismo criterio.
   if (media.kind === "plan" && media.item_id) {
     for (const old of await listItemMedia(tenant.id, media.item_id, "plan", media.id)) {
+      const deleted = await deleteMedia(old.id, tenant.id);
+      if (deleted.ok) await deleteObjects([deleted.r2_key, deleted.thumb_key]);
+      else if (deleted.code === "media_in_use") await markMediaDetached(old.id, tenant.id);
+    }
+  }
+  if (media.kind === "logo" && !media.item_id) {
+    for (const old of await listTenantMedia(tenant.id, "logo", media.id)) {
       const deleted = await deleteMedia(old.id, tenant.id);
       if (deleted.ok) await deleteObjects([deleted.r2_key, deleted.thumb_key]);
       else if (deleted.code === "media_in_use") await markMediaDetached(old.id, tenant.id);
