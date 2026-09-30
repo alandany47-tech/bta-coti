@@ -9,7 +9,22 @@ Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables, 
 4. `supabase config push` (plantillas de correo) y activar Captcha con Turnstile (ver LAUNCH-CHECKLIST §4).
 5. Crear al primer admin: usuario en Auth + `insert into app_admins (user_id) values ('<id>')`.
 
-## 2. Vercel Pro
+## 2. Vercel — probar primero en Hobby, luego subir a Pro
+Antes de pagar Pro conviene levantar todo en el plan gratis (Hobby) y probar el flujo completo en un
+dominio real; cuando ya funcione, un clic en Vercel pasa el proyecto a Pro sin volver a desplegar.
+Diferencias a tener en cuenta mientras estés en Hobby:
+- El plan Hobby es para uso personal/no comercial según los términos de Vercel — está bien para
+  probar antes de cobrar de verdad, pero pasa a Pro antes de abrir el registro a clientes reales.
+- Cron Jobs: Hobby los limita a una ejecución por día (y con hasta ~1 h de margen en la hora exacta).
+  Los 3 crons de `vercel.json` ya son diarios o semanales, así que corren igual; no dependas de que
+  disparen a la hora exacta indicada mientras estés en Hobby.
+- Dominio comodín (`*.ayx.solutions`): confirma en Vercel → Domains al momento, los límites por plan
+  cambian con el tiempo y no conviene asumir el de hoy.
+- Solo tú tienes acceso (Hobby no da colaboradores en el equipo) — no hace falta invitar a nadie para
+  esta prueba.
+- El resto (Supabase, R2, Stripe, Sentry, Upstash, Turnstile) son servicios aparte: no dependen del
+  plan de Vercel, así que sigue las secciones 1, 2b, 2c y 2d igual.
+
 1. Importar el repo `alandany47-tech/bta-coti`; framework Next.js, rama de producción `main`.
 2. Variables (Production / Preview; Preview apunta al Supabase de desarrollo):
 

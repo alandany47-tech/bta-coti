@@ -104,7 +104,11 @@ export function PlanPicker({
           .sort((a, b) => a.sort - b.sort)
           .map((plan) => {
             const price = interval === "month" ? plan.priceMonth : plan.priceYear;
-            const isCurrent = plan.code === currentPlanCode;
+            // Sin suscripción (el único caso que llega aquí: con suscripción activa se corta arriba
+            // con el mensaje del portal), el tenant SÍ puede comprar su plan "actual" — plan_id puede
+            // venir de la provisión inicial o de un ciclo cancelado, sin que eso signifique que ya
+            // está pagando. Ocultar el botón aquí lo dejaría sin forma de iniciar el primer cobro.
+            const isCurrent = hasSubscription && plan.code === currentPlanCode;
             return (
               <div key={plan.code} className="flex flex-col gap-2 rounded-lg border border-border-subtle bg-surface p-4">
                 <div className="flex items-baseline justify-between">

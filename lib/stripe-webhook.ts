@@ -79,7 +79,11 @@ async function upsertSubscription(supabase: SupabaseClient, tenantId: string, su
   if (error) throw error;
 
   const planId = await planIdForPrice(supabase, item.price.id);
-  const patch: Record<string, string | null> = { stripe_subscription_id: sub.id, stripe_checkout_pending_at: null };
+  const patch: Record<string, string | null> = {
+    stripe_subscription_id: sub.id,
+    stripe_checkout_pending_at: null,
+    stripe_checkout_session_id: null,
+  };
   const custId = customerId(sub.customer);
   if (custId) patch.stripe_customer_id = custId;
   if (planId) patch.plan_id = planId;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { NewClientForm } from "@/components/admin/new-client-form";
 import { TenantRow } from "@/components/admin/tenant-row";
@@ -13,8 +14,18 @@ export function AdminConsole({
   initialTenants: AdminTenantRow[];
   rootDomain: string;
 }) {
+  const router = useRouter();
   const [tenants, setTenants] = useState(initialTenants);
   const [creating, setCreating] = useState(false);
+  // `key` en el Server Component ya remonta esto al cambiar de página/filtro; este par cubre el otro
+  // caso, `router.refresh()` tras crear un cliente, donde el `key` no cambia pero sí los datos —
+  // ajustar el estado durante el render (no en un efecto) evita el re-render en cascada que marca
+  // react-hooks/set-state-in-effect.
+  const [prevInitialTenants, setPrevInitialTenants] = useState(initialTenants);
+  if (initialTenants !== prevInitialTenants) {
+    setPrevInitialTenants(initialTenants);
+    setTenants(initialTenants);
+  }
 
   function handleUpdate(updated: AdminTenantRow) {
     setTenants((prev) => prev.map((t) => (t.id === updated.id ? updated : t)));
@@ -22,15 +33,17 @@ export function AdminConsole({
 
   return (
     <>
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">{tenants.length} clientes</p>
+      <div className="flex items-center justify-end">
         {creating ? null : <Button onClick={() => setCreating(true)}>Nuevo cliente</Button>}
       </div>
 
       {creating ? (
         <NewClientForm
           rootDomain={rootDomain}
-          onCreated={(tenant) => setTenants((prev) => [tenant, ...prev])}
+          onCreated={() => {
+            setCreating(false);
+            router.refresh();
+          }}
           onCancel={() => setCreating(false)}
         />
       ) : null}
@@ -50,8 +63,11 @@ export function AdminConsole({
                 <th className="p-3 font-medium">Plan</th>
                 <th className="p-3 font-medium">Estado</th>
                 <th className="p-3 font-medium">Origen</th>
-                <th className="p-3 text-center font-medium">Propiedades</th>
+                <th className="p-3 font-medium">Almacenamiento</th>
+                <th className="p-3 text-center font-medium">Ítems</th>
                 <th className="p-3 text-center font-medium">Cotiz. del mes</th>
+                <th className="p-3 font-medium">Alta</th>
+                <th className="p-3 font-medium">Vencimiento</th>
                 <th className="p-3 font-medium">Cambiar estado</th>
                 <th className="p-3 font-medium">Notas internas</th>
               </tr>

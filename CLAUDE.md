@@ -61,12 +61,13 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0025 en `supabase/migrations` (detalle de cada una en su propio archivo; las
+- Migraciones 0001 → 0026 en `supabase/migrations` (detalle de cada una en su propio archivo; las
   más recientes: 0024 saltan su respaldo por IP cuando `auth.role() = 'service_role'` y agregan
   `media.detached_at`/`retry_detached_media_deletes`; 0025 (T20) agrega `stripe_events`,
   `subscriptions`, `status_changed_at`+`expire_past_due()`, `plan_usage_overages` y
-  `reserve_stripe_checkout` — todas validan membresía ellas mismas porque las llama el cliente de
-  sesión, nunca service role, desde `app/api/[tenant]/billing/*`). Se aplican con
+  `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id` +
+  `record_stripe_checkout_session` — todas validan membresía ellas mismas porque las llama el
+  cliente de sesión, nunca service role, desde `app/api/[tenant]/billing/*`). Se aplican con
   `supabase db push --linked`. Tests pgTAP en `supabase/tests` (sin Docker se corren por
   MCP/`supabase db query --linked -f` con rollback forzado por un `DO` final que lanza
   `RES total=% failed=%`).
@@ -119,31 +120,22 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   (`HEARTBEAT_URL_DAILY`/`_RESET_DEMO`/`_DISPOSABLE_DOMAINS`, para Better Stack); sin URL no hace
   nada. `withSentryConfig` va en `@sentry/nextjs/config`, no en el paquete raíz (cambió en v11).
 - Stripe (T20, `docs/STRIPE.md`): `lib/stripe.ts` (`getStripe`/`stripeConfigured`, sin `apiVersion`
-  fija). `npm run stripe:sync` (`lib/stripe-sync.ts`) crea/actualiza Products+Prices por `lookup_key`.
-  `POST /api/[tenant]/billing/{checkout,portal}` (`anyStatus: true` en `requireTenantAccess`: un
-  tenant suspended/canceled justo necesita pagar) usan el cliente de sesión (nunca service role ahí);
-  `checkout` rechaza si ya hay `stripe_subscription_id` (cambios de plan van por el Portal) y bloquea
-  un downgrade con `plan_usage_overages`. **OXXO no sirve para cobro recurrente** (verificado contra
-  Stripe real: lo rechaza en Checkout y en la API de suscripciones) — solo tarjeta (Checkout) y SPEI
-  (`stripe.subscriptions.create` con `send_invoice` + `invoices.finalizeInvoice`, nunca Checkout, que
-  también rechaza `customer_balance` en `mode: "subscription"`). `/api/stripe/webhook`
-  (`lib/stripe-webhook.ts`): idempotencia por `stripe_events` marcada DESPUÉS de los efectos (no
-  antes, o un reintento de Stripe chocaría con la PK sin completar lo que faltó);
-  `checkout.session.completed` solo activa si `payment_status === "paid"`; `setTenantStatus` revienta
-  el webhook si falla (para que Stripe reintente en vez de responder 200 desincronizado);
-  `customer.subscription.created/updated` es lo único que liga `stripe_customer_id`/`plan_id`
-  (dispara para Checkout y para SPEI directo por igual; aplica el plan sin volver a validar uso — el
-  Portal no da forma de bloquear un downgrade antes, el respaldo son los triggers de cuota
-  existentes, docs/STRIPE.md §4). `invoice.overdue` SÍ existe (a diferencia de lo que se pensó al
-  principio) y es el equivalente de `payment_failed` para SPEI/`send_invoice`, que nunca dispara ese
-  evento; ambos resuelven el tenant primero por `invoice.parent.subscription_details.metadata`
-  (foto fija, no depende del orden de entrega de webhooks) y solo si falta caen a buscar en
-  `subscriptions`. `expire_past_due()` en el cron diario deriva la suspensión por 7 días en
-  `past_due` de `status_changed_at`. `reserve_stripe_checkout` (columna
-  `stripe_checkout_pending_at`, expira a los 5 min) evita que un POST duplicado a `billing/checkout`
-  cree dos suscripciones antes de que el webhook guarde la real. Alta activa por Stripe desde
-  `/admin` ahora sí genera y devuelve el link de Checkout (antes daba acceso pagado sin cobrar).
-  Pendiente antes de cerrarlo: proveedor de correo transaccional para `invoice.finalized`/disputas.
+  fija). `npm run stripe:sync` crea/actualiza Products+Prices. `POST /api/[tenant]/billing/{checkout,portal}`
+  (`anyStatus: true`: un tenant suspended/canceled necesita pagar) usan el cliente de sesión, nunca
+  service role; `checkout` rechaza si ya hay `stripe_subscription_id` y bloquea downgrades con
+  `plan_usage_overages`. **OXXO no sirve para cobro recurrente** (verificado contra Stripe real) —
+  solo tarjeta (Checkout) y SPEI (`stripe.subscriptions.create` con `send_invoice` +
+  `invoices.finalizeInvoice`, nunca Checkout). `/api/stripe/webhook` (`lib/stripe-webhook.ts`):
+  idempotencia por `stripe_events` marcada DESPUÉS de los efectos; `checkout.session.completed` solo
+  activa si `payment_status === "paid"`; `customer.subscription.created/updated` liga
+  `stripe_customer_id`/`plan_id` sin revalidar uso (el respaldo son los triggers de cuota,
+  docs/STRIPE.md §4); `.deleted` limpia `stripe_subscription_id` del tenant (si no, nunca puede
+  volver a suscribirse). `invoice.overdue` SÍ existe (equivalente de `payment_failed` para SPEI).
+  `reserve_stripe_checkout` evita duplicar suscripciones por un doble POST; para tarjeta además se
+  expira en Stripe la Checkout Session anterior (`stripe_checkout_session_id`, 0026) antes de crear
+  otra — la reserva sola dura 5 min pero la sesión de Stripe hasta 24 h, y completar ambas crearía
+  dos suscripciones reales (hallazgo de Codex). Pendiente: proveedor de correo transaccional para
+  `invoice.finalized`/disputas.
 - Panel → Facturación (T21): `/panel/facturacion` es la ÚNICA página de `/panel/*` que un tenant
   suspended/canceled puede ver (necesita pagar ahí para reactivarse) — `requireOperableTenant`
   (`lib/tenant-page.ts`) y `getPanelContext` (`lib/auth/panel.ts`) toman un segundo argumento
@@ -183,6 +175,15 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `source = 'admin'`). Todo cambio de estado pasa por `setTenantStatus` (`lib/admin-status.ts`,
   RPC `set_tenant_status` con auditoría atómica; suspender/cancelar exigen motivo) y luego
   `revalidateTag(tenantTag(slug), { expire: 0 })`. Conteos desde `usage` (triggers), no contando filas.
+- Resumen y Clientes (T24a, `docs/ADMIN-PANEL.md`): el gate vive en `app/admin/layout.tsx` (antes
+  solo en `page.tsx`), que también trae el nav de 5 secciones (`/planes`/`/pagos`/`/auditoria` son
+  placeholder hasta T24b). `lib/admin-kpis.ts#getAdminKpis` calcula MRR/conteos/conversión de
+  prueba/almacenamiento en JS —sin migración nueva, la escala de hoy no la justifica—;
+  `computeMrr`/`computeTrialConversion` son puras y con tests. `listTenantsForAdminPaged`
+  (`lib/admin-tenants.ts`) reemplaza al `listTenantsForAdmin` sin paginar en `/admin/clientes`:
+  búsqueda por nombre/slug, filtros de estado/plan/origen, `.range()` server-side. Pendiente en
+  T24b: Cliente-detalle con acciones, Planes CRUD, Pagos, Auditoría, "entrar como soporte" y el
+  historial de uso (no hay tabla histórica hoy, `usage` solo guarda el mes en curso).
 
 ## Entorno local
 
