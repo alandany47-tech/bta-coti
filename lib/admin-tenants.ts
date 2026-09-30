@@ -1,5 +1,6 @@
 import "server-only";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { emailsByIds } from "@/lib/admin-users";
 import type { AdminTenantRow, TenantStatus } from "@/lib/types";
 
 const SELECT = "*, plans(name), usage(items_count, quotes_this_month, storage_bytes)";
@@ -56,6 +57,20 @@ export async function listDemoTenantsForAdmin(): Promise<AdminDemoTenantRow[]> {
   return ((data ?? []) as unknown as { id: string; name: string; slug: string; status: string; plans: { name: string } | { name: string }[] | null }[]).map(
     (row) => ({ id: row.id, name: row.name, slug: row.slug, status: row.status, plan_name: one(row.plans)?.name ?? "—" }),
   );
+}
+
+export type TenantMember = { userId: string; role: "owner" | "editor" | "viewer"; email: string | null };
+
+/** Dueño + miembros de un tenant, con su email resuelto (Cliente-detalle, T24b). */
+export async function getTenantMembers(tenantId: string): Promise<TenantMember[]> {
+  const { data } = await createServiceRoleClient()
+    .from("tenant_members")
+    .select("user_id, role")
+    .eq("tenant_id", tenantId)
+    .order("role", { ascending: true });
+  const rows = (data ?? []) as { user_id: string; role: TenantMember["role"] }[];
+  const emails = await emailsByIds(rows.map((r) => r.user_id));
+  return rows.map((r) => ({ userId: r.user_id, role: r.role, email: emails.get(r.user_id) ?? null }));
 }
 
 /** Código del plan (para clonar un tenant de demo con el mismo plan al aprovisionar el prospecto). */

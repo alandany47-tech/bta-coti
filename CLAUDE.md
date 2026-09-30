@@ -121,32 +121,27 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   nada. `withSentryConfig` va en `@sentry/nextjs/config`, no en el paquete raíz (cambió en v11).
 - Stripe (T20, `docs/STRIPE.md`): `lib/stripe.ts` (`getStripe`/`stripeConfigured`, sin `apiVersion`
   fija). `npm run stripe:sync` crea/actualiza Products+Prices. `POST /api/[tenant]/billing/{checkout,portal}`
-  (`anyStatus: true`: un tenant suspended/canceled necesita pagar) usan el cliente de sesión, nunca
-  service role; `checkout` rechaza si ya hay `stripe_subscription_id` y bloquea downgrades con
+  (`anyStatus: true`: suspended/canceled necesita pagar) usan el cliente de sesión, nunca service
+  role; `checkout` rechaza si ya hay `stripe_subscription_id` y bloquea downgrades con
   `plan_usage_overages`. **OXXO no sirve para cobro recurrente** (verificado contra Stripe real) —
   solo tarjeta (Checkout) y SPEI (`stripe.subscriptions.create` con `send_invoice` +
   `invoices.finalizeInvoice`, nunca Checkout). `/api/stripe/webhook` (`lib/stripe-webhook.ts`):
   idempotencia por `stripe_events` marcada DESPUÉS de los efectos; `checkout.session.completed` solo
-  activa si `payment_status === "paid"`; `customer.subscription.created/updated` liga
-  `stripe_customer_id`/`plan_id` sin revalidar uso (el respaldo son los triggers de cuota,
-  docs/STRIPE.md §4); `.deleted` limpia `stripe_subscription_id` del tenant (si no, nunca puede
-  volver a suscribirse). `invoice.overdue` SÍ existe (equivalente de `payment_failed` para SPEI).
-  `reserve_stripe_checkout` evita duplicar suscripciones por un doble POST; para tarjeta además se
-  expira en Stripe la Checkout Session anterior (`stripe_checkout_session_id`, 0026) antes de crear
-  otra — la reserva sola dura 5 min pero la sesión de Stripe hasta 24 h, y completar ambas crearía
-  dos suscripciones reales (hallazgo de Codex). Pendiente: proveedor de correo transaccional para
-  `invoice.finalized`/disputas.
+  activa si `payment_status === "paid"`; `.subscription.created/updated` liga `stripe_customer_id`/
+  `plan_id` (el respaldo de cuota son los triggers, docs/STRIPE.md §4); `.deleted` limpia
+  `stripe_subscription_id` (si no, nunca puede volver a suscribirse); `invoice.overdue` es el
+  equivalente SPEI de `payment_failed`. `reserve_stripe_checkout` evita duplicar suscripciones por
+  doble POST; para tarjeta también se expira en Stripe la Checkout Session anterior
+  (`stripe_checkout_session_id`, 0026) antes de crear otra — la reserva dura 5 min pero la sesión de
+  Stripe hasta 24 h (hallazgo de Codex). Pendiente: correo transaccional para `invoice.finalized`/disputas.
 - Panel → Facturación (T21): `/panel/facturacion` es la ÚNICA página de `/panel/*` que un tenant
   suspended/canceled puede ver (necesita pagar ahí para reactivarse) — `requireOperableTenant`
   (`lib/tenant-page.ts`) y `getPanelContext` (`lib/auth/panel.ts`) toman un segundo argumento
   `anyStatus`; el layout lo activa leyendo `x-tenant-pathname` y debe llamarlo con el mismo valor
-  exacto que la página (`React.cache` compara argumentos con `Object.is`, no una `{}` nueva cada
-  vez, si no se duplica la consulta en el caso normal). **Hallazgo aparte, no de este código:**
-  iniciar sesión y navegar a `slug.localhost:3100/panel` hace un loop infinito de redirects en
-  Chrome — la cookie con `Domain=localhost` (`lib/auth/cookie-domain.ts`) no se comparte con los
-  subdominios `*.localhost` porque Chrome trata `localhost` como si fuera un sufijo público; no
-  pasa con el dominio real (`.ayx.solutions`) en producción. No se intentó arreglar (no tiene
-  arreglo dentro de la cookie misma); toca probar el panel contra un preview de Vercel, no local.
+  exacto que la página (`React.cache` compara con `Object.is`, si no se duplica la consulta).
+  **Hallazgo aparte:** Chrome en `slug.localhost:3100/panel` hace loop de redirects (la cookie
+  `Domain=localhost` no cruza subdominios `*.localhost` ahí; no pasa en producción) — sin arreglo
+  posible en la cookie misma, toca probar el panel contra un preview de Vercel.
 - Ítems (T14): tabla `items` (`kind` product|service|property; `attrs` jsonb; `images`/`floor_plan_url`;
   `sku` único por tenant, en propiedades = unidad). La UI de propiedades sigue usando el tipo `Property`
   vía `lib/items.ts` (`itemToProperty`, `importRowToItem`); consultas con `.eq("kind","property")`. La
@@ -175,15 +170,20 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `source = 'admin'`). Todo cambio de estado pasa por `setTenantStatus` (`lib/admin-status.ts`,
   RPC `set_tenant_status` con auditoría atómica; suspender/cancelar exigen motivo) y luego
   `revalidateTag(tenantTag(slug), { expire: 0 })`. Conteos desde `usage` (triggers), no contando filas.
-- Resumen y Clientes (T24a, `docs/ADMIN-PANEL.md`): el gate vive en `app/admin/layout.tsx` (antes
-  solo en `page.tsx`), que también trae el nav de 5 secciones (`/planes`/`/pagos`/`/auditoria` son
-  placeholder hasta T24b). `lib/admin-kpis.ts#getAdminKpis` calcula MRR/conteos/conversión de
-  prueba/almacenamiento en JS —sin migración nueva, la escala de hoy no la justifica—;
-  `computeMrr`/`computeTrialConversion` son puras y con tests. `listTenantsForAdminPaged`
-  (`lib/admin-tenants.ts`) reemplaza al `listTenantsForAdmin` sin paginar en `/admin/clientes`:
-  búsqueda por nombre/slug, filtros de estado/plan/origen, `.range()` server-side. Pendiente en
-  T24b: Cliente-detalle con acciones, Planes CRUD, Pagos, Auditoría, "entrar como soporte" y el
-  historial de uso (no hay tabla histórica hoy, `usage` solo guarda el mes en curso).
+- Admin v2 (`docs/ADMIN-PANEL.md`): gate en `app/admin/layout.tsx` (no en `page.tsx`), nav de 5
+  secciones. `lib/admin-kpis.ts#getAdminKpis` calcula MRR/conteos/conversión de prueba/almacenamiento
+  en JS —sin migración nueva, la escala de hoy no la justifica—; `computeMrr`/`computeTrialConversion`
+  son puras y con tests. `listTenantsForAdminPaged` (`lib/admin-tenants.ts`): búsqueda/filtros/`.range()`
+  server-side en `/admin/clientes`. Cliente-detalle (`/admin/clientes/[tenantId]`): cambiar plan y
+  extender prueba escriben directo con service role (PATCH extendido de
+  `app/api/admin/tenants/[tenantId]/route.ts`, sin RPC nueva); "entrar como soporte" es sesión
+  completa auditada, no solo-lectura (`.../impersonate` arma la URL de `/auth/callback` con
+  `generateLink().properties.hashed_token` — nunca su `action_link`, que apunta al verify hosteado
+  de Supabase); el uso mostrado es solo del mes en curso (no hay tabla histórica). Planes: CRUD real
+  (`/api/admin/plans*`), nunca DELETE — `public=false` "borra" un plan con clientes. Pagos: una sola
+  llamada a `stripe.invoices.list` (nunca por tenant) cruzada con `subscriptions` local. Auditoría
+  (`lib/admin-audit.ts`): paginada, resuelve el email del actor con `auth.admin.getUserById` (no hay
+  API de Supabase para pedir varios ids de una vez).
 
 ## Entorno local
 

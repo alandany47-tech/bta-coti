@@ -1,3 +1,7 @@
-export default function AdminPlanesPage() {
-  return <p className="text-sm text-muted">Esto llega en el próximo ticket (T24b): CRUD de planes.</p>;
+import { listPlansForAdmin } from "@/lib/admin-plans";
+import { PlanesConsole } from "@/components/admin/planes-console";
+
+export default async function AdminPlanesPage() {
+  const plans = await listPlansForAdmin();
+  return <PlanesConsole initialPlans={plans} />;
 }
