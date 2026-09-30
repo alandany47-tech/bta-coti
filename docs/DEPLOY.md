@@ -20,12 +20,23 @@ Diferencias a tener en cuenta mientras estés en Hobby:
   disparen a la hora exacta indicada mientras estés en Hobby.
 - Dominio comodín (`*.ayx.solutions`): confirma en Vercel → Domains al momento, los límites por plan
   cambian con el tiempo y no conviene asumir el de hoy.
+- **El alias por default `tu-proyecto.vercel.app` NO wildcardea subdominios** (verificado:
+  `torrezafiro.bta-coti.vercel.app` da error de DNS, ni llega a la app) — a diferencia de lo que uno
+  asumiría del comportamiento de otros PaaS. Como toda ruta de tenant (`/panel/*`, `slug./`) depende
+  del subdominio vía `proxy.ts`, **nada de eso se puede probar en navegador hasta tener el dominio
+  propio con DNS comodín** (paso 3 de este documento) — ni en local (bug de cookies de Chrome en
+  `*.localhost`, ver `CLAUDE.md`) ni en este alias de Vercel. Sin el dominio, solo son probables en
+  navegador las rutas del dominio raíz (`/`, `/login`, `/admin`, `/registro`).
 - Solo tú tienes acceso (Hobby no da colaboradores en el equipo) — no hace falta invitar a nadie para
   esta prueba.
 - El resto (Supabase, R2, Stripe, Sentry, Upstash, Turnstile) son servicios aparte: no dependen del
   plan de Vercel, así que sigue las secciones 1, 2b, 2c y 2d igual.
 
-1. Importar el repo `alandany47-tech/bta-coti`; framework Next.js, rama de producción `main`.
+1. Importar el repo `alandany47/bta-coti` (renombrado; era `alandany47-tech/bta-coti`); framework
+   Next.js. **`main` está desactualizado** (contenido previo a la reescritura del proyecto) — el
+   trabajo real vive en una cadena de ramas apiladas (`docs/BUILD-WORKFLOW.md`) que todavía no se
+   mergean ahí, así que la rama de producción en Vercel hoy apunta a la punta de esa cadena (revisa
+   Settings → Git → Production Branch para ver cuál es al momento), no a `main`.
 2. Variables (Production / Preview; Preview apunta al Supabase de desarrollo):
 
 | Variable | Production | Preview |
