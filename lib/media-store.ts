@@ -138,3 +138,22 @@ export async function listItemMedia(tenantId: string, itemId: string, kind: stri
     .neq("id", exceptId);
   return data ?? [];
 }
+
+/** Liga la URL del CDN a `tenants.logo_url` (T23) — la única variante de medio sin `item_id`. */
+export async function setTenantLogo(tenantId: string, url: string) {
+  const { error } = await createServiceRoleClient().rpc("set_tenant_logo", { p_tenant: tenantId, p_url: url });
+  if (error) console.error("set_tenant_logo falló", error.message);
+  return !error;
+}
+
+/** Como `listItemMedia` pero para medios sin `item_id` (hoy solo `kind: "logo"`). */
+export async function listTenantMedia(tenantId: string, kind: string, exceptId: string) {
+  const { data } = await createServiceRoleClient()
+    .from("media")
+    .select("id, r2_key, thumb_key")
+    .eq("tenant_id", tenantId)
+    .is("item_id", null)
+    .eq("kind", kind)
+    .neq("id", exceptId);
+  return data ?? [];
+}

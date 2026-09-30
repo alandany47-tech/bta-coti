@@ -1,6 +1,6 @@
 import { prepareImage } from "@/lib/image-client";
 
-export type UploadKind = "image" | "render" | "plan";
+export type UploadKind = "image" | "render" | "plan" | "logo";
 
 export type UploadedMedia = {
   media: { id: string; url: string; thumbUrl: string | null; bytes: number };
@@ -38,7 +38,7 @@ async function json<T>(response: Response): Promise<T & { error?: string }> {
  */
 export async function uploadMedia(input: {
   tenant: string;
-  itemId: string;
+  itemId: string | null;
   kind: UploadKind;
   file: File;
   onStage?: (stage: UploadStage) => void;
