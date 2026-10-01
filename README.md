@@ -1,4 +1,4 @@
-# AYX Cotiza
+# AYXCO
 
 Cotizador multi-tenant para brokers inmobiliarios de lujo (cartera de hasta 10
 propiedades por tenant): importan su cartera desde Excel, suben fotos y plano
@@ -18,7 +18,7 @@ clic.
 
 ## Arquitectura multi-tenant
 
-- `proxy.ts` lee el header `Host`, extrae el subdominio (`cliente1.ayx.solutions`
+- `proxy.ts` lee el header `Host`, extrae el subdominio (`cliente1.ayxco.app`
   o `cliente1.localhost:3000`) y reescribe internamente a `/[tenant]/...`.
 - `app/[tenant]/layout.tsx` resuelve el tenant por slug contra Supabase y
   devuelve 404 si no existe o está inactivo.

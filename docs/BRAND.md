@@ -4,7 +4,7 @@
 
 ## 1. Nombre
 
-Nombre: **AYX Cotiza** (decidido por el dueño del producto, sustituye al provisional "BTA Cotiza"). "AYX" va primero y es la marca; "Cotiza" describe el producto. Dominio: ayx.solutions. Falta validar la marca en IMPI. Alternativas evaluadas antes:
+Nombre: **AYXCO** (decidido por el dueño del producto; sustituye a "AYX Cotiza", que sustituyó al provisional "BTA Cotiza"). Dominio: ayxco.app (sin cambio por ahora). Falta validar la marca en IMPI. Alternativas evaluadas antes:
 
 | Nombre | Idea |
 |---|---|
