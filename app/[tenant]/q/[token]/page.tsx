@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { DownloadPdfButton } from "@/components/quote/download-pdf-button";
-import { BRAND } from "@/lib/brand";
 import { tenantOrigin } from "@/lib/auth/redirects";
 import { parseQuoteSnapshot } from "@/lib/quote-snapshot";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
@@ -10,7 +9,7 @@ import { createServiceRoleClient } from "@/lib/supabase/server";
 import { formatCurrency } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: `Cotización · ${BRAND.name}`,
+  title: "Cotización",
   robots: { index: false, follow: false },
 };
 

@@ -16,6 +16,14 @@ const STATUS_DOT: Record<Property["status"], string> = {
   sold: "bg-danger",
 };
 
+type CatalogItemRow = {
+  id: string;
+  title: string;
+  category: string | null;
+  price: number | string;
+  unit: string | null;
+};
+
 export default async function StorefrontPage({
   params,
 }: {
@@ -25,13 +33,32 @@ export default async function StorefrontPage({
   const tenant = await requireOperableTenant(slug);
 
   const supabase = createServerSupabaseClient();
-  const { data } = await supabase
-    .from("items")
-    .select(PROPERTY_COLUMNS)
-    .eq("tenant_id", tenant.id)
-    .eq("kind", "property")
-    .order("sku", { ascending: true });
+  const [{ data }, { data: catalogData }] = await Promise.all([
+    supabase
+      .from("items")
+      .select(PROPERTY_COLUMNS)
+      .eq("tenant_id", tenant.id)
+      .eq("kind", "property")
+      .order("sku", { ascending: true }),
+    supabase
+      .from("items")
+      .select("id, title, category, price, unit")
+      .eq("tenant_id", tenant.id)
+      .in("kind", ["product", "service"])
+      .eq("status", "available")
+      .order("category", { ascending: true })
+      .order("title", { ascending: true }),
+  ]);
   const properties = (data ?? []).map(itemToProperty);
+
+  const catalogItems = (catalogData ?? []) as CatalogItemRow[];
+  const catalogByCategory = new Map<string, CatalogItemRow[]>();
+  for (const item of catalogItems) {
+    const key = item.category ?? "General";
+    const group = catalogByCategory.get(key) ?? [];
+    group.push(item);
+    catalogByCategory.set(key, group);
+  }
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-10">
@@ -39,7 +66,9 @@ export default async function StorefrontPage({
       <p className="mt-2 text-sm text-muted">
         {properties.length > 0
           ? `${properties.length} unidades en cartera.`
-          : "Aún no hay propiedades publicadas."}
+          : catalogItems.length > 0
+            ? `${catalogItems.length} productos y servicios.`
+            : "Aún no hay nada publicado."}
       </p>
 
       {properties.length > 0 ? (
@@ -77,6 +106,27 @@ export default async function StorefrontPage({
             </li>
           ))}
         </ul>
+      ) : null}
+
+      {catalogByCategory.size > 0 ? (
+        <div className="mt-8 flex flex-col gap-8">
+          {[...catalogByCategory.entries()].map(([category, items]) => (
+            <div key={category}>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">{category}</h2>
+              <ul className="mt-2 divide-y divide-border-subtle border-y border-border-subtle">
+                {items.map((item) => (
+                  <li key={item.id} className="flex items-center justify-between gap-4 py-3">
+                    <p className="text-foreground">{item.title}</p>
+                    <p className="tabular shrink-0 text-sm font-medium text-foreground">
+                      {formatCurrency(Number(item.price))}
+                      {item.unit ? <span className="ml-1 font-normal text-foreground-muted">/{item.unit}</span> : null}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
       ) : null}
     </div>
   );
