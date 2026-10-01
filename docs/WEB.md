@@ -32,7 +32,7 @@
 - Tarjetas de los 4 planes; se resalta uno (Broker) con borde tinta, sin badge chillón.
 - **Toggle Mensual / Anual** ("2 meses gratis").
 - Cada tarjeta muestra límites concretos: ítems, GB, usuarios y plantillas.
-- Nota: "Paga con tarjeta, OXXO o transferencia SPEI. Precios en MXN".
+- Nota: "Paga con tarjeta o transferencia SPEI. Precios en MXN" (OXXO no sirve para cobro recurrente, se quitó — ver `STRIPE.md`).
 - **CTA:** si no hay sesión → `/registro?plan=<code>`; si hay sesión → Checkout directo.
 
 ## 4. Pago (desde el panel del tenant)

@@ -15,9 +15,24 @@ const newsreader = Newsreader({
   weight: ["500", "600"],
 });
 
+const description = "Cotizador para PyMEs: catálogo, precios y envío por WhatsApp.";
+
 export const metadata: Metadata = {
-  title: BRAND.name,
-  description: "Cotizador para PyMEs: catálogo, precios y envío por WhatsApp.",
+  metadataBase: new URL(`https://${BRAND.domain}`),
+  title: { default: BRAND.name, template: `%s · ${BRAND.name}` },
+  description,
+  openGraph: {
+    type: "website",
+    locale: "es_MX",
+    siteName: BRAND.name,
+    title: BRAND.name,
+    description,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: BRAND.name,
+    description,
+  },
 };
 
 export default function RootLayout({
