@@ -22,6 +22,7 @@ type CatalogItemRow = {
   category: string | null;
   price: number | string;
   unit: string | null;
+  images: string[] | null;
 };
 
 export default async function StorefrontPage({
@@ -42,7 +43,7 @@ export default async function StorefrontPage({
       .order("sku", { ascending: true }),
     supabase
       .from("items")
-      .select("id, title, category, price, unit")
+      .select("id, title, category, price, unit, images")
       .eq("tenant_id", tenant.id)
       .in("kind", ["product", "service"])
       .eq("status", "available")
@@ -115,8 +116,20 @@ export default async function StorefrontPage({
               <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">{category}</h2>
               <ul className="mt-2 divide-y divide-border-subtle border-y border-border-subtle">
                 {items.map((item) => (
-                  <li key={item.id} className="flex items-center justify-between gap-4 py-3">
-                    <p className="text-foreground">{item.title}</p>
+                  <li key={item.id} className="flex items-center gap-4 py-3">
+                    {item.images?.[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.images[0]}
+                        alt={item.title}
+                        width={56}
+                        height={56}
+                        className="h-14 w-14 shrink-0 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="h-14 w-14 shrink-0 rounded-md bg-surface-hover" />
+                    )}
+                    <p className="min-w-0 flex-1 truncate text-foreground">{item.title}</p>
                     <p className="tabular shrink-0 text-sm font-medium text-foreground">
                       {formatCurrency(Number(item.price))}
                       {item.unit ? <span className="ml-1 font-normal text-foreground-muted">/{item.unit}</span> : null}
