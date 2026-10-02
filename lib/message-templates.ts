@@ -52,10 +52,10 @@ export const DEFAULT_TEMPLATES: Record<MessageModule, string> = {
 };
 
 export const EXAMPLE_VARS: Record<MessageModule, Record<string, string>> = {
-  services: { cliente: "Ana López", negocio: "Tu negocio", total: "$4,500.00", link: "https://slug.ayx.solutions/q/abc123", vendedor: "Juan Pérez", fecha: "3 de octubre de 2026" },
-  catalog: { cliente: "Ana López", negocio: "Tu negocio", total: "$12,300.00", link: "https://slug.ayx.solutions/q/abc123", vendedor: "Juan Pérez", fecha: "3 de octubre de 2026" },
+  services: { cliente: "Ana López", negocio: "Tu negocio", total: "$4,500.00", link: "https://slug.ayxco.app/q/abc123", vendedor: "Juan Pérez", fecha: "3 de octubre de 2026" },
+  catalog: { cliente: "Ana López", negocio: "Tu negocio", total: "$12,300.00", link: "https://slug.ayxco.app/q/abc123", vendedor: "Juan Pérez", fecha: "3 de octubre de 2026" },
   broker: {
-    cliente: "Ana López", negocio: "Tu negocio", total: "$3,180,000.00", link: "https://slug.ayx.solutions/q/abc123",
+    cliente: "Ana López", negocio: "Tu negocio", total: "$3,180,000.00", link: "https://slug.ayxco.app/q/abc123",
     vendedor: "Juan Pérez", fecha: "3 de octubre de 2026", propiedad: "Departamento Terraza A-201", unidad: "A-201",
     enganche: "$636,000.00", mensualidad: "$106,000.00", plazo: "12",
   },

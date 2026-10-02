@@ -1,5 +1,5 @@
 export const BRAND = {
-  name: "AYX Cotiza",
-  domain: (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "ayx.solutions").toLowerCase(),
+  name: "AYXCO",
+  domain: (process.env.NEXT_PUBLIC_ROOT_DOMAIN ?? "ayxco.app").toLowerCase(),
   tagline: "Cotizaciones que cierran ventas, listas en un minuto.",
 } as const;

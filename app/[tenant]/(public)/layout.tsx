@@ -15,7 +15,7 @@ export async function generateMetadata({
   const tenant = await getTenantBySlug(slug);
   // Los sitios en prueba no se indexan (ABUSE-AND-LIMITS §3.3).
   return {
-    title: tenant?.name ?? BRAND.name,
+    title: { absolute: tenant?.name ?? BRAND.name },
     robots: tenant?.status === "trialing" ? { index: false, follow: false } : undefined,
   };
 }
@@ -35,7 +35,7 @@ export default async function PublicLayout({
   return (
     <>
       <header className="flex items-center gap-3 border-b border-border-subtle px-6 py-4">
-        <TenantMark tenant={tenant} subtitle="Propiedades" />
+        <TenantMark tenant={tenant} subtitle="Catálogo público" />
         <a href={loginHref} className="ml-auto text-sm text-foreground-muted hover:text-foreground">
           Acceso
         </a>

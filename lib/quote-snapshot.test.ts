@@ -42,9 +42,9 @@ describe("snapshot de cotización", () => {
     const message = renderMessage(DEFAULT_TEMPLATES.broker, {
       cliente: "Ana", negocio: "Negocio", propiedad: "Depto", unidad: "A1", plazo: "12",
       total: "$900,000.00", enganche: "$180,000.00", mensualidad: "$60,000.00",
-      link: "https://slug.ayx.solutions/q/abc",
+      link: "https://slug.ayxco.app/q/abc",
     });
-    expect(message).toContain("https://slug.ayx.solutions/q/abc");
+    expect(message).toContain("https://slug.ayxco.app/q/abc");
     expect(buildWhatsAppUrl("55 1234 5678", message)).toContain("https://wa.me/5512345678?text=");
   });
 });

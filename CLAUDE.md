@@ -4,7 +4,7 @@
 > **Regla de este archivo: máximo 200 líneas.** Si se pasa, no se recorta a ciegas: se reescribe
 > compacto con solo lo necesario (lo que no se puede deducir del código) y lo demás va a `docs/`.
 
-# AYX Cotiza
+# AYXCO
 
 Cotizador SaaS multi-tenant para brokers inmobiliarios (y otros giros): calculadora financiera,
 mini-CRM, dossier PDF, envío por WhatsApp, suscripción por tenant y admin master en `/admin`.
@@ -13,7 +13,7 @@ Arquitectura y arranque: [README.md](./README.md). Tickets y estado: `docs/ROADM
 
 ## Marca y UI
 
-- Nombre y dominio solo en [lib/brand.ts](./lib/brand.ts) (`AYX Cotiza`, `ayx.solutions`; el
+- Nombre y dominio solo en [lib/brand.ts](./lib/brand.ts) (`AYXCO`, `ayxco.app`; el
   dominio sale de `NEXT_PUBLIC_ROOT_DOMAIN`). Nunca hardcodeados.
 - Paleta "papel y tinta" de `docs/BRAND.md` §4–7, solo en `app/globals.css`. Nada de hex ni
   colores crudos de Tailwind: `text-danger`, `text-ok`, `text-warn`, `bg-accent`. Fuentes
@@ -31,7 +31,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 ## Multi-tenant
 
-- El slug viaja en el subdominio (`slug.ayx.solutions`, `slug.localhost:3100`); `proxy.ts` lo
+- El slug viaja en el subdominio (`slug.ayxco.app`, `slug.localhost:3100`); `proxy.ts` lo
   reescribe a `/[tenant]/...`. No inventes rutas con prefijo.
 - `tenants.status`: `trialing | active | past_due | suspended | canceled`.
   `OPERABLE_TENANT_STATUSES` ([lib/tenants.ts](./lib/tenants.ts): active, trialing, past_due) es la

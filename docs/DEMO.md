@@ -19,7 +19,7 @@ principal: es la que abre `/demo/entrar`.
 ## 2. Dos modos
 
 1. **Ver (público):** el storefront de cualquier tenant `demo-*` ya es público
-   (`demo-broker.ayx.solutions`). No hay un enlace de cotización de ejemplo con token corto
+   (`demo-broker.ayxco.app`). No hay un enlace de cotización de ejemplo con token corto
    (`/q/demo`): el token de una cotización siempre es largo e impredecible (T15), así que un
    enlace de ejemplo usa el token real de una de las cotizaciones ya sembradas en `demo-broker`.
 2. **Probar como vendedor:** `/demo/entrar` (dominio raíz) entra automáticamente como el usuario
