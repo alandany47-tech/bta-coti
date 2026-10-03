@@ -68,7 +68,13 @@ Diferencias a tener en cuenta mientras estés en Hobby:
 3. `HEALTH_CHECK_TOKEN`: cualquier valor largo y aleatorio. Better Stack → Monitors → HTTP(S) con método GET, header `x-health-token: <ese valor>`, apuntando a `https://ayxco.app/api/health/deep`.
 4. Sube una vez cualquier archivo a R2 con la llave `health/ping.txt` (o la que pongas en `R2_HEALTH_KEY`): `/api/health/deep` le hace `HEAD` para confirmar que el bucket responde.
 5. Better Stack → Monitors → Heartbeats: crea uno por cada cron (`daily`, `reset-demo`, `disposable-domains`) y pon sus URLs en `HEARTBEAT_URL_DAILY`, `HEARTBEAT_URL_RESET_DEMO`, `HEARTBEAT_URL_DISPOSABLE_DOMAINS`. Alerta si no llega uno en el intervalo esperado (26 h para `daily`, por ejemplo).
-6. El resto de `docs/MONITORING.md` (Stripe en `/api/health/deep`, heartbeat de webhooks, alertas de negocio por correo) espera a T20/T25.
+6. El resto de `docs/MONITORING.md` (Stripe en `/api/health/deep`, heartbeat de webhooks, alertas de negocio por correo) sigue pendiente; la infra de correo ya existe (T25, §2c-bis).
+
+## 2c-bis. Correos transaccionales (T25, Resend)
+1. [resend.com](https://resend.com) → Domains → agrega `ayxco.app` y publica en Cloudflare los registros SPF, DKIM y DMARC (`p=quarantine`) que te da. Sin dominio verificado Resend solo manda a tu propio correo.
+2. API Keys → crea una con permiso de envío → `RESEND_API_KEY` (Production y Preview). `EMAIL_FROM` es opcional (por defecto `AYXCO <hola@ayxco.app>`); `EMAIL_REPLY_TO` también.
+3. Sin `RESEND_API_KEY` no se manda nada y nada se rompe (los envíos quedan en "skipped"). Con la llave puesta, el cron diario manda solo: "día 5" (faltan ≤3 días), "día 7" (falta ≤1 día) y "vencida"; la bienvenida sale al registrarse; "pago fallido" sale desde el webhook de Stripe. Cada correo se manda una sola vez por tenant (`email_log`, migración 0032).
+4. Para probar de punta a punta sin Resend: `RESEND_API_URL` apunta a un servidor falso (ver `lib/email/send.ts`).
 
 ## 2d. Stripe (T20, docs/STRIPE.md)
 1. Cuenta de Stripe (modo de prueba primero) → Developers → API keys → `STRIPE_SECRET_KEY` (`sk_test_...`) y `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (`pk_test_...`).
@@ -76,7 +82,7 @@ Diferencias a tener en cuenta mientras estés en Hobby:
 3. Webhook: en prueba, `stripe listen --forward-to localhost:3100/api/stripe/webhook` imprime un `whsec_...` temporal para `STRIPE_WEBHOOK_SECRET`. En vivo: Dashboard → Webhooks → endpoint con los eventos de `docs/STRIPE.md` §6 → su signing secret.
 4. Dashboard → Settings → Billing → Customer portal: activar los toggles de `docs/STRIPE.md` §5 (actualizar método de pago, ver facturas, cambiar entre planes públicos, cancelar al fin del periodo; dejar apagado cambiar cantidad y pausar) — la sesión del Portal usa la configuración activa de la cuenta, no algo que fije el código.
 5. **OXXO no está disponible para el plan** (verificado contra Stripe de prueba real: rechaza `oxxo` tanto en Checkout `mode: "subscription"` como en la API de suscripciones — no ofrece OXXO recurrente hoy). Tarjeta y SPEI sí están probados de punta a punta contra Stripe de prueba real (Checkout con tarjeta y test card `4242...`; SPEI con `stripe.subscriptions.create` + `invoices.finalizeInvoice`, confirmando que activa, liga `plan_id`/`stripe_customer_id` y NO activa antes de que se pague).
-6. Pendiente antes de dar por cerrado T20: decidir el proveedor de correo transaccional para `invoice.finalized` (CLABE) y la alerta de disputas (hoy solo quedan en `audit_log` y en el log del servidor).
+6. Pendiente antes de dar por cerrado T20: mandar con la infra de correo de T25 (`lib/email/`) el aviso de `invoice.finalized` (CLABE) y la alerta de disputas (hoy solo quedan en `audit_log` y en el log del servidor).
 
 ## 3. Dominio (Cloudflare, DNS-only)
 1. Comprar `ayxco.app` en Cloudflare Registrar (o apuntar sus nameservers a Cloudflare).

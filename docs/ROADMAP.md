@@ -42,7 +42,7 @@
 | T22 | Web: Home, Precios, 3 landings, legales, OG images | CX + Figma | T00 | Lighthouse ≥ 95 en móvil. Pasa el checklist de BRAND §9 | 🟨 |
 | T23 | Onboarding de 3 pasos (logo y color → ítems → primera cotización) | CX | T04, T13 | Se puede saltar. Se marca completo en `tenants.settings` | ✅ |
 | T24 | Admin v2 completo según `ADMIN-PANEL.md` | CC | T05, T20 | MRR correcto contra Stripe. Filtros y paginación server-side | ✅ |
-| T25 | Correos transaccionales con Resend y React Email: bienvenida, prueba día 5, día 7, vencida, pago fallido | CX | T17 | Plantillas con la marca, en español | ⬜ |
+| T25 | Correos transaccionales con Resend y React Email: bienvenida, prueba día 5, día 7, vencida, pago fallido | CX | T17 | Plantillas con la marca, en español | 🟨 Código listo y probado (5 correos, `email_log` 0032, cron y webhook); falta verificar el dominio y poner `RESEND_API_KEY`. Pendiente: CLABE de SPEI y alerta de disputas |
 
 ## F3: Módulos (y después, lanzamiento)
 

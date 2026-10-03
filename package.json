@@ -12,6 +12,8 @@
     "stripe:sync": "node --env-file=.env.local scripts/stripe-sync.ts"
   },
   "dependencies": {
+    "@react-email/components": "^1.0.12",
+    "@react-email/render": "^2.1.0",
     "@react-pdf/renderer": "^4.9.0",
     "@sentry/nextjs": "^11.1.0",
     "@supabase/ssr": "^0.12.5",

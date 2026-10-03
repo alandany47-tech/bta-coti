@@ -61,7 +61,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0031 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
+- Migraciones 0001 → 0032 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
   más recientes: 0025 (T20) agrega `stripe_events`, `subscriptions`, `expire_past_due()` y
   `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id`; 0027 (T23) agrega
   `set_tenant_logo`/`update_tenant_branding`/`dismiss_onboarding` — todas validan membresía ellas
@@ -93,11 +93,12 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `slug./q/<token>` pinta marca (`tenantName`/`tenantLogoUrl`/`brandColor`) desde `snap`, nunca desde
   la fila viva de `tenants`: si el tenant cambia nombre/logo/color después, la página no debe verse
   distinta del PDF ya descargado con la marca de ese momento.
-- Mensajes (T16): `message_templates` (tenant_id, module, channel='whatsapp', body ≤1000, sin HTML)
-  con una fila por módulo del plan (`provision_tenant` las crea; solo editor escribe, solo servicio
-  agrega/quita módulos). `lib/message-templates.ts` (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve
-  `{variable}` sin tocar las desconocidas; `POST /api/[tenant]/quotes` la usa para el link de wa.me.
-  Editor en Panel → Mensajes (`tenant_modules(tenant_id)` dice qué módulos mostrar).
+- Mensajes (T16): `message_templates` (tenant_id, module, channel='whatsapp', body ≤1000, sin HTML), una fila
+  por módulo del plan (`provision_tenant` las crea; solo editor escribe). `lib/message-templates.ts`
+  (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve `{variable}` sin tocar las desconocidas; `POST
+  /api/[tenant]/quotes` la usa para el link de wa.me. Editor en Panel → Mensajes (`tenant_modules`).
+- Correos (T25, DEPLOY §2c-bis): `lib/email/notifyTenant` reclama `email_log` antes de enviar (Resend) y lo suelta si falla;
+  plantillas en `emails/`. Salen del cron diario, de `provisionTenant` y del webhook. Sin `RESEND_API_KEY`, no hace nada.
 - Demo (T26): `is_demo` en tenants, visible en las columnas públicas. `reset_demo_data(password)`
   (0020) borra y recrea los 8 tenants `demo-*`; lo llaman `npm run seed:demo` (dueño), el cron
   `/api/cron/reset-demo` (diario) y el botón "Resetear demo" en `/admin`. `DEMO_PASSWORD` debe ser
@@ -112,12 +113,10 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   Mi negocio); nada escribe en la base. Panel → Catálogo (`/panel/catalogo`): alta/edición/fotos de productos y
   servicios (`/api/[tenant]/items[/<id>[/images]]`, `lib/item-input.ts`; tipos permitidos por módulo del plan).
   El menú del panel sigue `tenant_modules` (`getPanelModules`): sin `broker` no hay cotizador ni propiedades.
-- Cron diario (T17): `/api/cron/daily` (protegido con `CRON_SECRET`) llama `expire_trials()`
-  (trialing + `trial_ends_at` vencido + sin `stripe_subscription_id`, sin tocar `is_demo` →
-  `suspended` con `status_reason='trial_expired'`), `reset_monthly_quote_counters()` y
-  `cleanupOrphanedMedia()` (`lib/media-cleanup.ts`: borra `media` `pending` sin confirmar y, con
-  `lib/r2.ts#listObjects`, objetos de R2 sin fila que los respalde tras una hora).
-- Monitoreo (T19): ver `docs/MONITORING.md` (health, Sentry, heartbeats de los cron).
+- Cron diario (T17): `/api/cron/daily` (`CRON_SECRET`): `expire_trials()` (trialing vencido sin `stripe_subscription_id`,
+  no `is_demo` → `suspended`, `status_reason='trial_expired'`), `reset_monthly_quote_counters()` y `cleanupOrphanedMedia()`
+  (`lib/media-cleanup.ts`: `media` `pending` sin confirmar y objetos de R2 sin fila tras una hora). Monitoreo (T19):
+  `docs/MONITORING.md` (health, Sentry, heartbeats de los cron).
 - Stripe (T20, `docs/STRIPE.md`): `lib/stripe.ts` (`getStripe`/`stripeConfigured`, sin `apiVersion`
   fija). `npm run stripe:sync` crea/actualiza Products+Prices. `POST /api/[tenant]/billing/{checkout,portal}`
   (`anyStatus: true`: suspended/canceled necesita pagar) usan el cliente de sesión, nunca service

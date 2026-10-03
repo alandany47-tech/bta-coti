@@ -1,9 +1,11 @@
 import "server-only";
 import { revalidateTag } from "next/cache";
+import { after } from "next/server";
 import type { User } from "@supabase/supabase-js";
 import { createServiceRoleClient } from "@/lib/supabase/server";
 import { parsePendingTenant, type PendingTenant } from "@/lib/auth/register-schema";
 import { tenantTag } from "@/lib/tenants";
+import { sendWelcomeEmail } from "@/lib/email/notify";
 
 export type ProvisionResult =
   | { ok: true; slug: string }
@@ -39,6 +41,8 @@ export async function provisionTenant(userId: string, pending: PendingTenant): P
 
   await clearPending(userId);
   revalidateTag(tenantTag(pending.slug), { expire: 0 });
+  // T25: la bienvenida sale después de responder (no retrasa el redirect) y nunca rompe el registro.
+  after(() => sendWelcomeEmail(pending.slug));
   return { ok: true, slug: pending.slug };
 }
 
