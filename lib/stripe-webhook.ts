@@ -37,6 +37,25 @@ async function requireStatusChange(...args: Parameters<typeof setTenantStatus>):
   if (!result.ok) throw new Error(`setTenantStatus falló (${result.code}) para ${args[0]}`);
 }
 
+/**
+ * Motivos de suspensión/cancelación que pone el sistema (cron, webhooks): un pago los levanta. Los
+ * demás vienen de un humano (`setTenantStatus` desde el admin exige un motivo escrito, p. ej. abuso):
+ * un cobro automático no puede reactivar una cuenta que el admin bloqueó aunque la suscripción siga pagándose.
+ */
+const SYSTEM_STATUS_REASONS = ["trial_expired", "payment_failed", "subscription_deleted"];
+
+async function reactivateAfterPayment(supabase: SupabaseClient, tenantId: string): Promise<void> {
+  const { data } = await supabase.from("tenants").select("status, status_reason").eq("id", tenantId).maybeSingle();
+  const row = data as { status: string; status_reason: string | null } | null;
+  const blockedByAdmin =
+    row && (row.status === "suspended" || row.status === "canceled") && row.status_reason && !SYSTEM_STATUS_REASONS.includes(row.status_reason);
+  if (blockedByAdmin) {
+    await logAudit("stripe.reactivation_skipped", tenantId, null, { status: row.status, reason: row.status_reason });
+    return;
+  }
+  await requireStatusChange(tenantId, "active", null, null);
+}
+
 async function planIdForPrice(supabase: SupabaseClient, priceId: string): Promise<string | null> {
   const { data } = await supabase
     .from("plans")
@@ -144,7 +163,7 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
       const session = event.data.object as Stripe.Checkout.Session;
       const tenantId = session.client_reference_id ?? tenantIdFromMetadata(session.metadata);
       if (!tenantId || session.payment_status !== "paid") break;
-      await requireStatusChange(tenantId, "active", null, null);
+      await reactivateAfterPayment(supabase, tenantId);
       break;
     }
 
@@ -179,7 +198,7 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
       const invoice = event.data.object as Stripe.Invoice;
       const tenantId = await tenantIdFromInvoice(supabase, invoice);
       if (!tenantId) break;
-      await requireStatusChange(tenantId, "active", null, null);
+      await reactivateAfterPayment(supabase, tenantId);
       break;
     }
 

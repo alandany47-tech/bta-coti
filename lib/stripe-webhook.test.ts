@@ -151,6 +151,25 @@ describe("handleStripeEvent", () => {
     expect(setTenantStatus).toHaveBeenCalledWith("tenant-1", "active", null, null);
   });
 
+  it("invoice.paid NO reactiva a un tenant que el admin suspendió con un motivo escrito", async () => {
+    const supabase = fakeSupabase({ tenants: [{ id: "tenant-1", status: "suspended", status_reason: "abuso: contenido ilegal" }] });
+    const invoice = { parent: { subscription_details: { subscription: "sub_1", metadata: { tenant_id: "tenant-1" } } } };
+    await handleStripeEvent(fakeEvent("evt_6d", "invoice.paid", invoice), supabase);
+    expect(setTenantStatus).not.toHaveBeenCalled();
+    expect(logAudit).toHaveBeenCalledWith("stripe.reactivation_skipped", "tenant-1", null, { status: "suspended", reason: "abuso: contenido ilegal" });
+  });
+
+  it("invoice.paid sí reactiva una suspensión del sistema (falta de pago, prueba vencida, cancelación previa)", async () => {
+    for (const [i, reason] of ["payment_failed", "trial_expired", "subscription_deleted"].entries()) {
+      setTenantStatus.mockClear();
+      const status = reason === "subscription_deleted" ? "canceled" : "suspended";
+      const supabase = fakeSupabase({ tenants: [{ id: "tenant-1", status, status_reason: reason }] });
+      const invoice = { parent: { subscription_details: { subscription: "sub_1", metadata: { tenant_id: "tenant-1" } } } };
+      await handleStripeEvent(fakeEvent(`evt_6e${i}`, "invoice.paid", invoice), supabase);
+      expect(setTenantStatus).toHaveBeenCalledWith("tenant-1", "active", null, null);
+    }
+  });
+
   it("invoice.overdue pone en past_due una suscripción SPEI que nunca se pagó", async () => {
     const supabase = fakeSupabase({ subscriptions: [{ tenant_id: "tenant-1", stripe_subscription_id: "sub_spei" }] });
     const invoice = { parent: { subscription_details: { subscription: "sub_spei" } } };

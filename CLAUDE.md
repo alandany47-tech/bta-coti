@@ -61,7 +61,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0032 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
+- Migraciones 0001 → 0033 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
   más recientes: 0025 (T20) agrega `stripe_events`, `subscriptions`, `expire_past_due()` y
   `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id`; 0027 (T23) agrega
   `set_tenant_logo`/`update_tenant_branding`/`dismiss_onboarding` — todas validan membresía ellas
@@ -130,7 +130,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `stripe_subscription_id`; `invoice.overdue` es el equivalente SPEI de `payment_failed`.
   `reserve_stripe_checkout` evita duplicar suscripciones por doble POST; para tarjeta también se
   expira en Stripe la Checkout Session anterior (`stripe_checkout_session_id`, 0026) antes de crear
-  otra (hallazgo de Codex). Pendiente: correo transaccional para `invoice.finalized`/disputas.
+  otra (hallazgo de Codex). Pendiente: correo transaccional para `invoice.finalized`/disputas. Revisado de punta a punta (T35): `npm run stripe:e2e`, docs/STRIPE.md §7b; un pago no reactiva suspensiones del admin.
 - Panel → Facturación (T21): `/panel/facturacion` es la ÚNICA página de `/panel/*` que un tenant
   suspended/canceled puede ver (necesita pagar ahí para reactivarse) — `requireOperableTenant`
   (`lib/tenant-page.ts`) y `getPanelContext` (`lib/auth/panel.ts`) toman un segundo argumento
