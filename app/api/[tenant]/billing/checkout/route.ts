@@ -52,19 +52,41 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
     return NextResponse.json({ error: "Ese plan todavía no está sincronizado con Stripe." }, { status: 500 });
   }
 
-  const { data: currentTenant } = await supabase
+  const { data: currentTenant, error: tenantError } = await supabase
     .from("tenants")
     .select("plan_id, stripe_customer_id, stripe_subscription_id, stripe_checkout_session_id")
     .eq("id", tenant.id)
     .maybeSingle();
+  // Si esta lectura falla (p. ej. una columna sin GRANT, como pasó con 0026 hasta 0033) NO se puede
+  // seguir "como si no hubiera nada": se desactivan en silencio el 409 de suscripción existente, la
+  // validación de excesos, la reutilización del customer y la expiración de la sesión previa.
+  if (tenantError || !currentTenant) {
+    console.error("billing/checkout: no se pudo leer el tenant", tenantError?.message);
+    return NextResponse.json({ error: "No se pudo iniciar el pago. Intenta de nuevo." }, { status: 500 });
+  }
 
   // Un tenant que ya tiene suscripción cambia de plan por el Portal (docs/STRIPE.md §5), no
   // creando otra: si no, la vieja sigue cobrando y el webhook solo alcanza a pisar una fila local.
-  if (currentTenant?.stripe_subscription_id) {
+  if (currentTenant.stripe_subscription_id) {
     return NextResponse.json(
       { error: "Ya tienes una suscripción activa. Cambia de plan desde el portal de facturación." },
       { status: 409 },
     );
+  }
+
+  // Antes de reservar: un 409 por exceso de uso no debe dejar al dueño bloqueado 5 min por una reserva que no usó.
+  if (currentTenant.plan_id && currentTenant.plan_id !== plan.id) {
+    const { data: currentPlan } = await supabase.from("plans").select("sort").eq("id", currentTenant.plan_id).maybeSingle();
+    const isDowngrade = Boolean(currentPlan && plan.sort < currentPlan.sort);
+    if (isDowngrade) {
+      const { data: overages } = await supabase.rpc("plan_usage_overages", { p_tenant: tenant.id, p_plan_code: plan.code });
+      if (overages && overages.length > 0) {
+        return NextResponse.json(
+          { error: "El uso actual no cabe en ese plan todavía.", overages },
+          { status: 409 },
+        );
+      }
+    }
   }
 
   // Reserva atómica (docs/STRIPE.md §3): dos POST concurrentes o un reintento del navegador podrían
@@ -79,20 +101,6 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
     );
   }
 
-  if (currentTenant?.plan_id && currentTenant.plan_id !== plan.id) {
-    const { data: currentPlan } = await supabase.from("plans").select("sort").eq("id", currentTenant.plan_id).maybeSingle();
-    const isDowngrade = Boolean(currentPlan && plan.sort < currentPlan.sort);
-    if (isDowngrade) {
-      const { data: overages } = await supabase.rpc("plan_usage_overages", { p_tenant: tenant.id, p_plan_code: plan.code });
-      if (overages && overages.length > 0) {
-        return NextResponse.json(
-          { error: "El uso actual no cabe en ese plan todavía.", overages },
-          { status: 409 },
-        );
-      }
-    }
-  }
-
   if (paymentMethod === "card") {
     const stripe = getStripe();
     // La reserva de arriba se libera sola a los 5 min, pero una Checkout Session de tarjeta sigue
@@ -100,7 +108,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
     // con dos sesiones válidas y, si el dueño completa ambas, dos suscripciones reales cobrando
     // (hallazgo de Codex). Se expira la sesión anterior en Stripe antes de crear otra — best effort,
     // que ya esté pagada/expirada/no exista no debe tumbar el intento nuevo.
-    if (currentTenant?.stripe_checkout_session_id) {
+    if (currentTenant.stripe_checkout_session_id) {
       try {
         const previous = await stripe.checkout.sessions.retrieve(currentTenant.stripe_checkout_session_id);
         if (previous.status === "open") await stripe.checkout.sessions.expire(previous.id);
@@ -114,7 +122,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       client_reference_id: tenant.id,
-      customer: currentTenant?.stripe_customer_id ?? undefined,
+      customer: currentTenant.stripe_customer_id ?? undefined,
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       subscription_data: { metadata: { tenant_id: tenant.id } },
@@ -137,7 +145,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ ten
   }
   const stripe = getStripe();
   const customerId =
-    currentTenant?.stripe_customer_id ??
+    currentTenant.stripe_customer_id ??
     (await stripe.customers.create({ email: user.email, metadata: { tenant_id: tenant.id } })).id;
 
   const subscription = await stripe.subscriptions.create({

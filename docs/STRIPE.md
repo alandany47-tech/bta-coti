@@ -79,6 +79,32 @@
   - Upgrade, downgrade bloqueado por uso, cancelación y disputa.
   - Un tenant con suscripción activa no puede crear otra desde `app/api/[tenant]/billing/checkout` (409, debe usar el Portal).
 
+## 7b. Revisión de punta a punta (T35, 2026-10-03)
+
+Corrida contra Stripe en modo prueba y la base real: `npm run stripe:e2e` (30 comprobaciones, requisitos en el encabezado de `scripts/stripe-e2e.mjs`). Resultado final: **30/30**. Qué cubre y qué no:
+
+| Cubierto | Cómo |
+|---|---|
+| Checkout con tarjeta: modo, método, `tenant_id`, precio del plan, URLs de retorno, reserva (409 al doble clic), expiración de la sesión previa | Se lee la sesión de Stripe y se compara |
+| Pago aprobado → `active`, `plan_id`, fila en `subscriptions`; `expire_trials` no la toca | Suscripción creada por API con `pm_card_visa` (equivale a completar Checkout) y webhooks reales por `stripe listen` |
+| 409 si ya hay suscripción; Portal devuelve su URL | Rutas reales con la sesión del dueño |
+| Cobro rechazado → `past_due` + correo T25 una vez por factura; pago de la factura → `active` y plan nuevo | `pm_card_chargeCustomerFail` en una mejora de plan con prorrateo |
+| Firma inválida → 400; mismo evento dos veces → un solo efecto | Eventos firmados con el secreto real |
+| Cancelación → `canceled` y se limpia `stripe_subscription_id`; bajar de plan con exceso → 409 con detalle | |
+| SPEI: factura `send_invoice` a 3 días, el tenant NO se activa hasta pagar, pagada → `active` | `test_helpers/customers/{id}/fund_cash_balance` |
+| Día 8 en `past_due` → `expire_past_due` suspende | |
+
+**Hallazgos corregidos (migración 0033, ruta de checkout y webhook):**
+1. **Crítico — la ruta de checkout no veía el tenant.** 0026 agregó `stripe_checkout_session_id` sin darle `GRANT SELECT` a `authenticated`; el `select` de la ruta fallaba completo y seguía como si no hubiera nada. Se apagaban en silencio el 409 de "ya tienes suscripción" (un dueño podía crear una segunda), la validación de excesos al bajar de plan, la reutilización del customer (creaba uno nuevo por intento) y la expiración de la sesión previa. Ahora hay GRANT, la ruta responde 500 si la lectura falla (nunca "como si nada") y hay prueba pgTAP de regresión.
+2. **Un pago reactivaba cuentas suspendidas por el admin.** `invoice.paid`/`checkout.session.completed` ponían `active` sin mirar el motivo. Ahora solo levantan suspensiones del sistema (`trial_expired`, `payment_failed`, `subscription_deleted`); las que el admin escribió a mano se respetan y queda `stripe.reactivation_skipped` en la auditoría.
+3. La validación de excesos corre antes de la reserva: un 409 por exceso ya no deja al dueño bloqueado 5 min.
+
+**No cubierto (queda para ti, en vivo):**
+- Teclear la tarjeta `4242 4242 4242 4242` en la página hospedada de Checkout y volver a `?checkout=success` (la prueba no teclea tarjetas; el resto del camino sí).
+- `checkout.session.completed` real (solo tiene pruebas unitarias), `invoice.overdue` real de SPEI (hay que esperar el vencimiento o usar un Test Clock) y disputas.
+- Correos de la CLABE (`invoice.finalized`) y de disputas: siguen sin enviarse.
+- Smart Retries, recibos por correo de Stripe y la configuración del Portal: son del Dashboard, no del código.
+
 ## 8. Checklist antes de modo live
 
 - [ ] Cuenta verificada (RFC, CLABE). OXXO y SPEI activados.
