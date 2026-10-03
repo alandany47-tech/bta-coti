@@ -61,7 +61,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0033 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
+- Migraciones 0001 → 0034 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
   más recientes: 0025 (T20) agrega `stripe_events`, `subscriptions`, `expire_past_due()` y
   `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id`; 0027 (T23) agrega
   `set_tenant_logo`/`update_tenant_branding`/`dismiss_onboarding` — todas validan membresía ellas
@@ -93,6 +93,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `slug./q/<token>` pinta marca (`tenantName`/`tenantLogoUrl`/`brandColor`) desde `snap`, nunca desde
   la fila viva de `tenants`: si el tenant cambia nombre/logo/color después, la página no debe verse
   distinta del PDF ya descargado con la marca de ese momento.
+  Plantillas (T31, `lib/quote-templates.ts`): una config para web (`components/quote/quote-view.tsx`) y PDF (`pdf/QuoteDocument.tsx`) sobre `lib/quote-view-model.ts` (sin plantilla: no altera montos); elegida en `tenants.quote_template` y congelada en el snapshot.
 - Mensajes (T16): `message_templates` (tenant_id, module, channel='whatsapp', body ≤1000, sin HTML), una fila
   por módulo del plan (`provision_tenant` las crea; solo editor escribe). `lib/message-templates.ts`
   (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve `{variable}` sin tocar las desconocidas; `POST

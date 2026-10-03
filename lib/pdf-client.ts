@@ -1,4 +1,7 @@
+import { BRAND } from "@/lib/brand";
 import type { QuoteSnapshot } from "@/lib/quote-snapshot";
+import { getQuoteTemplate, safeBrandColor } from "@/lib/quote-templates";
+import { buildQuoteViewModel } from "@/lib/quote-view-model";
 
 /** Generación del PDF en el navegador (T15): react-pdf solo lee JPEG/PNG, así que las imágenes se re-codifican. */
 const MAX_EDGE = 1400;
@@ -26,29 +29,21 @@ async function toJpegDataUrl(url: string): Promise<string | null> {
 
 export async function buildQuotePdf(snapshot: QuoteSnapshot): Promise<Blob> {
   const [{ pdf }, { QuoteDocument }] = await Promise.all([import("@react-pdf/renderer"), import("@/pdf/QuoteDocument")]);
-  const { property } = snapshot;
-  const plan = property?.floor_plan_url && !property.floor_plan_url.toLowerCase().endsWith(".pdf") ? property.floor_plan_url : null;
+  const model = buildQuoteViewModel(snapshot, BRAND.name);
 
   const [images, floorPlan, logo] = await Promise.all([
-    Promise.all((property?.images.slice(0, 9) ?? []).map(toJpegDataUrl)),
-    plan ? toJpegDataUrl(plan) : Promise.resolve(null),
+    Promise.all(model.images.map(toJpegDataUrl)),
+    model.floorPlanUrl ? toJpegDataUrl(model.floorPlanUrl) : Promise.resolve(null),
     snapshot.tenantLogoUrl ? toJpegDataUrl(snapshot.tenantLogoUrl) : Promise.resolve(null),
   ]);
 
   const document = QuoteDocument({
-    tenantName: snapshot.tenantName,
-    tenantLogoUrl: logo,
-    brandColor: snapshot.brandColor ?? undefined,
-    advisorName: snapshot.advisorName,
-    quoteId: snapshot.quoteId,
-    quoteNumber: snapshot.number,
-    clientName: snapshot.clientName,
-    clientPhone: snapshot.clientPhone,
-    property: property && { ...property, images: images.filter((u): u is string => u !== null), floor_plan_url: floorPlan },
-    breakdown: snapshot.breakdown,
-    installmentsCount: snapshot.installmentsCount,
-    notes: snapshot.notes,
-    createdAt: snapshot.createdAt,
+    model,
+    template: getQuoteTemplate(snapshot.templateCode),
+    brandColor: safeBrandColor(snapshot.brandColor),
+    logo,
+    images: images.filter((u): u is string => u !== null),
+    floorPlan,
   });
   return pdf(document).toBlob();
 }
