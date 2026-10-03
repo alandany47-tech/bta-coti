@@ -7,7 +7,15 @@ import { formatCurrency } from "@/lib/utils";
  * y el PDF. NO recibe la plantilla a propósito: así cambiar de plantilla no puede alterar un monto ni un
  * texto, solo el aspecto (T31). Todo sale del snapshot congelado.
  */
+export type QuoteViewLine = { title: string; qty: string; unitPrice: string; discount: string | null; total: string };
+
 export type QuoteViewModel = {
+  kind: "property" | "services";
+  /** Texto del encabezado a la derecha ("Cotización ejecutiva" / "Cotización"). */
+  metaTitle: string;
+  rowsTitle: string;
+  /** Solo servicios: renglones de la cotización (concepto, cantidad, precio, descuento, importe). */
+  lines: QuoteViewLine[];
   folio: string;
   date: string;
   tenantName: string;
@@ -39,6 +47,7 @@ const area = (m2: number) => `${new Intl.NumberFormat("es-MX", { maximumFraction
 const dateFmt = new Intl.DateTimeFormat("es-MX", { year: "numeric", month: "long", day: "numeric" });
 
 export function buildQuoteViewModel(snapshot: QuoteSnapshot, brandName: string): QuoteViewModel {
+  if (snapshot.kind === "services" && snapshot.services) return buildServicesViewModel(snapshot, brandName);
   const { property, breakdown } = snapshot;
   const folio = snapshot.number ? String(snapshot.number).padStart(4, "0") : snapshot.quoteId.slice(0, 8).toUpperCase();
   const hasDiscount = breakdown.discountAmount > 0.009;
@@ -64,6 +73,10 @@ export function buildQuoteViewModel(snapshot: QuoteSnapshot, brandName: string):
   const plan = property?.floor_plan_url && !property.floor_plan_url.toLowerCase().endsWith(".pdf") ? property.floor_plan_url : null;
 
   return {
+    kind: "property",
+    metaTitle: "Cotización ejecutiva",
+    rowsTitle: "Condiciones de venta",
+    lines: [],
     folio,
     date: dateFmt.format(new Date(snapshot.createdAt)),
     tenantName: snapshot.tenantName,
@@ -94,6 +107,58 @@ export function buildQuoteViewModel(snapshot: QuoteSnapshot, brandName: string):
     hasProperty: Boolean(property),
     galleryTitle: property ? `${property.title} · Unidad ${property.unit_number}` : "",
     sheet2Footer: `${snapshot.tenantName} · Dossier generado vía ${brandName} · Folio ${folio}`,
+    brandName,
+  };
+}
+
+const qtyFmt = new Intl.NumberFormat("es-MX", { maximumFractionDigits: 3 });
+
+/** Servicios (T30): tabla de conceptos + Subtotal / Descuentos / IVA / Total. Sin propiedad ni segunda hoja. */
+function buildServicesViewModel(snapshot: QuoteSnapshot, brandName: string): QuoteViewModel {
+  const sv = snapshot.services!;
+  const folio = snapshot.number ? String(snapshot.number).padStart(4, "0") : snapshot.quoteId.slice(0, 8).toUpperCase();
+  const rows: QuoteViewModel["rows"] = [];
+  if (sv.discountTotal > 0.009) {
+    rows.push({ label: "Subtotal sin descuentos", sub: null, value: formatCurrency(sv.subtotal + sv.discountTotal), tone: "muted" });
+    rows.push({ label: "Descuentos", sub: null, value: `− ${formatCurrency(sv.discountTotal)}`, tone: "accent" });
+  }
+  rows.push({ label: "Subtotal", sub: null, value: formatCurrency(sv.subtotal), tone: "normal" });
+  rows.push({
+    label: sv.taxPct > 0 ? `IVA ${qtyFmt.format(sv.taxPct)} %` : "IVA",
+    sub: sv.taxPct > 0 ? null : "Precios sin IVA",
+    value: formatCurrency(sv.taxAmount),
+    tone: sv.taxPct > 0 ? "normal" : "muted",
+  });
+
+  return {
+    kind: "services",
+    metaTitle: "Cotización",
+    rowsTitle: "Resumen",
+    lines: sv.lines.map((l) => ({
+      title: l.title,
+      qty: `${qtyFmt.format(l.qty)}${l.unit ? ` ${l.unit}` : ""}`,
+      unitPrice: formatCurrency(l.unitPrice),
+      discount: l.discountPct > 0 ? `− ${qtyFmt.format(l.discountPct)} %` : null,
+      total: formatCurrency(l.total),
+    })),
+    folio,
+    date: dateFmt.format(new Date(snapshot.createdAt)),
+    tenantName: snapshot.tenantName,
+    tenantLogoUrl: snapshot.tenantLogoUrl,
+    advisorName: snapshot.advisorName,
+    clientName: snapshot.clientName,
+    tagline: "Cotización de servicios",
+    hero: { title: "Cotización de servicios", subtitle: `Preparada para ${snapshot.clientName}`, status: null },
+    stats: [],
+    rows,
+    total: { label: "Total", value: formatCurrency(sv.total) },
+    notes: snapshot.notes,
+    disclaimer: `Cotización preparada por ${snapshot.tenantName} vía ${brandName} para ${snapshot.clientName}${snapshot.clientPhone ? ` (${snapshot.clientPhone})` : ""} — folio ${folio}. Importes en pesos mexicanos. Precios y disponibilidad sujetos a cambio sin previo aviso fuera de su vigencia.`,
+    images: [],
+    floorPlanUrl: null,
+    hasProperty: false,
+    galleryTitle: "",
+    sheet2Footer: "",
     brandName,
   };
 }

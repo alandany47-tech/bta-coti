@@ -1,7 +1,7 @@
 /**
  * Mensajes de WhatsApp configurables por módulo (T16, docs/PLAN-MAESTRO.md §6). Un tenant tiene
- * una plantilla por módulo de su plan (`plans.modules`); hoy solo el cotizador de `broker` envía
- * mensajes, pero el esquema ya soporta `services`/`catalog` para cuando tengan su propio flujo.
+ * una plantilla por módulo de su plan (`plans.modules`); envían mensajes el cotizador de `broker` y,
+ * desde T30, el de `services`. `catalog` aún no tiene un flujo propio de envío.
  */
 export const MODULES = ["services", "catalog", "broker"] as const;
 export type MessageModule = (typeof MODULES)[number];

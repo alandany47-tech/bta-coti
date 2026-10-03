@@ -49,8 +49,8 @@ export function OnboardingWizard({
   hasItems: boolean;
   hasQuotes: boolean;
   canImport: boolean;
-  /** `broker` = cotizador de propiedades; `catalog` = catálogo de productos/servicios. */
-  mode: "broker" | "catalog";
+  /** `broker` = cotizador de propiedades; `catalog` = catálogo con vitrina; `services` = solo cotizar servicios (Esencial). */
+  mode: "broker" | "catalog" | "services";
   hasWhatsapp: boolean;
 }) {
   const [tenant, setTenant] = useState(initialTenant);
@@ -59,7 +59,9 @@ export function OnboardingWizard({
 
   const step1Done = Boolean(tenant.logo_url);
   const isBroker = mode === "broker";
-  const step3Done = isBroker ? hasQuotes : hasWhatsapp;
+  // Catálogo comparte su vitrina por WhatsApp; Esencial y Broker lo que hacen es cotizar.
+  const quotesFirst = mode !== "catalog";
+  const step3Done = quotesFirst ? hasQuotes : hasWhatsapp;
   const steps = [step1Done, hasItems, step3Done];
 
   async function handleSkip() {
@@ -122,15 +124,17 @@ export function OnboardingWizard({
         </section>
 
         <section className="py-6">
-          <StepHeader done={step3Done} title={isBroker ? "3. Haz tu primera cotización" : "3. Pon tu WhatsApp y comparte tu catálogo"} />
+          <StepHeader done={step3Done} title={quotesFirst ? "3. Haz tu primera cotización" : "3. Pon tu WhatsApp y comparte tu catálogo"} />
           <div className="flex items-center justify-between gap-4">
             <p className="text-sm text-muted">
               {isBroker
                 ? "Elige una propiedad, ajusta el enganche y envíala por WhatsApp."
-                : "Tus clientes arman su cotización en tu página y te la mandan por WhatsApp."}
+                : quotesFirst
+                  ? "Toca tus conceptos, ajusta cantidades e IVA y envíala por WhatsApp."
+                  : "Tus clientes arman su cotización en tu página y te la mandan por WhatsApp."}
             </p>
-            <Link href={isBroker ? "/panel" : "/panel/negocio"} className="shrink-0 text-sm underline hover:text-foreground">
-              {isBroker ? "Cotizar" : "Mi negocio"}
+            <Link href={isBroker ? "/panel" : quotesFirst ? "/panel/cotizar" : "/panel/negocio"} className="shrink-0 text-sm underline hover:text-foreground">
+              {quotesFirst ? "Cotizar" : "Mi negocio"}
             </Link>
           </div>
         </section>

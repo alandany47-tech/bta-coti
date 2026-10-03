@@ -49,7 +49,7 @@
 
 | ID | Ticket | Agente | Depende de | Criterios de aceptación | Estado |
 |---|---|---|---|---|---|
-| T30 | Módulo Servicios: ítems product/service, cotización multilínea (cantidad, descuento por línea, IVA configurable) | CC | T15 | Cotización de 10 líneas en menos de 60 segundos en móvil | ⬜ |
+| T30 | Módulo Servicios: ítems product/service, cotización multilínea (cantidad, descuento por línea, IVA configurable) | CC | T15 | Cotización de 10 líneas en menos de 60 segundos en móvil | ✅ Cotizar en `/panel/cotizar` (catálogo a un toque, cantidad, descuento por línea, IVA 0/8/16/otro), snapshot `kind: services`, página y PDF con las 3 plantillas, demo sin guardar. Pendiente: productos con variantes/stock y descuento global |
 | T31 | Plantillas base (3): web y PDF con la misma fuente de verdad (`templates.config`) | CX | T15 | Cambiar plantilla no altera montos. Se ve igual en web y PDF | ✅ 3 plantillas base (Clásica, Moderna, Editorial); web y PDF salen de `lib/quote-templates.ts` + `lib/quote-view-model.ts`; elección en Panel → Plantillas con vista previa; tope por plan en BD (0034). Fuera: plantilla premium de pago único y plantillas de Servicios (van con T30) |
 | T32 | Módulo Catálogo: editor simple (portada, secciones, orden) y página pública compartible | CC | T13 | Publicar o despublicar. Carga en menos de 2 s en 4G | 🟨 Editor listo (Panel → Catálogo: alta, edición, fotos, ocultar, borrar; menú por plan); faltan portada y secciones/orden |
 | T33 | Usuarios extra: invitaciones y roles, con límite por plan | CX | T03 | El trigger bloquea al superar `limits.users` | ⬜ |

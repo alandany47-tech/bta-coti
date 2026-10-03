@@ -71,7 +71,7 @@ export function QuoteView({
                 </div>
               </div>
               <div className="text-right leading-snug" style={t.header === "band" ? bandMuted : muted}>
-                <p style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>Cotización ejecutiva</p>
+                <p style={{ fontSize: 11, letterSpacing: "0.12em", textTransform: "uppercase" }}>{m.metaTitle}</p>
                 <p className="font-semibold" style={t.header === "band" ? { color: onBrand } : { color: c.ink }}>
                   Folio {m.folio}
                 </p>
@@ -129,9 +129,43 @@ export function QuoteView({
           </section>
         ) : null}
 
+        {m.lines.length > 0 ? (
+          <section>
+            <h2 style={label} className="mb-2 font-normal">
+              Conceptos
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[420px] text-left text-sm">
+                <thead style={{ borderBottom: `1px solid ${c.ink}`, ...muted }}>
+                  <tr className="text-[10px] uppercase tracking-wider">
+                    <th className="py-2 pr-2 font-normal">Concepto</th>
+                    <th className="px-2 py-2 text-right font-normal">Cant.</th>
+                    <th className="px-2 py-2 text-right font-normal">Precio</th>
+                    <th className="px-2 py-2 text-right font-normal">Desc.</th>
+                    <th className="py-2 pl-2 text-right font-normal">Importe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {m.lines.map((line, index) => (
+                    <tr key={index} style={{ borderBottom: `1px solid ${c.line}` }}>
+                      <td className="py-2.5 pr-2 text-[15px]">{line.title}</td>
+                      <td className="tabular px-2 py-2.5 text-right whitespace-nowrap">{line.qty}</td>
+                      <td className="tabular px-2 py-2.5 text-right whitespace-nowrap">{line.unitPrice}</td>
+                      <td className="tabular px-2 py-2.5 text-right whitespace-nowrap" style={line.discount ? { color: accentText } : muted}>
+                        {line.discount ?? "·"}
+                      </td>
+                      <td className="tabular py-2.5 pl-2 text-right font-semibold whitespace-nowrap">{line.total}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ) : null}
+
         <section>
           <h2 style={label} className="mb-2 font-normal">
-            Condiciones de venta
+            {m.rowsTitle}
           </h2>
           <dl>
             {m.rows.map((row) => (

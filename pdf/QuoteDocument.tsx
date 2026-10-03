@@ -8,6 +8,9 @@ import { accentTextColor, readableOn, type QuoteTemplate } from "@/lib/quote-tem
  * propios. Dos hojas: ficha financiera y, si hay propiedad, plano + galería. Las imágenes llegan ya
  * como JPEG (`lib/pdf-client.ts`: react-pdf no lee WebP).
  */
+/** Las fuentes estándar del PDF (WinAnsi) no tienen el signo menos tipográfico (U+2212): se cambia por guion. */
+const pdfText = (text: string) => text.replace(/\u2212/g, "-");
+
 const STATUS_COLOR = { ok: "#22C55E", warn: "#F59E0B", danger: "#EF4444" } as const;
 
 function makeStyles(t: QuoteTemplate, brand: string) {
@@ -71,6 +74,17 @@ function makeStyles(t: QuoteTemplate, brand: string) {
     rowSub: { fontSize: 8, color: c.muted },
     rowValue: { fontSize: 10, fontFamily: bold },
     rowValueMuted: { fontSize: 10, color: c.muted },
+    linesHead: { flexDirection: "row", paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: c.ink },
+    linesRow: { flexDirection: "row", paddingVertical: 7, borderBottomWidth: 1, borderBottomColor: c.line },
+    colTitle: { flex: 5, paddingRight: 8 },
+    colQty: { flex: 2, textAlign: "right" },
+    colPrice: { flex: 2.4, textAlign: "right" },
+    colDisc: { flex: 1.6, textAlign: "right" },
+    colTotal: { flex: 2.4, textAlign: "right" },
+    linesHeadText: { fontSize: 7, color: c.muted, textTransform: "uppercase", letterSpacing: 0.8 },
+    linesText: { fontSize: 9.5 },
+    linesMuted: { color: c.muted },
+    linesBold: { fontFamily: bold },
     totalRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4, paddingTop: 14 },
     totalBlock: {
       flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 8, padding: 14,
@@ -134,7 +148,7 @@ export function QuoteDocument({ model, template, brandColor, logo, images, floor
   );
   const meta = (
     <View style={styles.metaBlock}>
-      <Text style={[styles.metaTitle, header === "band" ? { color: styles.onBrand.color, opacity: 0.8 } : {}]}>Cotización ejecutiva</Text>
+      <Text style={[styles.metaTitle, header === "band" ? { color: styles.onBrand.color, opacity: 0.8 } : {}]}>{model.metaTitle}</Text>
       <Text style={[styles.metaFolio, header === "band" ? styles.onBrand : {}]}>Folio {model.folio}</Text>
       <Text style={[styles.metaLine, header === "band" ? { color: styles.onBrand.color, opacity: 0.8 } : {}]}>{model.date}</Text>
       {model.advisorName ? <Text style={[styles.metaLine, header === "band" ? { color: styles.onBrand.color, opacity: 0.8 } : {}]}>Asesor: {model.advisorName}</Text> : null}
@@ -195,7 +209,31 @@ export function QuoteDocument({ model, template, brandColor, logo, images, floor
           </>
         ) : null}
 
-        <Text style={styles.sectionLabel}>Condiciones de venta</Text>
+        {model.lines.length > 0 ? (
+          <>
+            <Text style={styles.sectionLabel}>Conceptos</Text>
+            <View style={{ marginBottom: 18 }}>
+              <View style={styles.linesHead} fixed>
+                <Text style={[styles.linesHeadText, styles.colTitle]}>Concepto</Text>
+                <Text style={[styles.linesHeadText, styles.colQty]}>Cant.</Text>
+                <Text style={[styles.linesHeadText, styles.colPrice]}>Precio</Text>
+                <Text style={[styles.linesHeadText, styles.colDisc]}>Desc.</Text>
+                <Text style={[styles.linesHeadText, styles.colTotal]}>Importe</Text>
+              </View>
+              {model.lines.map((line, index) => (
+                <View key={index} style={styles.linesRow} wrap={false}>
+                  <Text style={[styles.linesText, styles.colTitle]}>{line.title}</Text>
+                  <Text style={[styles.linesText, styles.colQty]}>{line.qty}</Text>
+                  <Text style={[styles.linesText, styles.colPrice]}>{line.unitPrice}</Text>
+                  <Text style={[styles.linesText, styles.colDisc, line.discount ? styles.brandAccent : styles.linesMuted]}>{line.discount ? pdfText(line.discount) : "·"}</Text>
+                  <Text style={[styles.linesText, styles.colTotal, styles.linesBold]}>{line.total}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        ) : null}
+
+        <Text style={styles.sectionLabel}>{model.rowsTitle}</Text>
         <View style={styles.conditions}>
           {model.rows.map((row) => (
             <View key={row.label} style={styles.row}>
@@ -204,7 +242,7 @@ export function QuoteDocument({ model, template, brandColor, logo, images, floor
                 {row.sub ? <Text style={styles.rowSub}>{row.sub}</Text> : null}
               </View>
               <Text style={row.tone === "muted" ? styles.rowValueMuted : row.tone === "accent" ? [styles.rowValue, styles.brandAccent] : styles.rowValue}>
-                {row.value}
+                {pdfText(row.value)}
               </Text>
             </View>
           ))}

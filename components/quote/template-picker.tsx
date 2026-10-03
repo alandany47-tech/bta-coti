@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { Check, Loader2, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QuoteView } from "@/components/quote/quote-view";
-import { buildSampleSnapshot } from "@/lib/quote-sample";
+import { buildSampleServicesSnapshot, buildSampleSnapshot } from "@/lib/quote-sample";
 import { QUOTE_TEMPLATES, templateIncludedInPlan, type QuoteTemplateCode } from "@/lib/quote-templates";
 import type { Property } from "@/lib/types";
 
@@ -19,6 +19,7 @@ export function TemplatePicker({
   property,
   createdAt,
   isDemo,
+  kinds,
 }: {
   tenantSlug: string;
   tenantName: string;
@@ -29,15 +30,21 @@ export function TemplatePicker({
   property: Property | null;
   createdAt: string;
   isDemo: boolean;
+  /** Tipos de cotización que hace el negocio: con ambos se puede alternar la vista previa. */
+  kinds: ("property" | "services")[];
 }) {
+  const [sampleKind, setSampleKind] = useState<"property" | "services">(kinds[0]);
   const [saved, setSaved] = useState(initialCode);
   const [preview, setPreview] = useState(initialCode);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const snapshot = useMemo(
-    () => buildSampleSnapshot({ tenantName, logoUrl, brandColor, templateCode: preview, property, createdAt }),
-    [tenantName, logoUrl, brandColor, preview, property, createdAt],
+    () =>
+      sampleKind === "services"
+        ? buildSampleServicesSnapshot({ tenantName, logoUrl, brandColor, templateCode: preview, createdAt })
+        : buildSampleSnapshot({ tenantName, logoUrl, brandColor, templateCode: preview, property, createdAt }),
+    [sampleKind, tenantName, logoUrl, brandColor, preview, property, createdAt],
   );
   const included = templateIncludedInPlan(preview, planLimit);
 
@@ -111,7 +118,24 @@ export function TemplatePicker({
       </div>
 
       <div className="rounded-lg border border-line bg-sunken">
-        <p className="px-4 pt-3 text-xs uppercase tracking-wider text-ink-3">Vista previa · así la ve tu cliente y así sale el PDF</p>
+        <div className="flex flex-wrap items-center justify-between gap-2 px-4 pt-3">
+          <p className="text-xs uppercase tracking-wider text-ink-3">Vista previa · así la ve tu cliente y así sale el PDF</p>
+          {kinds.length > 1 ? (
+            <div className="flex gap-1" role="group" aria-label="Tipo de cotización de ejemplo">
+              {kinds.map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={sampleKind === k}
+                  onClick={() => setSampleKind(k)}
+                  className={`h-8 rounded-md border px-3 text-xs ${sampleKind === k ? "border-ink bg-ink text-paper" : "border-line bg-paper"}`}
+                >
+                  {k === "property" ? "Propiedad" : "Servicios"}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
         <QuoteView snapshot={snapshot} validUntil={null} />
       </div>
     </div>

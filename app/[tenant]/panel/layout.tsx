@@ -28,7 +28,8 @@ export default async function PanelLayout({
   // El menú sigue al plan: solo los brokers tienen cotizador y propiedades; el resto administra su catálogo.
   const modules = await getPanelModules(tenant.id);
   const isBroker = modules.includes("broker");
-  const hasCatalog = modules.some((m) => m === "services" || m === "catalog");
+  const hasServices = modules.includes("services");
+  const hasCatalog = hasServices || modules.includes("catalog");
 
   return (
     <>
@@ -37,14 +38,19 @@ export default async function PanelLayout({
         <TenantMark tenant={tenant} subtitle="Panel" />
         <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-muted">
           {isBroker ? (
-            <>
-              <Link href="/panel" className="hover:text-foreground">
-                Cotizador
-              </Link>
-              <Link href="/panel/cotizaciones" className="hover:text-foreground">
-                Cotizaciones
-              </Link>
-            </>
+            <Link href="/panel" className="hover:text-foreground">
+              Cotizador
+            </Link>
+          ) : null}
+          {hasServices ? (
+            <Link href="/panel/cotizar" className="hover:text-foreground">
+              {isBroker ? "Cotizar servicios" : "Cotizar"}
+            </Link>
+          ) : null}
+          {isBroker || hasServices ? (
+            <Link href="/panel/cotizaciones" className="hover:text-foreground">
+              Cotizaciones
+            </Link>
           ) : null}
           {canEdit && hasCatalog ? (
             <Link href="/panel/catalogo" className="hover:text-foreground">
@@ -59,13 +65,15 @@ export default async function PanelLayout({
               <Link href="/panel/negocio" className="hover:text-foreground">
                 Mi negocio
               </Link>
+              {isBroker || hasServices ? (
+                <Link href="/panel/plantillas" className="hover:text-foreground">
+                  Plantillas
+                </Link>
+              ) : null}
               {isBroker ? (
                 <>
                   <Link href="/panel/propiedades" className="hover:text-foreground">
                     Propiedades
-                  </Link>
-                  <Link href="/panel/plantillas" className="hover:text-foreground">
-                    Plantillas
                   </Link>
                   <Link href="/panel/importar" className="hover:text-foreground">
                     Importar cartera

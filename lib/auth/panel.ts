@@ -66,6 +66,12 @@ export const getPanelModules = cache(async (tenantId: string): Promise<string[]>
   return Array.isArray(data) ? (data as string[]) : [];
 });
 
+/** Páginas de cotizaciones (lista, plantillas): las tiene quien cotiza propiedades (`broker`) o servicios (`services`). */
+export async function requireQuotingModule(tenantId: string) {
+  const modules = await getPanelModules(tenantId);
+  if (!modules.includes("broker") && !modules.includes("services")) redirect("/panel");
+}
+
 /** Las páginas de brokers (cotizador, cotizaciones, propiedades, importar) mandan al catálogo si el plan no incluye `broker`. */
 export async function requireBrokerModule(tenantId: string) {
   if (!(await getPanelModules(tenantId)).includes("broker")) redirect("/panel/catalogo");

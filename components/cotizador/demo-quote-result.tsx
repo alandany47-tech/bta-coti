@@ -48,18 +48,41 @@ export function DemoQuoteResult({
             </dd>
           </div>
         ) : null}
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted">Precio final</dt>
-          <dd className="font-medium text-foreground">{formatCurrency(breakdown.effectivePrice)}</dd>
-        </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted">Enganche</dt>
-          <dd className="text-foreground">{formatCurrency(breakdown.downPaymentAmount)}</dd>
-        </div>
-        <div className="flex justify-between gap-4">
-          <dt className="text-muted">Mensualidad ({snapshot.installmentsCount} pagos)</dt>
-          <dd className="text-foreground">{formatCurrency(breakdown.monthlyPaymentAmount)}</dd>
-        </div>
+        {snapshot.kind === "services" && snapshot.services ? (
+          <>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Conceptos</dt>
+              <dd className="text-foreground">{snapshot.services.lines.length}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Subtotal</dt>
+              <dd className="text-foreground">{formatCurrency(snapshot.services.subtotal)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">IVA{snapshot.services.taxPct > 0 ? ` ${snapshot.services.taxPct} %` : ""}</dt>
+              <dd className="text-foreground">{formatCurrency(snapshot.services.taxAmount)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Total</dt>
+              <dd className="font-medium text-foreground">{formatCurrency(snapshot.services.total)}</dd>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Precio final</dt>
+              <dd className="font-medium text-foreground">{formatCurrency(breakdown.effectivePrice)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Enganche</dt>
+              <dd className="text-foreground">{formatCurrency(breakdown.downPaymentAmount)}</dd>
+            </div>
+            <div className="flex justify-between gap-4">
+              <dt className="text-muted">Mensualidad ({snapshot.installmentsCount} pagos)</dt>
+              <dd className="text-foreground">{formatCurrency(breakdown.monthlyPaymentAmount)}</dd>
+            </div>
+          </>
+        )}
       </dl>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start">

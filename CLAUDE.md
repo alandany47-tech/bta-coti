@@ -94,6 +94,8 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   la fila viva de `tenants`: si el tenant cambia nombre/logo/color después, la página no debe verse
   distinta del PDF ya descargado con la marca de ese momento.
   Plantillas (T31, `lib/quote-templates.ts`): una config para web (`components/quote/quote-view.tsx`) y PDF (`pdf/QuoteDocument.tsx`) sobre `lib/quote-view-model.ts` (sin plantilla: no altera montos); elegida en `tenants.quote_template` y congelada en el snapshot.
+  Servicios (T30): `lib/services-pricing.ts` (centavos; el precio de ítems sale de la base, nunca del navegador), `POST /api/[tenant]/quotes/services`,
+  snapshot `kind:'services'` (`property_id` nulo), UI en `/panel/cotizar`; reusa visor, PDF y plantillas.
 - Mensajes (T16): `message_templates` (tenant_id, module, channel='whatsapp', body ≤1000, sin HTML), una fila
   por módulo del plan (`provision_tenant` las crea; solo editor escribe). `lib/message-templates.ts`
   (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve `{variable}` sin tocar las desconocidas; `POST
@@ -173,17 +175,13 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   `source = 'admin'`). Todo cambio de estado pasa por `setTenantStatus` (`lib/admin-status.ts`,
   RPC `set_tenant_status` con auditoría atómica; suspender/cancelar exigen motivo) y luego
   `revalidateTag(tenantTag(slug), { expire: 0 })`. Conteos desde `usage` (triggers), no contando filas.
-- Admin v2 (`docs/ADMIN-PANEL.md`): gate en `app/admin/layout.tsx` (no en `page.tsx`), nav de 5
-  secciones. `lib/admin-kpis.ts#getAdminKpis` calcula MRR/conteos/conversión de prueba/almacenamiento
-  en JS —sin migración nueva, la escala de hoy no la justifica—; `computeMrr`/`computeTrialConversion`
-  son puras y con tests. `listTenantsForAdminPaged` (`lib/admin-tenants.ts`): búsqueda/filtros/`.range()`
-  server-side en `/admin/clientes`. Cliente-detalle: cambiar plan/extender prueba escriben directo con
-  service role (PATCH extendido de `.../tenants/[tenantId]/route.ts`, sin RPC nueva); "entrar como
-  soporte" es sesión completa auditada (`.../impersonate` arma `/auth/callback` con
-  `generateLink().properties.hashed_token`, nunca el `action_link` hosteado de Supabase); uso = solo
-  mes en curso. Planes: CRUD real (`/api/admin/plans*`), nunca DELETE — `public=false` es "borrar".
-  Pagos: una sola llamada a `stripe.invoices.list` cruzada con `subscriptions` local. Auditoría
-  (`lib/admin-audit.ts`): paginada, resuelve el email del actor con `auth.admin.getUserById`.
+- Admin v2 (`docs/ADMIN-PANEL.md`): gate en `app/admin/layout.tsx` (no en `page.tsx`), nav de 5 secciones.
+  `lib/admin-kpis.ts#getAdminKpis` calcula MRR/conteos/conversión/almacenamiento en JS (sin migración; `computeMrr`/
+  `computeTrialConversion` puras y con tests). `listTenantsForAdminPaged` (`lib/admin-tenants.ts`): filtros y `.range()`
+  server-side. Cliente-detalle: plan/extender prueba escriben con service role (PATCH de `.../tenants/[tenantId]`); "entrar
+  como soporte" es sesión auditada (`.../impersonate` usa `generateLink().properties.hashed_token`, nunca el `action_link`);
+  uso = solo mes en curso. Planes: CRUD real, nunca DELETE (`public=false`). Pagos: una llamada a `stripe.invoices.list`
+  cruzada con `subscriptions`. Auditoría (`lib/admin-audit.ts`): paginada, email del actor con `auth.admin.getUserById`.
 
 ## Entorno local
 
