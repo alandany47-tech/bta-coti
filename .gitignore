@@ -43,3 +43,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Consentimiento local de Impeccable (por desarrollador, hallazgo de Codex): nunca se versiona.
+.impeccable/config.local.json

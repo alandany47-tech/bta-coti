@@ -190,6 +190,8 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - Dev server: `.claude/launch.json` (puerto 3100). Otro `next dev` viejo (p. ej. en 4000) puede
   tener env vars obsoletas: si "Tenant no encontrado" con datos que existen, reinícialo.
 - Despliegue (Vercel, Cloudflare, Supabase prod): `docs/DEPLOY.md`.
+- QA: `npm run e2e:launch` (registro→cotización→pago→suspensión, 41 comprobaciones; `docs/QA-LANZAMIENTO.md`) y `npm run stripe:e2e`.
+  WhatsApp: todo número pasa por `normalizeWhatsapp` (10 dígitos = 52); `wa.me` sin lada manda el mensaje a otro país.
 
 ## Flujo de trabajo
 

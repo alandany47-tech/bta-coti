@@ -45,6 +45,6 @@ describe("snapshot de cotización", () => {
       link: "https://slug.ayxco.app/q/abc",
     });
     expect(message).toContain("https://slug.ayxco.app/q/abc");
-    expect(buildWhatsAppUrl("55 1234 5678", message)).toContain("https://wa.me/5512345678?text=");
+    expect(buildWhatsAppUrl("55 1234 5678", message)).toContain("https://wa.me/525512345678?text=");
   });
 });
