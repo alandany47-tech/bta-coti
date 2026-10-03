@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
-import { getPanelContext, hasRole } from "@/lib/auth/panel";
+import { getPanelContext, getPanelModules, hasRole } from "@/lib/auth/panel";
 import { rootOrigin } from "@/lib/auth/redirects";
 import { TenantMark } from "@/components/tenant-mark";
 import { DemoBanner } from "@/components/demo-banner";
@@ -25,6 +25,10 @@ export default async function PanelLayout({
   const { tenant, user, role } = isBilling ? await getPanelContext(slug, true) : await getPanelContext(slug);
   const host = h.get("host") ?? "";
   const canEdit = hasRole(role, "editor");
+  // El menú sigue al plan: solo los brokers tienen cotizador y propiedades; el resto administra su catálogo.
+  const modules = await getPanelModules(tenant.id);
+  const isBroker = modules.includes("broker");
+  const hasCatalog = modules.some((m) => m === "services" || m === "catalog");
 
   return (
     <>
@@ -32,12 +36,21 @@ export default async function PanelLayout({
       <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border-subtle px-6 py-4">
         <TenantMark tenant={tenant} subtitle="Panel" />
         <nav className="flex gap-4 text-sm text-foreground-muted">
-          <Link href="/panel" className="hover:text-foreground">
-            Cotizador
-          </Link>
-          <Link href="/panel/cotizaciones" className="hover:text-foreground">
-            Cotizaciones
-          </Link>
+          {isBroker ? (
+            <>
+              <Link href="/panel" className="hover:text-foreground">
+                Cotizador
+              </Link>
+              <Link href="/panel/cotizaciones" className="hover:text-foreground">
+                Cotizaciones
+              </Link>
+            </>
+          ) : null}
+          {canEdit && hasCatalog ? (
+            <Link href="/panel/catalogo" className="hover:text-foreground">
+              Catálogo
+            </Link>
+          ) : null}
           <Link href="/panel/mensajes" className="hover:text-foreground">
             Mensajes
           </Link>
@@ -46,12 +59,16 @@ export default async function PanelLayout({
               <Link href="/panel/negocio" className="hover:text-foreground">
                 Mi negocio
               </Link>
-              <Link href="/panel/propiedades" className="hover:text-foreground">
-                Propiedades
-              </Link>
-              <Link href="/panel/importar" className="hover:text-foreground">
-                Importar cartera
-              </Link>
+              {isBroker ? (
+                <>
+                  <Link href="/panel/propiedades" className="hover:text-foreground">
+                    Propiedades
+                  </Link>
+                  <Link href="/panel/importar" className="hover:text-foreground">
+                    Importar cartera
+                  </Link>
+                </>
+              ) : null}
             </>
           ) : null}
           {tenant.is_demo ? null : (

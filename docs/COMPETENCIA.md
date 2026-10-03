@@ -37,8 +37,8 @@ financiamiento ni CRM.
 
 No es la misma categoría: **ellos venden pedidos (carrito) a comercio chico; AYXCO vende
 cotizaciones a negocios de ticket alto** (inmobiliario, servicios, mueble a la medida). Se cruzan
-solo en el módulo **Catálogo** ($399 aquí vs. $200–$400 allá), y ahí vamos atrás: T32 (editor y
-página compartible) sigue ⬜ y no tenemos pedidos ni pagos del lado del cliente final.
+solo en el módulo **Catálogo** ($399 aquí vs. $200–$400 allá), y ahí vamos más cerca: T32 ya tiene editor y vitrina compartible,
+pero no tenemos pedidos ni pagos del lado del cliente final (a propósito, D22).
 
 | Tema | Marea | AYXCO hoy |
 |---|---|---|
@@ -47,7 +47,7 @@ página compartible) sigue ⬜ y no tenemos pedidos ni pagos del lado del client
 | Vertical inmobiliario | No | Sí |
 | Comisión por venta | 0.9–1.9 % | Ninguna |
 | Pedidos/carrito/pagos al cliente final | Sí | "Mi cotización" por WhatsApp, sin pago (T28) |
-| Catálogo con búsqueda, categorías y ficha por producto | Sí | Sí (T28); falta el editor del negocio (T32) |
+| Catálogo con búsqueda, categorías y ficha por producto | Sí | Sí (T28) y editor del negocio con fotos (T32, Panel → Catálogo); faltan portada y orden |
 | Dominio propio, equipo, multisucursal | Sí (planes altos) | No (T33 equipo) |
 | Contenido SEO y herramientas gratis | Fuerte | Nada |
 | Canal de agencias | Sí | No |

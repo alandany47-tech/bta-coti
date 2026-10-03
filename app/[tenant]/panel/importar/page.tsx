@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getPanelContext, hasRole } from "@/lib/auth/panel";
+import { getPanelContext, hasRole, requireBrokerModule } from "@/lib/auth/panel";
 import { ExcelDropzone } from "@/components/catalog/excel-dropzone";
 
 export default async function ImportPage({
@@ -8,8 +8,9 @@ export default async function ImportPage({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant: slug } = await params;
-  const { role } = await getPanelContext(slug);
+  const { tenant, role } = await getPanelContext(slug);
   if (!hasRole(role, "editor")) redirect("/panel");
+  await requireBrokerModule(tenant.id);
 
   return (
     <div className="flex flex-1 flex-col gap-6 p-6">

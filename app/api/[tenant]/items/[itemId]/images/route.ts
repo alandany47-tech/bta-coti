@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireTenantAccess } from "@/lib/auth/api";
-import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 import { isUuid, mediaUrl } from "@/lib/media";
 import { deleteMedia, markMediaDetached } from "@/lib/media-store";
 import { deleteObjects, r2Configured } from "@/lib/r2";
 
 /**
- * Reordena o quita imágenes de una propiedad. Solo acepta un subconjunto de las URLs actuales
+ * Reordena o quita imágenes de un ítem (propiedad, producto o servicio). Solo acepta un subconjunto de las URLs actuales
  * (nunca URLs nuevas: esas las agrega el servidor al confirmar la subida a R2). Si una URL que se
  * quita es un medio de R2 (no una imagen legada de Storage), también se borra su fila en `media`
  * y el objeto en R2: si no, la subida seguiría contando en la cuota del tenant aunque ya no se
@@ -14,10 +13,10 @@ import { deleteObjects, r2Configured } from "@/lib/r2";
  */
 export async function PUT(
   request: Request,
-  { params }: { params: Promise<{ tenant: string; propertyId: string }> },
+  { params }: { params: Promise<{ tenant: string; itemId: string }> },
 ) {
-  const { tenant: slug, propertyId } = await params;
-  if (!isUuid(propertyId)) return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
+  const { tenant: slug, itemId } = await params;
+  if (!isUuid(itemId)) return NextResponse.json({ error: "Solicitud inválida." }, { status: 400 });
 
   const access = await requireTenantAccess(slug, "editor");
   if (access instanceof NextResponse) return access;
@@ -35,11 +34,11 @@ export async function PUT(
   const { data: property } = await supabase
     .from("items")
     .select("id, images, floor_plan_url")
-    .eq("id", propertyId)
+    .eq("id", itemId)
     .eq("tenant_id", tenant.id)
-    .eq("kind", "property")
+    .in("kind", ["product", "service", "property"])
     .maybeSingle();
-  if (!property) return NextResponse.json({ error: "Propiedad no encontrada." }, { status: 404 });
+  if (!property) return NextResponse.json({ error: "Ítem no encontrado." }, { status: 404 });
 
   const patch: { images?: string[]; floor_plan_url?: null } = {};
   const removedUrls: string[] = [];
@@ -60,10 +59,10 @@ export async function PUT(
   const { data: updated, error } = await supabase
     .from("items")
     .update(patch)
-    .eq("id", propertyId)
+    .eq("id", itemId)
     .eq("tenant_id", tenant.id)
-    .eq("kind", "property")
-    .select(PROPERTY_COLUMNS)
+    .in("kind", ["product", "service", "property"])
+    .select("id, images, floor_plan_url")
     .single();
   if (error) return NextResponse.json({ error: "No se pudo guardar el cambio." }, { status: 500 });
 
@@ -72,7 +71,7 @@ export async function PUT(
       .from("media")
       .select("id, r2_key, thumb_key")
       .eq("tenant_id", tenant.id)
-      .eq("item_id", propertyId)
+      .eq("item_id", itemId)
       .eq("status", "ready");
     const byUrl = new Map((media ?? []).map((m) => [mediaUrl(m.r2_key), m]));
     for (const url of removedUrls) {
@@ -89,5 +88,5 @@ export async function PUT(
     }
   }
 
-  return NextResponse.json({ property: itemToProperty(updated) });
+  return NextResponse.json({ item: { id: updated.id, images: updated.images, floor_plan_url: updated.floor_plan_url } });
 }

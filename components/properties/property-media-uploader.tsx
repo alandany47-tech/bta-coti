@@ -4,7 +4,9 @@ import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, FileText, Loader2, UploadCloud, X } from "lucide-react";
 import { deleteMediaById, uploadMedia, type UploadStage } from "@/lib/media-client";
 import { thumbUrl } from "@/lib/media";
-import type { Property } from "@/lib/types";
+
+/** Lo mínimo que necesita el uploader de un ítem: propiedades, productos y servicios comparten galería. */
+export type MediaOwner = { id: string; images: string[]; floor_plan_url?: string | null };
 
 type QueueItem = { id: string; name: string; stage: UploadStage; progress: number; error?: string };
 
@@ -17,16 +19,19 @@ const STAGE_LABEL: Record<UploadStage, string> = {
 const tileControl =
   "flex h-7 w-7 items-center justify-center rounded-md bg-paper/90 text-ink-2 transition-colors hover:text-ink disabled:opacity-40 disabled:hover:text-ink-2";
 
-export function PropertyMediaUploader({
+export function PropertyMediaUploader<T extends MediaOwner>({
   tenantSlug,
   property,
   mediaIds,
   onUpdate,
+  showPlan = true,
 }: {
   tenantSlug: string;
-  property: Property;
+  property: T;
   mediaIds: Record<string, string>;
-  onUpdate: (property: Property, mediaIds?: Record<string, string>) => void;
+  onUpdate: (property: T, mediaIds?: Record<string, string>) => void;
+  /** Productos y servicios no llevan plano. */
+  showPlan?: boolean;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [queue, setQueue] = useState<QueueItem[]>([]);
@@ -99,7 +104,7 @@ export function PropertyMediaUploader({
         const failure = await deleteMediaById(tenantSlug, mediaId);
         if (failure) return setError(failure);
       } else {
-        const response = await fetch(`/api/${tenantSlug}/properties/${property.id}/images`, {
+        const response = await fetch(`/api/${tenantSlug}/items/${property.id}/images`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ floor_plan_url: null }),
@@ -115,7 +120,7 @@ export function PropertyMediaUploader({
   async function saveOrder(images: string[]) {
     const previous = property;
     onUpdate({ ...property, images });
-    const response = await fetch(`/api/${tenantSlug}/properties/${property.id}/images`, {
+    const response = await fetch(`/api/${tenantSlug}/items/${property.id}/images`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ images }),
@@ -264,6 +269,7 @@ export function PropertyMediaUploader({
         </div>
       </div>
 
+      {showPlan ? (
       <div>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
           <span className="text-xs font-medium text-muted">Plano (imagen o PDF)</span>
@@ -328,6 +334,7 @@ export function PropertyMediaUploader({
           <p className="mt-1 text-xs text-muted">Los planos en PDF aún no se incluyen en el dossier; sube una imagen para verlo ahí.</p>
         ) : null}
       </div>
+      ) : null}
 
       <p className="sr-only" aria-live="polite">
         {uploading ? "Subiendo archivos" : ""}

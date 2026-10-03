@@ -55,3 +55,18 @@ export const getPanelContext = cache(async (slug: string, anyStatus = false): Pr
 export function hasRole(role: TenantRole, minRole: TenantRole) {
   return RANK[role] >= RANK[minRole];
 }
+
+/**
+ * Módulos del plan del tenant (`broker`, `services`, `catalog`) para armar el menú y decidir la
+ * página de inicio del panel. Una sola RPC por petición (`React.cache`).
+ */
+export const getPanelModules = cache(async (tenantId: string): Promise<string[]> => {
+  const supabase = await createSessionSupabaseClient();
+  const { data } = await supabase.rpc("tenant_modules", { p_tenant: tenantId });
+  return Array.isArray(data) ? (data as string[]) : [];
+});
+
+/** Las páginas de brokers (cotizador, cotizaciones, propiedades, importar) mandan al catálogo si el plan no incluye `broker`. */
+export async function requireBrokerModule(tenantId: string) {
+  if (!(await getPanelModules(tenantId)).includes("broker")) redirect("/panel/catalogo");
+}

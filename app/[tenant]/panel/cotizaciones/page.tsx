@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { CopyLinkButton } from "@/components/quote/copy-link-button";
-import { getPanelContext } from "@/lib/auth/panel";
+import { getPanelContext, requireBrokerModule } from "@/lib/auth/panel";
 import { tenantOrigin } from "@/lib/auth/redirects";
 import { formatCurrency } from "@/lib/utils";
 
@@ -25,6 +25,7 @@ function displayStatus(status: string, expiresAt: string | null): string {
 export default async function QuotesPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params;
   const { supabase, tenant } = await getPanelContext(slug);
+  await requireBrokerModule(tenant.id);
   const origin = tenantOrigin(slug, (await headers()).get("host") ?? "");
 
   const { data: quotes } = await supabase

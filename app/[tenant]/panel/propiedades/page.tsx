@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { getPanelContext, hasRole } from "@/lib/auth/panel";
+import { getPanelContext, hasRole, requireBrokerModule } from "@/lib/auth/panel";
 import { PropertiesManager } from "@/components/properties/properties-manager";
 import { mediaUrl } from "@/lib/media";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
@@ -12,6 +12,7 @@ export default async function PropertiesPage({
   const { tenant: slug } = await params;
   const { supabase, tenant, role } = await getPanelContext(slug);
   if (!hasRole(role, "editor")) redirect("/panel");
+  await requireBrokerModule(tenant.id);
 
   const { data: properties } = await supabase
     .from("items")
