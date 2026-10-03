@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { render } from "@react-email/render";
-import { buildEmail, formatTrialEnd, type EmailKind } from "./templates";
+import { buildEmail, buildInviteEmail, formatTrialEnd, type EmailKind } from "./templates";
 
 const data = { tenantName: "Muebles Nogal", slug: "muebles-nogal", trialEndsAt: "2026-10-09T18:00:00Z" };
 const kinds: EmailKind[] = ["welcome", "trial_day5", "trial_day7", "trial_expired", "payment_failed"];
@@ -27,5 +27,20 @@ describe("plantillas de correo", () => {
   it("formatTrialEnd tolera fechas ausentes o inválidas", () => {
     expect(formatTrialEnd(null)).toBeNull();
     expect(formatTrialEnd("nope")).toBeNull();
+  });
+});
+
+describe("correo de invitación al equipo", () => {
+  it("nombra al negocio, el rol y trae el enlace y la vigencia", async () => {
+    const { subject, element } = buildInviteEmail({
+      tenantName: "Muebles Nogal", inviterEmail: "dueno@nogal.mx", roleLabel: "Vendedor", roleHelp: "Solo cotiza.",
+      url: "https://ayxco.app/invitacion/abc", expiresAt: "2026-10-10T18:00:00Z",
+    });
+    const html = await render(element);
+    expect(subject).toContain("Muebles Nogal");
+    expect(html).toContain("https://ayxco.app/invitacion/abc");
+    expect(html).toContain("Vendedor");
+    expect(html).toContain("10 de octubre");
+    expect(html).not.toMatch(/undefined|\{\w+\}/);
   });
 });

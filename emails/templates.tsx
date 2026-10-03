@@ -105,3 +105,31 @@ export function buildEmail(kind: EmailKind, data: EmailData): { subject: string;
       return { subject: `No pudimos cobrar tu suscripción de ${data.tenantName}`, element: <PaymentFailed {...data} /> };
   }
 }
+
+const expiryFmt = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "long", timeZone: "America/Mexico_City" });
+
+/** Invitación al equipo (T33): va al correo invitado, no al dueño, por eso no pasa por `buildEmail`/`email_log`. */
+export function buildInviteEmail(input: {
+  tenantName: string;
+  inviterEmail: string;
+  roleLabel: string;
+  roleHelp: string;
+  url: string;
+  expiresAt: string;
+}): { subject: string; element: ReactElement } {
+  const expires = expiryFmt.format(new Date(input.expiresAt));
+  return {
+    subject: `Te invitaron a ${input.tenantName} en ${BRAND.name}`,
+    element: (
+      <EmailLayout preview={`${input.inviterEmail} te invitó como ${input.roleLabel}`} title={`Te invitaron a ${input.tenantName}`}>
+        <P>
+          {input.inviterEmail} te agregó al equipo de {input.tenantName} como <strong>{input.roleLabel}</strong>. {input.roleHelp}
+        </P>
+        <Cta href={input.url}>Aceptar invitación</Cta>
+        <Divider />
+        <Small>La invitación vence el {expires}. Si el botón no abre, copia este enlace: <A href={input.url}>{input.url}</A></Small>
+        <Small>Si no esperabas este correo, ignóralo: no se crea nada hasta que aceptes.</Small>
+      </EmailLayout>
+    ),
+  };
+}
