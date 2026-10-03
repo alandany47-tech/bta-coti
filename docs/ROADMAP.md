@@ -29,6 +29,7 @@
 | T16 | Mensajes de WhatsApp configurables: `message_templates`, editor con chips y vista previa, `renderMessage()` | CX | T01 | Variables reemplazadas. "Restaurar original" funciona. Máximo 1,000 caracteres | ✅ |
 | T19 | Monitoreo: `/api/health` y `/deep`, Sentry, heartbeats de cron y webhooks, alertas de negocio (ver `MONITORING.md`) | CX | T12 | Una llave rota de Supabase dispara la alerta en menos de 10 minutos | 🟨 |
 | T26 | Demo: `is_demo`, seeds, `/demo/entrar`, restricciones, reset nocturno, clonar demo para prospecto (ver `DEMO.md`) | CC | T15, T16 | Demo usable sin registro. El reset deja los datos iguales. Clonar crea `prospecto-x` en trial | 🟨 |
+| T27 | Demo sin registro: cotización de prueba solo con nombre y sin guardar nada, capturas de marketing sin el badge de Next, home móvil y demos por giro clicables (ver `DEMO.md` §2) | CC | T26, T22 | Generar una cotización de prueba no cambia `clients` ni `quotes`. Las capturas no muestran el badge "N". Sin recortes raros en móvil | 🟨 |
 | T17 | Cron de Vercel diario: vence pruebas, limpia huérfanos de R2, resetea `quotes_this_month` | CX | T12 | Idempotente. Protegido con `CRON_SECRET` | ✅ |
 
 ## F2: Pagos, web y onboarding

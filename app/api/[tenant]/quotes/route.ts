@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
 import { requireTenantAccess } from "@/lib/auth/api";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { tenantOrigin } from "@/lib/auth/redirects";
+import { rootOrigin, tenantOrigin } from "@/lib/auth/redirects";
+import { BRAND } from "@/lib/brand";
+import { normalizeDemoClientName, withoutLinkLines } from "@/lib/demo-quote";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { DEFAULT_TEMPLATES, renderMessage } from "@/lib/message-templates";
 import { formatCurrency } from "@/lib/utils";
@@ -14,6 +16,8 @@ import { createQuote } from "@/lib/quote-store";
 type QuoteRequestBody = {
   propertyId: string;
   clientId: string;
+  /** Solo en tenants de demo: nombre del cliente de prueba, en lugar de `clientId`. */
+  clientName: string;
   advisorName?: string;
   discountPct: number;
   downPaymentPct: number;
@@ -43,9 +47,17 @@ export async function POST(
 
   const body = (await request.json().catch(() => ({}))) as Partial<QuoteRequestBody>;
 
-  if (!body.propertyId || !body.clientId) {
+  // En la demo no hay cliente real: la sesión del editor la comparten todos los visitantes, así
+  // que solo se pide un nombre y nada se guarda (ni `clients` ni `quotes`).
+  const demoClientName = tenant.is_demo ? normalizeDemoClientName(body.clientName) : null;
+
+  if (!body.propertyId || (tenant.is_demo ? !demoClientName : !body.clientId)) {
     return NextResponse.json(
-      { error: "Falta seleccionar una propiedad y un cliente." },
+      {
+        error: tenant.is_demo
+          ? "Falta seleccionar una propiedad y escribir el nombre del cliente de prueba."
+          : "Falta seleccionar una propiedad y un cliente.",
+      },
       { status: 400 },
     );
   }
@@ -66,18 +78,24 @@ export async function POST(
   }
   const property = itemToProperty(propertyRow);
 
-  const { data: client, error: clientError } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("id", body.clientId)
-    .eq("tenant_id", tenant.id)
-    .maybeSingle();
+  let client: { id: string | null; full_name: string; phone: string };
+  if (demoClientName) {
+    client = { id: null, full_name: demoClientName, phone: "" };
+  } else {
+    const { data: clientRow, error: clientError } = await supabase
+      .from("clients")
+      .select("*")
+      .eq("id", body.clientId!)
+      .eq("tenant_id", tenant.id)
+      .maybeSingle();
 
-  if (clientError || !client) {
-    return NextResponse.json(
-      { error: "El cliente seleccionado ya no existe." },
-      { status: 400 },
-    );
+    if (clientError || !clientRow) {
+      return NextResponse.json(
+        { error: "El cliente seleccionado ya no existe." },
+        { status: 400 },
+      );
+    }
+    client = clientRow;
   }
 
   // El precio y el desglose financiero siempre se recalculan en el servidor contra el precio
@@ -107,12 +125,42 @@ export async function POST(
     createdAt: new Date().toISOString(),
   });
 
+  if (tenant.is_demo) {
+    const host = request.headers.get("host") ?? "";
+    const { data: demoTemplate } = await supabase
+      .from("message_templates")
+      .select("body")
+      .eq("tenant_id", tenant.id)
+      .eq("module", "broker")
+      .maybeSingle();
+    const demoMessage = renderMessage(withoutLinkLines(demoTemplate?.body ?? DEFAULT_TEMPLATES.broker), {
+      cliente: client.full_name,
+      negocio: tenant.name,
+      total: formatCurrency(breakdown.effectivePrice),
+      vendedor: snapshot.advisorName ?? "",
+      fecha: new Date(snapshot.createdAt).toLocaleDateString("es-MX", { year: "numeric", month: "long", day: "numeric" }),
+      propiedad: property.title,
+      unidad: property.unit_number,
+      enganche: formatCurrency(breakdown.downPaymentAmount),
+      mensualidad: formatCurrency(breakdown.monthlyPaymentAmount),
+      plazo: String(installmentsCount),
+    });
+    const whatsappMessage = `${demoMessage}\n\n🧪 Cotización de prueba de la demo de ${BRAND.name}. Crea la tuya gratis: ${rootOrigin(host)}/registro`;
+    // Sin teléfono: wa.me/?text= deja elegir el contacto en el propio WhatsApp de quien prueba.
+    return NextResponse.json({
+      demo: true,
+      snapshot,
+      whatsappUrl: buildWhatsAppUrl("", whatsappMessage),
+      breakdown,
+    });
+  }
+
   const created = await createQuote({
     id: quoteId,
     tenantId: tenant.id,
     createdBy: user.id,
     propertyId: property.id,
-    clientId: client.id,
+    clientId: client.id!,
     snapshot,
     discountPct,
     downPaymentPct,

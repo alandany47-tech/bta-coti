@@ -1,4 +1,6 @@
+import { headers } from "next/headers";
 import { getPanelContext } from "@/lib/auth/panel";
+import { rootOrigin } from "@/lib/auth/redirects";
 import { CotizadorClient } from "@/components/cotizador/cotizador-client";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 
@@ -18,10 +20,14 @@ export default async function CotizadorPage({
     .in("status", ["available", "reserved"])
     .order("sku", { ascending: true });
 
+  const host = (await headers()).get("host") ?? "";
+
   return (
     <CotizadorClient
       tenantSlug={slug}
       properties={(properties ?? []).map(itemToProperty)}
+      isDemo={tenant.is_demo}
+      registroUrl={`${rootOrigin(host)}/registro`}
     />
   );
 }

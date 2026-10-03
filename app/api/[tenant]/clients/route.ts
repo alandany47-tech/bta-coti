@@ -50,6 +50,16 @@ export async function POST(
   if (access instanceof NextResponse) return access;
   const { supabase, tenant } = access;
 
+  // La sesión del editor demo la comparten todos los visitantes: un cliente guardado aquí
+  // (nombre, teléfono) lo vería el siguiente visitante hasta el reset nocturno. En la demo la
+  // cotización pide solo un nombre y no guarda nada (lib/demo-quote.ts).
+  if (tenant.is_demo) {
+    return NextResponse.json(
+      { error: "En la demo no se guardan clientes. Escribe solo un nombre para la cotización de prueba." },
+      { status: 403 },
+    );
+  }
+
   const body = await request.json();
 
   const fullName = String(body.fullName ?? "").trim();

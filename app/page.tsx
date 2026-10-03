@@ -1,6 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { BRAND } from "@/lib/brand";
+import { tenantOrigin } from "@/lib/auth/redirects";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { cn, formatCurrency } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
@@ -52,6 +54,40 @@ export default async function MarketingHome() {
   const esencialFrom = plans?.find((p) => p.code === "esencial")?.price_month;
   const catalogoFrom = plans?.find((p) => p.code === "catalogo")?.price_month;
 
+  // Cada giro enseña un negocio de ejemplo real (docs/DEMO.md §4.1): Broker abre el panel
+  // interactivo; Servicios y Catálogo, que aún no tienen cotizador propio (T30/T32), enseñan su
+  // catálogo público. Los enlaces son del subdominio del tenant, así que se arman con el host.
+  const host = (await headers()).get("host") ?? "";
+  const modules = [
+    {
+      name: "Broker",
+      body: "Propiedades, enganches y mensualidades, cotización en un clic.",
+      from: brokerFrom,
+      image: "/marketing/hero-broker-storefront-v2.jpg",
+      alt: "Catálogo de propiedades del módulo Broker",
+      href: "/demo/entrar",
+      cta: "Probar el panel de ejemplo",
+    },
+    {
+      name: "Servicios",
+      body: "Catálogo de servicios y materiales por categoría.",
+      from: esencialFrom,
+      image: "/marketing/hero-servicios-storefront-v2.jpg",
+      alt: "Catálogo público de servicios del módulo Servicios",
+      href: tenantOrigin("demo-esencial", host),
+      cta: "Ver catálogo de ejemplo",
+    },
+    {
+      name: "Catálogo",
+      body: "Publica tu catálogo de productos, compartible con un link.",
+      from: catalogoFrom,
+      image: "/marketing/hero-catalogo-storefront-v2.jpg",
+      alt: "Catálogo público de productos del módulo Catálogo",
+      href: tenantOrigin("demo-catalogo", host),
+      cta: "Ver catálogo de ejemplo",
+    },
+  ];
+
   return (
     <>
       <SiteHeader />
@@ -76,24 +112,31 @@ export default async function MarketingHome() {
             </div>
           </div>
 
-          <div className="mt-14 flex flex-col items-end gap-4 sm:flex-row sm:items-end sm:justify-center">
-            <div className="w-full max-w-[420px] overflow-hidden rounded-xl border border-line shadow-lg sm:w-[60%]">
+          <div className="mt-14 flex items-end justify-center gap-4">
+            <div className="hidden w-[45%] max-w-[420px] overflow-hidden rounded-xl border border-line shadow-lg sm:block">
               <Image
-                src="/marketing/hero-cotizacion-desktop.jpg"
+                src="/marketing/hero-cotizacion-desktop-v2.jpg"
                 alt={`Cotización real de ${BRAND.name}, vista de escritorio`}
-                width={752}
-                height={470}
+                width={860}
+                height={836}
+                sizes="(min-width: 640px) 45vw, 420px"
                 className="w-full"
                 priority
               />
             </div>
-            <div className="w-[55%] max-w-[220px] overflow-hidden rounded-xl border border-line shadow-lg sm:w-[22%]">
+            <div className="relative w-[72%] max-w-[260px] overflow-hidden rounded-xl border border-line shadow-lg sm:w-[22%]">
               <Image
-                src="/marketing/hero-cotizacion-mobile.jpg"
+                src="/marketing/hero-cotizacion-mobile-v2.jpg"
                 alt={`Cotización real de ${BRAND.name}, vista de celular`}
                 width={292}
                 height={634}
+                sizes="(min-width: 640px) 22vw, 260px"
                 className="w-full"
+                priority
+              />
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-paper to-transparent"
               />
             </div>
           </div>
@@ -104,54 +147,39 @@ export default async function MarketingHome() {
           <div className="mx-auto w-full max-w-[1120px] px-6 py-16">
             <h2 className="font-display text-[32px] font-medium leading-[1.15] text-ink">Un módulo por cada giro</h2>
             <div className="mt-8 grid gap-6 sm:grid-cols-3">
-              <div className="flex flex-col overflow-hidden rounded-lg border border-line bg-paper">
-                <Image
-                  src="/marketing/hero-broker-storefront.jpg"
-                  alt="Catálogo de propiedades del módulo Broker"
-                  width={752}
-                  height={634}
-                  className="h-40 w-full object-cover object-top"
-                />
-                <div className="flex flex-1 flex-col gap-1 p-5">
-                  <h3 className="font-medium text-ink">Broker</h3>
-                  <p className="text-sm text-ink-2">Propiedades, enganches y mensualidades, cotización en un clic.</p>
-                  {brokerFrom ? (
-                    <p className="mt-2 text-sm text-ink-2">Desde {formatCurrency(brokerFrom)}/mes</p>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-col overflow-hidden rounded-lg border border-line bg-paper">
-                <Image
-                  src="/marketing/hero-servicios-storefront.jpg"
-                  alt="Catálogo público de servicios del módulo Servicios"
-                  width={752}
-                  height={634}
-                  className="h-40 w-full object-cover object-top"
-                />
-                <div className="flex flex-1 flex-col gap-1 p-5">
-                  <h3 className="font-medium text-ink">Servicios</h3>
-                  <p className="text-sm text-ink-2">Catálogo de servicios y materiales por categoría.</p>
-                  {esencialFrom ? (
-                    <p className="mt-2 text-sm text-ink-2">Desde {formatCurrency(esencialFrom)}/mes</p>
-                  ) : null}
-                </div>
-              </div>
-              <div className="flex flex-col overflow-hidden rounded-lg border border-line bg-paper">
-                <Image
-                  src="/marketing/hero-catalogo-storefront.jpg"
-                  alt="Catálogo público de productos del módulo Catálogo"
-                  width={752}
-                  height={634}
-                  className="h-40 w-full object-cover object-top"
-                />
-                <div className="flex flex-1 flex-col gap-1 p-5">
-                  <h3 className="font-medium text-ink">Catálogo</h3>
-                  <p className="text-sm text-ink-2">Publica tu catálogo de productos, compartible con un link.</p>
-                  {catalogoFrom ? (
-                    <p className="mt-2 text-sm text-ink-2">Desde {formatCurrency(catalogoFrom)}/mes</p>
-                  ) : null}
-                </div>
-              </div>
+              {modules.map((module) => (
+                <a
+                  key={module.name}
+                  href={module.href}
+                  className="group flex flex-col overflow-hidden rounded-lg border border-line bg-paper transition-colors hover:border-ink-3"
+                >
+                  {/* El degradado del borde inferior avisa que la captura sigue: sin él la miniatura parecía cortada a media fila. */}
+                  <div className="relative border-b border-line">
+                    <Image
+                      src={module.image}
+                      alt={module.alt}
+                      width={752}
+                      height={564}
+                      sizes="(min-width: 640px) 33vw, 100vw"
+                      className="aspect-[4/3] w-full object-cover object-top"
+                    />
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-paper to-transparent"
+                    />
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1 p-5">
+                    <h3 className="font-medium text-ink">{module.name}</h3>
+                    <p className="text-sm text-ink-2">{module.body}</p>
+                    {module.from ? (
+                      <p className="mt-2 text-sm text-ink-2">Desde {formatCurrency(module.from)}/mes</p>
+                    ) : null}
+                    <span className="mt-auto pt-3 text-sm font-medium text-accent group-hover:underline">
+                      {module.cta} →
+                    </span>
+                  </div>
+                </a>
+              ))}
             </div>
           </div>
         </section>
@@ -178,7 +206,8 @@ export default async function MarketingHome() {
             <div>
               <h2 className="font-display text-[24px] font-medium text-paper">Pruébalo sin registrarte</h2>
               <p className="mt-2 text-sm text-paper/70">
-                Entra al panel de un negocio de ejemplo y arma una cotización real.
+                Entra al panel de una inmobiliaria de ejemplo y arma una cotización de prueba, con PDF y
+                WhatsApp. No se guarda nada.
               </p>
             </div>
             <Link
