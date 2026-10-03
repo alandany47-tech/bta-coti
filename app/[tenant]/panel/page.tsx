@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
-import { getPanelContext } from "@/lib/auth/panel";
+import { redirect } from "next/navigation";
+import { getPanelContext, getPanelModules, hasRole } from "@/lib/auth/panel";
 import { rootOrigin } from "@/lib/auth/redirects";
 import { CotizadorClient } from "@/components/cotizador/cotizador-client";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
@@ -10,7 +11,17 @@ export default async function CotizadorPage({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant: slug } = await params;
-  const { supabase, tenant } = await getPanelContext(slug);
+  const { supabase, tenant, role } = await getPanelContext(slug);
+
+  // Sin módulo `broker` no hay cotizador de propiedades: el negocio entra a administrar su catálogo.
+  if (!(await getPanelModules(tenant.id)).includes("broker")) {
+    if (hasRole(role, "editor")) redirect("/panel/catalogo");
+    return (
+      <div className="mx-auto w-full max-w-xl p-6 text-sm text-ink-2">
+        Tu acceso es de solo lectura. Pide a quien administra {tenant.name} que te dé permisos de edición.
+      </div>
+    );
+  }
 
   const { data: properties } = await supabase
     .from("items")

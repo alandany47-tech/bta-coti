@@ -42,18 +42,25 @@ export function OnboardingWizard({
   hasItems,
   hasQuotes,
   canImport,
+  mode,
+  hasWhatsapp,
 }: {
   tenant: PublicTenant;
   hasItems: boolean;
   hasQuotes: boolean;
   canImport: boolean;
+  /** `broker` = cotizador de propiedades; `catalog` = catálogo de productos/servicios. */
+  mode: "broker" | "catalog";
+  hasWhatsapp: boolean;
 }) {
   const [tenant, setTenant] = useState(initialTenant);
   const [dismissing, setDismissing] = useState(false);
   const router = useRouter();
 
   const step1Done = Boolean(tenant.logo_url);
-  const steps = [step1Done, hasItems, hasQuotes];
+  const isBroker = mode === "broker";
+  const step3Done = isBroker ? hasQuotes : hasWhatsapp;
+  const steps = [step1Done, hasItems, step3Done];
 
   async function handleSkip() {
     setDismissing(true);
@@ -66,7 +73,7 @@ export function OnboardingWizard({
       <h1 className="text-3xl tracking-tight text-foreground">Bienvenido a {BRAND.name}</h1>
       <p className="mt-3 text-foreground-muted">
         Tu espacio <span className="font-medium text-foreground">{tenant.name}</span> ya está listo. Estos 3 pasos te
-        dejan cotizando en minutos — puedes saltarlos y volver después.
+        dejan {isBroker ? "cotizando" : "vendiendo"} en minutos — puedes saltarlos y volver después.
       </p>
 
       <div className="mt-6 flex items-center gap-2">
@@ -90,8 +97,19 @@ export function OnboardingWizard({
         </section>
 
         <section className="py-6">
-          <StepHeader done={hasItems} title="2. Carga tu cartera" />
-          {canImport ? (
+          <StepHeader done={hasItems} title={isBroker ? "2. Carga tu cartera" : "2. Agrega tus productos o servicios"} />
+          {!isBroker ? (
+            canImport ? (
+              <div className="flex items-center justify-between gap-4">
+                <p className="text-sm text-muted">Con foto, precio y una descripción corta. Tarda un minuto por ítem.</p>
+                <Link href="/panel/catalogo" className="shrink-0 text-sm underline hover:text-foreground">
+                  Ir a Catálogo
+                </Link>
+              </div>
+            ) : (
+              <p className="text-sm text-muted">Pide a un editor de tu equipo que cargue el catálogo.</p>
+            )
+          ) : canImport ? (
             <div className="flex items-center justify-between gap-4">
               <p className="text-sm text-muted">Importa un Excel con tus propiedades o servicios.</p>
               <Link href="/panel/importar" className="shrink-0 text-sm underline hover:text-foreground">
@@ -104,11 +122,15 @@ export function OnboardingWizard({
         </section>
 
         <section className="py-6">
-          <StepHeader done={hasQuotes} title="3. Haz tu primera cotización" />
+          <StepHeader done={step3Done} title={isBroker ? "3. Haz tu primera cotización" : "3. Pon tu WhatsApp y comparte tu catálogo"} />
           <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-muted">Elige una propiedad, ajusta el enganche y envíala por WhatsApp.</p>
-            <Link href="/panel" className="shrink-0 text-sm underline hover:text-foreground">
-              Cotizar
+            <p className="text-sm text-muted">
+              {isBroker
+                ? "Elige una propiedad, ajusta el enganche y envíala por WhatsApp."
+                : "Tus clientes arman su cotización en tu página y te la mandan por WhatsApp."}
+            </p>
+            <Link href={isBroker ? "/panel" : "/panel/negocio"} className="shrink-0 text-sm underline hover:text-foreground">
+              {isBroker ? "Cotizar" : "Mi negocio"}
             </Link>
           </div>
         </section>
