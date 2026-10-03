@@ -35,7 +35,7 @@ export default async function PanelLayout({
       {tenant.is_demo ? <DemoBanner registroUrl={`${rootOrigin(host)}/registro`} /> : null}
       <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border-subtle px-6 py-4">
         <TenantMark tenant={tenant} subtitle="Panel" />
-        <nav className="flex gap-4 text-sm text-foreground-muted">
+        <nav className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground-muted">
           {isBroker ? (
             <>
               <Link href="/panel" className="hover:text-foreground">
@@ -63,6 +63,9 @@ export default async function PanelLayout({
                 <>
                   <Link href="/panel/propiedades" className="hover:text-foreground">
                     Propiedades
+                  </Link>
+                  <Link href="/panel/plantillas" className="hover:text-foreground">
+                    Plantillas
                   </Link>
                   <Link href="/panel/importar" className="hover:text-foreground">
                     Importar cartera

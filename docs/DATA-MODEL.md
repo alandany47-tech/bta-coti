@@ -90,6 +90,9 @@ quotes (
 
 quote_items (id, quote_id, item_id null, title, qty numeric, unit_price, discount_pct, total)
 
+-- Plantillas (T31, D26): el aspecto vive en código (`lib/quote-templates.ts`); la BD solo guarda
+-- tenants.quote_template text (clasica|moderna|editorial) y el tope en plans.limits.templates.
+-- La tabla templates/tenant_templates de abajo queda para plantillas premium de pago único (futuro).
 templates (id, code, name, module, tier text check (tier in ('base','premium')), config jsonb, preview_url)
 tenant_templates (tenant_id, template_id, source text check (source in ('plan','purchase','custom')), created_at)
 

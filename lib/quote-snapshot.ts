@@ -1,4 +1,5 @@
 import type { PricingBreakdown } from "@/lib/pricing";
+import { DEFAULT_QUOTE_TEMPLATE, isQuoteTemplateCode, type QuoteTemplateCode } from "@/lib/quote-templates";
 import type { Property, PublicTenant } from "@/lib/types";
 
 /**
@@ -12,6 +13,8 @@ export type QuoteSnapshot = {
   tenantName: string;
   tenantLogoUrl: string | null;
   brandColor: string | null;
+  /** Plantilla con la que se hizo (T31): congelada, cambiar la del negocio después no la toca. */
+  templateCode: QuoteTemplateCode;
   advisorName: string | null;
   clientName: string;
   clientPhone: string;
@@ -26,7 +29,7 @@ const MAX_SNAPSHOT_IMAGES = 9;
 
 export function buildQuoteSnapshot(input: {
   quoteId: string;
-  tenant: Pick<PublicTenant, "name" | "logo_url" | "brand_color">;
+  tenant: Pick<PublicTenant, "name" | "logo_url" | "brand_color"> & { quote_template?: QuoteTemplateCode };
   advisorName: string | null;
   clientName: string;
   clientPhone: string;
@@ -43,6 +46,7 @@ export function buildQuoteSnapshot(input: {
     tenantName: input.tenant.name,
     tenantLogoUrl: input.tenant.logo_url ?? null,
     brandColor: input.tenant.brand_color ?? null,
+    templateCode: input.tenant.quote_template ?? DEFAULT_QUOTE_TEMPLATE,
     advisorName: input.advisorName,
     clientName: input.clientName,
     clientPhone: input.clientPhone,
@@ -73,6 +77,7 @@ export function parseQuoteSnapshot(value: unknown): QuoteSnapshot | null {
     number: typeof s.number === "number" ? s.number : null,
     tenantLogoUrl: s.tenantLogoUrl ?? null,
     brandColor: s.brandColor ?? null,
+    templateCode: isQuoteTemplateCode(s.templateCode) ? s.templateCode : DEFAULT_QUOTE_TEMPLATE,
     advisorName: s.advisorName ?? null,
     notes: s.notes ?? null,
     property: s.property ? { ...s.property, images: s.property.images ?? [], floor_plan_url: s.property.floor_plan_url ?? null } : null,

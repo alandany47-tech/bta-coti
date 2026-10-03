@@ -20,6 +20,8 @@ export type Tenant = {
   is_demo: boolean;
   /** Dígitos con lada de país (10 a 15); público: el botón de WhatsApp de la vitrina escribe a este número. */
   whatsapp: string | null;
+  /** Plantilla de cotización elegida (T31); el aspecto vive en `lib/quote-templates.ts`. */
+  quote_template: "clasica" | "moderna" | "editorial";
   created_at: string;
 };
 

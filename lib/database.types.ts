@@ -656,6 +656,7 @@ export type Database = {
           name: string
           notes: string | null
           plan_id: string
+          quote_template: string
           settings: Json
           slug: string
           source: string | null
@@ -681,6 +682,7 @@ export type Database = {
           name: string
           notes?: string | null
           plan_id: string
+          quote_template?: string
           settings?: Json
           slug: string
           source?: string | null
@@ -706,6 +708,7 @@ export type Database = {
           name?: string
           notes?: string | null
           plan_id?: string
+          quote_template?: string
           settings?: Json
           slug?: string
           source?: string | null
@@ -939,6 +942,10 @@ export type Database = {
       reset_demo_data: { Args: { p_password: string }; Returns: undefined }
       reset_monthly_quote_counters: { Args: never; Returns: number }
       retry_detached_media_deletes: { Args: never; Returns: number }
+      set_quote_template: {
+        Args: { p_code: string; p_tenant: string }
+        Returns: undefined
+      }
       set_tenant_logo: {
         Args: { p_tenant: string; p_url: string }
         Returns: undefined
