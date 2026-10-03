@@ -3,6 +3,7 @@ import { expirePastDue, expireTrials } from "@/lib/trials";
 import { resetMonthlyQuoteCounters } from "@/lib/monthly-usage";
 import { cleanupOrphanedMedia } from "@/lib/media-cleanup";
 import { pingHeartbeat } from "@/lib/heartbeat";
+import { sendTrialEmails } from "@/lib/email/notify";
 
 export const runtime = "nodejs";
 
@@ -19,12 +20,15 @@ export async function GET(request: Request) {
     const expiredPastDue = await expirePastDue();
     const resetUsageRows = await resetMonthlyQuoteCounters();
     const media = await cleanupOrphanedMedia();
+    // T25: avisos de la prueba (día 5, día 7, vencida). Van después de expireTrials() para cubrir las vencidas de hoy.
+    const emails = await sendTrialEmails();
     await pingHeartbeat(process.env.HEARTBEAT_URL_DAILY);
     return NextResponse.json({
       ok: true,
       expiredTrials: expiredTrials.length,
       expiredPastDue: expiredPastDue.length,
       resetUsageRows,
+      emails,
       ...media,
     });
   } catch (error) {

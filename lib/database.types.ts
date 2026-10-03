@@ -189,6 +189,41 @@ export type Database = {
         }
         Relationships: []
       }
+      email_log: {
+        Row: {
+          created_at: string
+          id: number
+          kind: string
+          ref: string
+          sent_to: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: never
+          kind: string
+          ref?: string
+          sent_to?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: never
+          kind?: string
+          ref?: string
+          sent_to?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_log_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       items: {
         Row: {
           attrs: Json
@@ -735,6 +770,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _demo_enrich_catalog: { Args: never; Returns: undefined }
       _demo_image: { Args: { p_n: number; p_slug: string }; Returns: string }
       _demo_quote: {
         Args: {
@@ -756,6 +792,10 @@ export type Database = {
       _demo_user: {
         Args: { p_email: string; p_name: string; p_password: string }
         Returns: string
+      }
+      _reset_demo_data_base: {
+        Args: { p_password: string }
+        Returns: undefined
       }
       _slug_forms: { Args: { p_text: string }; Returns: string[] }
       _terms_hit: { Args: { p_forms: string[] }; Returns: boolean }

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type Stripe from "stripe";
 import { logAudit, setTenantStatus } from "@/lib/admin-status";
 import { createServiceRoleClient } from "@/lib/supabase/server";
+import { sendPaymentFailedEmail } from "@/lib/email/notify";
 
 function tenantIdFromMetadata(metadata: Stripe.Metadata | null | undefined): string | null {
   return metadata?.tenant_id || null;
@@ -188,6 +189,7 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
       const tenantId = await tenantIdFromInvoice(supabase, invoice);
       if (!tenantId) break;
       await requireStatusChange(tenantId, "past_due", "payment_failed", null);
+      if (invoice.id) await sendPaymentFailedEmail(tenantId, invoice.id); // T25: nunca lanza ni bloquea el webhook
       break;
     }
 
@@ -200,6 +202,7 @@ export async function handleStripeEvent(event: Stripe.Event, supabase: SupabaseC
       const tenantId = await tenantIdFromInvoice(supabase, invoice);
       if (!tenantId) break;
       await requireStatusChange(tenantId, "past_due", "payment_failed", null);
+      if (invoice.id) await sendPaymentFailedEmail(tenantId, invoice.id);
       break;
     }
 
