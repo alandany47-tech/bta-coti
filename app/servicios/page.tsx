@@ -26,7 +26,7 @@ export default async function ServiciosPage() {
         title="Publica tu catálogo de servicios"
         description="Organiza tus servicios y materiales por categoría en una página pública compartible. Para talleres, contratistas y negocios de servicio."
         status="available"
-        screenshotSrc="/marketing/hero-servicios-storefront-v2.jpg"
+        screenshotSrc="/marketing/hero-servicios-storefront-v3.jpg"
         screenshotAlt="Catálogo público de servicios, ejemplo de una plomería"
         planCode="esencial"
         priceMonth={plan ? Number(plan.price_month) : 199}

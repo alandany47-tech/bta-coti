@@ -628,10 +628,12 @@ export type Database = {
           status_changed_at: string
           status_reason: string | null
           stripe_checkout_pending_at: string | null
+          stripe_checkout_session_id: string | null
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           theme: Json
           trial_ends_at: string | null
+          whatsapp: string | null
         }
         Insert: {
           billing_mode?: string
@@ -651,10 +653,12 @@ export type Database = {
           status_changed_at?: string
           status_reason?: string | null
           stripe_checkout_pending_at?: string | null
+          stripe_checkout_session_id?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           theme?: Json
           trial_ends_at?: string | null
+          whatsapp?: string | null
         }
         Update: {
           billing_mode?: string
@@ -674,10 +678,12 @@ export type Database = {
           status_changed_at?: string
           status_reason?: string | null
           stripe_checkout_pending_at?: string | null
+          stripe_checkout_session_id?: string | null
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           theme?: Json
           trial_ends_at?: string | null
+          whatsapp?: string | null
         }
         Relationships: [
           {
@@ -808,6 +814,7 @@ export type Database = {
         Args: { p_tenant: string; p_url: string }
         Returns: undefined
       }
+      dismiss_onboarding: { Args: { p_tenant: string }; Returns: undefined }
       effective_limit: {
         Args: { p_key: string; p_tenant: string }
         Returns: number
@@ -866,6 +873,10 @@ export type Database = {
         }
         Returns: string
       }
+      record_stripe_checkout_session: {
+        Args: { p_session_id: string; p_tenant: string }
+        Returns: undefined
+      }
       request_ip: { Args: never; Returns: string }
       reserve_media: {
         Args: {
@@ -888,6 +899,10 @@ export type Database = {
       reset_demo_data: { Args: { p_password: string }; Returns: undefined }
       reset_monthly_quote_counters: { Args: never; Returns: number }
       retry_detached_media_deletes: { Args: never; Returns: number }
+      set_tenant_logo: {
+        Args: { p_tenant: string; p_url: string }
+        Returns: undefined
+      }
       set_tenant_status: {
         Args: {
           p_actor: string
@@ -900,6 +915,14 @@ export type Database = {
       slug_available: { Args: { p_slug: string }; Returns: boolean }
       tenant_from_path: { Args: { p_name: string }; Returns: string }
       tenant_modules: { Args: { p_tenant: string }; Returns: string[] }
+      update_tenant_branding: {
+        Args: { p_brand_color: string; p_tenant: string }
+        Returns: undefined
+      }
+      update_tenant_whatsapp: {
+        Args: { p_tenant: string; p_whatsapp: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

@@ -1,6 +1,13 @@
+import { headers } from "next/headers";
 import { requireOperableTenant } from "@/lib/tenant-page";
+import { tenantOrigin } from "@/lib/auth/redirects";
+import { CatalogBrowser } from "@/components/storefront/catalog-browser";
+import { ShareButton } from "@/components/storefront/share-button";
+import { buttonVariants } from "@/components/ui/button";
+import { MessageCircle } from "lucide-react";
+import { whatsappHref, type CatalogItem } from "@/lib/catalog";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { formatCurrency } from "@/lib/utils";
+import { cn, formatCurrency } from "@/lib/utils";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 import type { Property } from "@/lib/types";
 
@@ -14,15 +21,6 @@ const STATUS_DOT: Record<Property["status"], string> = {
   available: "bg-ok",
   reserved: "bg-warn",
   sold: "bg-danger",
-};
-
-type CatalogItemRow = {
-  id: string;
-  title: string;
-  category: string | null;
-  price: number | string;
-  unit: string | null;
-  images: string[] | null;
 };
 
 export default async function StorefrontPage({
@@ -43,34 +41,59 @@ export default async function StorefrontPage({
       .order("sku", { ascending: true }),
     supabase
       .from("items")
-      .select("id, title, category, price, unit, images")
+      .select("id, title, description, category, price, unit, images, sku")
       .eq("tenant_id", tenant.id)
       .in("kind", ["product", "service"])
       .eq("status", "available")
-      .order("category", { ascending: true })
+      .order("sort", { ascending: true })
       .order("title", { ascending: true }),
   ]);
   const properties = (data ?? []).map(itemToProperty);
 
-  const catalogItems = (catalogData ?? []) as CatalogItemRow[];
-  const catalogByCategory = new Map<string, CatalogItemRow[]>();
-  for (const item of catalogItems) {
-    const key = item.category ?? "General";
-    const group = catalogByCategory.get(key) ?? [];
-    group.push(item);
-    catalogByCategory.set(key, group);
-  }
+  const catalogItems: CatalogItem[] = (catalogData ?? []).map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    category: row.category,
+    price: Number(row.price),
+    unit: row.unit,
+    images: row.images ?? [],
+    sku: row.sku,
+  }));
+  const categoryCount = new Set(catalogItems.map((i) => i.category ?? "General")).size;
+
+  const host = (await headers()).get("host") ?? "";
+  const catalogUrl = tenantOrigin(slug, host);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-10">
-      <h1 className="text-3xl tracking-tight text-foreground">{tenant.name}</h1>
-      <p className="mt-2 text-sm text-muted">
-        {properties.length > 0
-          ? `${properties.length} unidades en cartera.`
-          : catalogItems.length > 0
-            ? `${catalogItems.length} productos y servicios.`
-            : "Aún no hay nada publicado."}
-      </p>
+    <div className="mx-auto w-full max-w-[1120px] px-6 pb-32 pt-10 sm:pt-14">
+      <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-2xl">
+          <h1 className="text-[40px] tracking-[-0.01em] text-ink sm:text-[56px]">{tenant.name}</h1>
+          <p className="mt-3 text-[15px] text-ink-2">
+            {properties.length > 0
+              ? `${properties.length} unidades en cartera.`
+              : catalogItems.length > 0
+                ? `${catalogItems.length} ${catalogItems.length === 1 ? "producto o servicio" : "productos y servicios"}${categoryCount > 1 ? ` en ${categoryCount} categorías` : ""}.`
+                : "Aún no hay nada publicado."}
+          </p>
+        </div>
+        {properties.length > 0 || catalogItems.length > 0 ? (
+          <div className="flex gap-2 sm:gap-3">
+            <ShareButton url={catalogUrl} title={tenant.name} />
+            <a
+              href={whatsappHref(tenant.whatsapp, `Hola, vi el catálogo de ${tenant.name} (${catalogUrl}) y quiero hacer una consulta.`)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(buttonVariants({ variant: "secondary" }))}
+            >
+              <MessageCircle className="h-4 w-4" aria-hidden />
+              <span className="sm:hidden">WhatsApp</span>
+              <span className="hidden sm:inline">Escribir por WhatsApp</span>
+            </a>
+          </div>
+        ) : null}
+      </div>
 
       {properties.length > 0 ? (
         <ul className="mt-8 divide-y divide-border-subtle border-y border-border-subtle">
@@ -109,36 +132,9 @@ export default async function StorefrontPage({
         </ul>
       ) : null}
 
-      {catalogByCategory.size > 0 ? (
-        <div className="mt-8 flex flex-col gap-8">
-          {[...catalogByCategory.entries()].map(([category, items]) => (
-            <div key={category}>
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted">{category}</h2>
-              <ul className="mt-2 divide-y divide-border-subtle border-y border-border-subtle">
-                {items.map((item) => (
-                  <li key={item.id} className="flex items-center gap-4 py-3">
-                    {item.images?.[0] ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={item.images[0]}
-                        alt={item.title}
-                        width={56}
-                        height={56}
-                        className="h-14 w-14 shrink-0 rounded-md object-cover"
-                      />
-                    ) : (
-                      <div className="h-14 w-14 shrink-0 rounded-md bg-surface-hover" />
-                    )}
-                    <p className="min-w-0 flex-1 truncate text-foreground">{item.title}</p>
-                    <p className="tabular shrink-0 text-sm font-medium text-foreground">
-                      {formatCurrency(Number(item.price))}
-                      {item.unit ? <span className="ml-1 font-normal text-foreground-muted">/{item.unit}</span> : null}
-                    </p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+      {catalogItems.length > 0 ? (
+        <div className={properties.length > 0 ? "mt-12" : "mt-8"}>
+          <CatalogBrowser slug={slug} items={catalogItems} accent={tenant.brand_color} />
         </div>
       ) : null}
     </div>

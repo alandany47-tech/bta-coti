@@ -85,6 +85,39 @@ h2 {
   font-variant-numeric: tabular-nums;
 }
 
+/* Fila horizontal que se desplaza sin barra visible (filtros de categoría de la vitrina). */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* Entrada de la barra "Mi cotización" y de su hoja (BRAND §7: 240 ms, ease-out fuerte). */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@utility animate-rise {
+  animation: rise var(--duration-slow) var(--ease-out-strong) both;
+}
+
+dialog[open].sheet {
+  animation: rise var(--duration-slow) var(--ease-out-strong) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

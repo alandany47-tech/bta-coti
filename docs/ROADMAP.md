@@ -30,6 +30,7 @@
 | T19 | Monitoreo: `/api/health` y `/deep`, Sentry, heartbeats de cron y webhooks, alertas de negocio (ver `MONITORING.md`) | CX | T12 | Una llave rota de Supabase dispara la alerta en menos de 10 minutos | 🟨 |
 | T26 | Demo: `is_demo`, seeds, `/demo/entrar`, restricciones, reset nocturno, clonar demo para prospecto (ver `DEMO.md`) | CC | T15, T16 | Demo usable sin registro. El reset deja los datos iguales. Clonar crea `prospecto-x` en trial | 🟨 |
 | T27 | Demo sin registro: cotización de prueba solo con nombre y sin guardar nada, capturas de marketing sin el badge de Next, home móvil y demos por giro clicables (ver `DEMO.md` §2) | CC | T26, T22 | Generar una cotización de prueba no cambia `clients` ni `quotes`. Las capturas no muestran el badge "N". Sin recortes raros en móvil | 🟨 |
+| T28 | Vitrina de catálogo v2: cuadrícula con foto, búsqueda y categorías, ficha de ítem con enlace propio (`/i/<id>`) y vista previa en WhatsApp, "Mi cotización" del visitante enviada por WhatsApp (sin guardar nada), WhatsApp del negocio en Panel → Mi negocio (0029), demos con descripciones (0030) | CC | T14, T27 | Un visitante arma una lista de 3 ítems y la manda por WhatsApp en menos de 30 s en móvil. Buscar sin acentos funciona. Sin errores en consola | 🟨 |
 | T17 | Cron de Vercel diario: vence pruebas, limpia huérfanos de R2, resetea `quotes_this_month` | CX | T12 | Idempotente. Protegido con `CRON_SECRET` | ✅ |
 
 ## F2: Pagos, web y onboarding
