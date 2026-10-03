@@ -15,7 +15,7 @@ dominio real; cuando ya funcione, un clic en Vercel pasa el proyecto a Pro sin v
 Diferencias a tener en cuenta mientras estés en Hobby:
 - El plan Hobby es para uso personal/no comercial según los términos de Vercel — está bien para
   probar antes de cobrar de verdad, pero pasa a Pro antes de abrir el registro a clientes reales.
-- Cron Jobs: Hobby los limita a una ejecución por día (y con hasta ~1 h de margen en la hora exacta).
+- Cron Jobs: Hobby los limita a una ejecución por día (y con hasta ~1 h de margen en la hora exacta); verificado en la documentación de Vercel el 2026-10-03: hasta 100 crons por proyecto en todos los planes (un revisor externo supuso 2).
   Los 3 crons de `vercel.json` ya son diarios o semanales, así que corren igual; no dependas de que
   disparen a la hora exacta indicada mientras estés en Hobby.
 - Dominio comodín (`*.ayxco.app`): confirma en Vercel → Domains al momento, los límites por plan

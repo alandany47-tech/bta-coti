@@ -15,6 +15,8 @@ select set_config('t.ta',
 select set_config('t.tb',
   public.provision_tenant('00000000-0000-0000-0000-00000000000b', 'Negocio B', 'tenant-b', 'esencial', 'active', null, 'admin', 'manual')::text, true);
 
+-- El tope de usuarios (0035) se prueba en team.sql; aquí los datos de prueba arman equipos mayores al plan.
+alter table public.tenant_members disable trigger tenant_members_users_guard;
 insert into public.tenant_members (tenant_id, user_id, role) values
   (current_setting('t.ta')::uuid, '00000000-0000-0000-0000-00000000000c', 'viewer'),
   (current_setting('t.ta')::uuid, '00000000-0000-0000-0000-00000000000e', 'editor');

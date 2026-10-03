@@ -10,7 +10,8 @@
     "test": "vitest run",
     "seed:demo": "node scripts/seed-demo.mjs",
     "stripe:sync": "node --env-file=.env.local scripts/stripe-sync.ts",
-    "stripe:e2e": "node --env-file=.env.local scripts/stripe-e2e.mjs"
+    "stripe:e2e": "node --env-file=.env.local scripts/stripe-e2e.mjs",
+    "e2e:launch": "node --env-file=.env.local scripts/launch-e2e.mjs"
   },
   "dependencies": {
     "@react-email/components": "^1.0.12",
@@ -26,7 +27,7 @@
     "clsx": "^2.1.1",
     "exceljs": "^4.4.0",
     "lucide-react": "^1.39.0",
-    "next": "16.3.4",
+    "next": "^16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
@@ -39,7 +40,8 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.3.4",
+    "eslint-config-next": "^16.3.8",
+    "playwright-core": "^1.63.0",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^3.2.7"

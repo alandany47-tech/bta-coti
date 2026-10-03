@@ -9,6 +9,8 @@ insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-000000001103', 'g3@test.local');
 select set_config('t.br', public.provision_tenant('00000000-0000-0000-0000-000000001101', 'Negocio P', 'negocio-p', 'broker', 'active', null, 'admin', 'manual')::text, true);
 select set_config('t.es', public.provision_tenant('00000000-0000-0000-0000-000000001102', 'Negocio Q', 'negocio-q', 'esencial', 'active', null, 'admin', 'manual')::text, true);
+-- El tope de usuarios (0035) se prueba en team.sql; aquí los datos de prueba arman equipos mayores al plan.
+alter table public.tenant_members disable trigger tenant_members_users_guard;
 insert into public.tenant_members (tenant_id, user_id, role) values (current_setting('t.es')::uuid, '00000000-0000-0000-0000-000000001103', 'viewer');
 
 select is((select array_agg(module order by module) from public.message_templates where tenant_id = current_setting('t.br')::uuid), array['broker', 'services'], 'broker crea plantillas para broker y services');

@@ -13,7 +13,7 @@
 ## 2. Cuentas y accesos
 - [ ] Dominio en Cloudflare Registrar, con auto-renovación.
 - [ ] Correo del dominio (soporte@, hola@), por ejemplo con Cloudflare Email Routing (gratis) a tu Gmail.
-- [ ] Resend con el dominio verificado: SPF, DKIM y DMARC (`p=quarantine`).
+- [ ] Resend con el dominio verificado: SPF, DKIM y DMARC (`p=quarantine`). **También** como SMTP de Supabase Auth (el por defecto tiene un tope muy bajo por hora y la base exige confirmar el correo: sin esto el registro se atora).
 - [ ] Vercel Pro, Supabase Pro (prod), Cloudflare (R2, Turnstile), Stripe y GitHub.
 - [ ] **2FA en todas las cuentas.** Correo de equipo, no personal, como dueño de las cuentas.
 - [ ] Un gestor de contraseñas compartido para las credenciales.
@@ -29,14 +29,14 @@
 - [ ] Tests de RLS en CI (aislamiento entre tenants, anon bloqueado).
 - [ ] Rate limit en registro, login, `/api/media/*` y `/q/*`. Turnstile en registro.
 - [ ] Turnstile: widget en Cloudflare, `NEXT_PUBLIC_TURNSTILE_SITE_KEY` en Vercel y Captcha (Turnstile) activado en Supabase Auth con el secret; sin lo segundo, un `signUp` directo con la anon key se salta el formulario.
-- [ ] Headers: CSP, HSTS, X-Frame-Options (excepto donde se permita embeber el catálogo).
+- [x] Headers: HSTS, nosniff, X-Frame-Options, Referrer-Policy y Permissions-Policy (`next.config.ts`, T34). **Falta** una CSP completa (scripts/imágenes: R2, Sentry, Stripe, Turnstile): empezar en Report-Only con tráfico real.
 - [ ] Antiphishing automático activo (T18, `ABUSE-AND-LIMITS.md` §3).
 - [ ] Botón "Reportar contenido" en storefront y cotización, con suspensión rápida desde el admin.
 - [ ] Stripe según el checklist de `STRIPE.md` §8.
-- [ ] `npm audit` sin altas ni críticas (`xlsx` ya se quitó en T14; queda solo un aviso moderado de `vitest`, dev).
+- [x] `npm audit --omit=dev` sin vulnerabilidades (T34: `next` 16.3.8 por el RCE de `next/og`). Quedan avisos solo de desarrollo (eslint, vitest).
 
 ## 5. Calidad
-- [ ] E2E con Playwright: registro → onboarding → ítem → cotización → WhatsApp → PDF → pago → suspensión → reactivación.
+- [x] E2E con Playwright: registro → onboarding → ítem → cotización → WhatsApp → PDF → pago → suspensión → reactivación (`npm run e2e:launch`, 41/41; informe y pendientes manuales en `docs/QA-LANZAMIENTO.md`).
 - [ ] PDF probado en iPhone (Safari), Android (Chrome) y escritorio.
 - [ ] Links `/q/` con buena vista previa en WhatsApp (OG image dinámica con logo del tenant).
 - [ ] Móvil primero: el broker cotiza desde el teléfono.
@@ -48,7 +48,7 @@
 - [ ] Guion de onboarding manual para los primeros 10 clientes (videollamada de 15 minutos). Es la mejor fuente de feedback.
 
 ## 7. Comercial
-- [ ] Demo según `DEMO.md` (T26).
+- [x] Demo según `DEMO.md` (T26, T27): 8 tenants, cotización de prueba sin guardar datos, Servicios y Catálogo.
 - [ ] Pilotos con los clientes actuales desde G2 (cobro manual, precio fundador congelado).
 - [ ] Métricas: conversión de prueba a pago, cotizaciones por tenant por semana y churn mensual.
 - [ ] Cupones de Stripe para pilotos y referidos.
