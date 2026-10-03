@@ -61,7 +61,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0034 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
+- Migraciones 0001 → 0035 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
   más recientes: 0025 (T20) agrega `stripe_events`, `subscriptions`, `expire_past_due()` y
   `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id`; 0027 (T23) agrega
   `set_tenant_logo`/`update_tenant_branding`/`dismiss_onboarding` — todas validan membresía ellas
@@ -96,21 +96,21 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   Plantillas (T31, `lib/quote-templates.ts`): una config para web (`components/quote/quote-view.tsx`) y PDF (`pdf/QuoteDocument.tsx`) sobre `lib/quote-view-model.ts` (sin plantilla: no altera montos); elegida en `tenants.quote_template` y congelada en el snapshot.
   Servicios (T30): `lib/services-pricing.ts` (centavos; el precio de ítems sale de la base, nunca del navegador), `POST /api/[tenant]/quotes/services`,
   snapshot `kind:'services'` (`property_id` nulo), UI en `/panel/cotizar`; reusa visor, PDF y plantillas.
+- Equipo (T33, D28): `/panel/equipo` (solo dueño) → `/api/[tenant]/team*` con sesión y RPC `create_invitation`/`set_member_role`/`remove_member`.
+  Token propio (hash SHA-256 en `tenant_invitations`, 7 días); se acepta en `/invitacion/<token>` (service role: `invitation_preview`/
+  `accept_invitation`, y aquí se crea la cuenta nueva). Tope: trigger `tenant_members_users_guard` (demo exento) + cuenta invitaciones vigentes.
 - Mensajes (T16): `message_templates` (tenant_id, module, channel='whatsapp', body ≤1000, sin HTML), una fila
   por módulo del plan (`provision_tenant` las crea; solo editor escribe). `lib/message-templates.ts`
   (`renderMessage`, `DEFAULT_TEMPLATES`) resuelve `{variable}` sin tocar las desconocidas; `POST
   /api/[tenant]/quotes` la usa para el link de wa.me. Editor en Panel → Mensajes (`tenant_modules`).
 - Correos (T25, DEPLOY §2c-bis): `lib/email/notifyTenant` reclama `email_log` antes de enviar (Resend) y lo suelta si falla;
   plantillas en `emails/`. Salen del cron diario, de `provisionTenant` y del webhook. Sin `RESEND_API_KEY`, no hace nada.
-- Demo (T26): `is_demo` en tenants, visible en las columnas públicas. `reset_demo_data(password)`
-  (0020) borra y recrea los 8 tenants `demo-*`; lo llaman `npm run seed:demo` (dueño), el cron
-  `/api/cron/reset-demo` (diario) y el botón "Resetear demo" en `/admin`. `DEMO_PASSWORD` debe ser
-  la misma en el seed y en el entorno de la app: `/demo/entrar` inicia sesión con ella como el
-  editor de `demo-broker` (la vitrina). `is_demo` bloquea subir/borrar medios; banner y modo
-  `?present=1` en `components/demo-banner.tsx`. Admin → "Clonar como prospecto" copia catálogo y
-  marca a un tenant nuevo en trial (`clone_demo_items`, docs/DEMO.md).
-  La cotización en demo (T27) NO se guarda: solo nombre, `POST /api/[tenant]/quotes` devuelve el
-  snapshot sin `createQuote` y `/clients` POST da 403 (`lib/demo-quote.ts`); la sesión es compartida.
+- Demo (T26): `is_demo` en tenants (columna pública). `reset_demo_data(password)` (0020) borra y recrea los 8 tenants `demo-*`;
+  lo llaman `npm run seed:demo`, el cron `/api/cron/reset-demo` (diario) y "Resetear demo" en `/admin`. `DEMO_PASSWORD` debe
+  ser la misma en el seed y en la app: `/demo/entrar` entra como el editor de `demo-broker`. `is_demo` bloquea medios,
+  altas de ítems y equipo; banner y `?present=1` en `components/demo-banner.tsx`. Admin → "Clonar como prospecto" (`clone_demo_items`).
+  La cotización en demo (T27/T30) NO se guarda: solo nombre; las rutas de quotes devuelven el snapshot sin `createQuote`
+  y `/clients` POST da 403 (`lib/demo-quote.ts`); la sesión es compartida.
 - Vitrina y catálogo (T28/T32): `slug./` = `CatalogBrowser`, `slug./i/<id>` = ficha; "Mi cotización" vive en
   `localStorage` (`lib/cart-store.ts`) y sale como texto de WhatsApp a `tenants.whatsapp` (0029/0031, Panel →
   Mi negocio); nada escribe en la base. Panel → Catálogo (`/panel/catalogo`): alta/edición/fotos de productos y

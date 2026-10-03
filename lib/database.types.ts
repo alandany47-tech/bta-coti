@@ -615,6 +615,53 @@ export type Database = {
           },
         ]
       }
+      tenant_invitations: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          expires_at: string
+          id: string
+          invited_by: string
+          revoked_at: string | null
+          role: string
+          tenant_id: string
+          token_hash: string
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          expires_at?: string
+          id?: string
+          invited_by: string
+          revoked_at?: string | null
+          role: string
+          tenant_id: string
+          token_hash: string
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invited_by?: string
+          revoked_at?: string | null
+          role?: string
+          tenant_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_invitations_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_members: {
         Row: {
           created_at: string
@@ -802,6 +849,10 @@ export type Database = {
       }
       _slug_forms: { Args: { p_text: string }; Returns: string[] }
       _terms_hit: { Args: { p_forms: string[] }; Returns: boolean }
+      accept_invitation: {
+        Args: { p_token_hash: string; p_user: string }
+        Returns: string
+      }
       admin_user_id_by_email: { Args: { p_email: string }; Returns: string }
       attach_media_url: {
         Args: {
@@ -845,6 +896,15 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_invitation: {
+        Args: {
+          p_email: string
+          p_role: string
+          p_tenant: string
+          p_token_hash: string
+        }
+        Returns: string
+      }
       default_message_template: { Args: { p_module: string }; Returns: string }
       delete_media: {
         Args: { p_id: string; p_tenant: string }
@@ -878,6 +938,18 @@ export type Database = {
           tenant_name: string
           tenant_slug: string
           views: number
+        }[]
+      }
+      invitation_preview: {
+        Args: { p_token_hash: string }
+        Returns: {
+          email: string
+          invitation_id: string
+          role: string
+          status: string
+          tenant_name: string
+          tenant_slug: string
+          user_exists: boolean
         }[]
       }
       is_app_admin: { Args: never; Returns: boolean }
@@ -920,6 +992,10 @@ export type Database = {
         Args: { p_session_id: string; p_tenant: string }
         Returns: undefined
       }
+      remove_member: {
+        Args: { p_tenant: string; p_user: string }
+        Returns: undefined
+      }
       request_ip: { Args: never; Returns: string }
       reserve_media: {
         Args: {
@@ -942,6 +1018,14 @@ export type Database = {
       reset_demo_data: { Args: { p_password: string }; Returns: undefined }
       reset_monthly_quote_counters: { Args: never; Returns: number }
       retry_detached_media_deletes: { Args: never; Returns: number }
+      revoke_invitation: {
+        Args: { p_invitation: string; p_tenant: string }
+        Returns: undefined
+      }
+      set_member_role: {
+        Args: { p_role: string; p_tenant: string; p_user: string }
+        Returns: undefined
+      }
       set_quote_template: {
         Args: { p_code: string; p_tenant: string }
         Returns: undefined
@@ -960,6 +1044,7 @@ export type Database = {
         Returns: string
       }
       slug_available: { Args: { p_slug: string }; Returns: boolean }
+      team_overview: { Args: { p_tenant: string }; Returns: Json }
       tenant_from_path: { Args: { p_name: string }; Returns: string }
       tenant_modules: { Args: { p_tenant: string }; Returns: string[] }
       update_tenant_branding: {

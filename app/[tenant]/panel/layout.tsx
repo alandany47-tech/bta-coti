@@ -65,6 +65,11 @@ export default async function PanelLayout({
               <Link href="/panel/negocio" className="hover:text-foreground">
                 Mi negocio
               </Link>
+              {role === "owner" ? (
+                <Link href="/panel/equipo" className="hover:text-foreground">
+                  Equipo
+                </Link>
+              ) : null}
               {isBroker || hasServices ? (
                 <Link href="/panel/plantillas" className="hover:text-foreground">
                   Plantillas
