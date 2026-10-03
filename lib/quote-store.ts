@@ -16,7 +16,8 @@ export async function createQuote(input: {
   id: string;
   tenantId: string;
   createdBy: string;
-  propertyId: string;
+  /** null en cotizaciones de servicios (T30): no hay propiedad. */
+  propertyId: string | null;
   clientId: string;
   snapshot: QuoteSnapshot;
   discountPct: number;

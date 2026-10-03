@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { TemplatePicker } from "@/components/quote/template-picker";
-import { getPanelContext, hasRole, requireBrokerModule } from "@/lib/auth/panel";
+import { getPanelContext, getPanelModules, hasRole, requireQuotingModule } from "@/lib/auth/panel";
 import { itemToProperty, PROPERTY_COLUMNS } from "@/lib/items";
 import { isQuoteTemplateCode, safeBrandColor, DEFAULT_QUOTE_TEMPLATE } from "@/lib/quote-templates";
 
@@ -8,7 +8,9 @@ export default async function TemplatesPage({ params }: { params: Promise<{ tena
   const { tenant: slug } = await params;
   const { supabase, tenant, role } = await getPanelContext(slug);
   if (!hasRole(role, "editor")) redirect("/panel");
-  await requireBrokerModule(tenant.id);
+  await requireQuotingModule(tenant.id);
+  const modules = await getPanelModules(tenant.id);
+  const kinds: ("property" | "services")[] = [...(modules.includes("broker") ? (["property"] as const) : []), ...(modules.includes("services") ? (["services"] as const) : [])];
 
   const [{ data: row }, { data: property }] = await Promise.all([
     supabase.from("tenants").select("plan_id").eq("id", tenant.id).maybeSingle(),
@@ -47,6 +49,7 @@ export default async function TemplatesPage({ params }: { params: Promise<{ tena
         property={property ? itemToProperty(property) : null}
         createdAt={new Date().toISOString()}
         isDemo={tenant.is_demo}
+        kinds={kinds}
       />
     </div>
   );

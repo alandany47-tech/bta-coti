@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { CopyLinkButton } from "@/components/quote/copy-link-button";
-import { getPanelContext, requireBrokerModule } from "@/lib/auth/panel";
+import { getPanelContext, requireQuotingModule } from "@/lib/auth/panel";
 import { tenantOrigin } from "@/lib/auth/redirects";
 import { formatCurrency } from "@/lib/utils";
 
@@ -25,7 +25,7 @@ function displayStatus(status: string, expiresAt: string | null): string {
 export default async function QuotesPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params;
   const { supabase, tenant } = await getPanelContext(slug);
-  await requireBrokerModule(tenant.id);
+  await requireQuotingModule(tenant.id);
   const origin = tenantOrigin(slug, (await headers()).get("host") ?? "");
 
   const { data: quotes } = await supabase
@@ -45,7 +45,7 @@ export default async function QuotesPage({ params }: { params: Promise<{ tenant:
               <tr>
                 <th className="p-3 font-medium">Folio</th>
                 <th className="p-3 font-medium">Cliente</th>
-                <th className="p-3 font-medium">Propiedad</th>
+                <th className="p-3 font-medium">Concepto</th>
                 <th className="p-3 text-right font-medium">Total</th>
                 <th className="p-3 font-medium">Estado</th>
                 <th className="p-3 text-center font-medium">Vistas</th>
@@ -54,7 +54,9 @@ export default async function QuotesPage({ params }: { params: Promise<{ tenant:
             </thead>
             <tbody>
               {quotes.map((quote) => {
-                const property = (quote.snapshot as { property?: { title?: string } } | null)?.property?.title;
+                const snap = quote.snapshot as { property?: { title?: string } | null; kind?: string; services?: { lines?: unknown[] } } | null;
+                const lineCount = snap?.kind === "services" ? snap.services?.lines?.length ?? 0 : 0;
+                const property = snap?.property?.title ?? (lineCount > 0 ? `${lineCount} ${lineCount === 1 ? "concepto" : "conceptos"}` : undefined);
                 const url = `${origin}/q/${quote.share_token}`;
                 return (
                   <tr key={quote.id} className="border-b border-line last:border-b-0">

@@ -1,5 +1,6 @@
 import { calculatePricing } from "@/lib/pricing";
-import { buildQuoteSnapshot, type QuoteSnapshot } from "@/lib/quote-snapshot";
+import { buildQuoteSnapshot, buildServicesSnapshot, type QuoteSnapshot } from "@/lib/quote-snapshot";
+import { priceServices } from "@/lib/services-pricing";
 import type { QuoteTemplateCode } from "@/lib/quote-templates";
 import type { Property } from "@/lib/types";
 
@@ -47,6 +48,37 @@ export function buildSampleSnapshot(input: {
       breakdown,
       installmentsCount: 24,
       notes: "Vigencia de 30 días. Precios sujetos a disponibilidad.",
+      createdAt: input.createdAt,
+    }),
+    number: 1,
+  };
+}
+
+/** Cotización de servicios de ejemplo (negocios sin módulo inmobiliario en Panel → Plantillas). */
+export function buildSampleServicesSnapshot(input: {
+  tenantName: string;
+  logoUrl: string | null;
+  brandColor: string;
+  templateCode: QuoteTemplateCode;
+  createdAt: string;
+}): QuoteSnapshot {
+  const pricing = priceServices(
+    [
+      { itemId: null, title: "Instalación de calentador solar", unit: "pieza", qty: 1, unitPrice: 8500, discountPct: 0 },
+      { itemId: null, title: "Mano de obra", unit: "hora", qty: 6, unitPrice: 350, discountPct: 10 },
+      { itemId: null, title: "Tubería y conexiones", unit: null, qty: 1, unitPrice: 1240, discountPct: 0 },
+    ],
+    16,
+  );
+  return {
+    ...buildServicesSnapshot({
+      quoteId: "00000000-ejemplo",
+      tenant: { name: input.tenantName, logo_url: input.logoUrl, brand_color: input.brandColor, quote_template: input.templateCode },
+      advisorName: "Tu nombre",
+      clientName: "Cliente de ejemplo",
+      clientPhone: "5512345678",
+      pricing,
+      notes: "Vigencia de 30 días. Anticipo del 50 % para iniciar.",
       createdAt: input.createdAt,
     }),
     number: 1,

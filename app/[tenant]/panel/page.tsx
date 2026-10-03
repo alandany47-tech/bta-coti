@@ -14,7 +14,9 @@ export default async function CotizadorPage({
   const { supabase, tenant, role } = await getPanelContext(slug);
 
   // Sin módulo `broker` no hay cotizador de propiedades: el negocio entra a administrar su catálogo.
-  if (!(await getPanelModules(tenant.id)).includes("broker")) {
+  const modules = await getPanelModules(tenant.id);
+  if (!modules.includes("broker")) {
+    if (modules.includes("services")) redirect("/panel/cotizar"); // T30: cualquier rol puede cotizar
     if (hasRole(role, "editor")) redirect("/panel/catalogo");
     return (
       <div className="mx-auto w-full max-w-xl p-6 text-sm text-ink-2">

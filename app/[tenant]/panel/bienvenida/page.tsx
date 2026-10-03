@@ -17,7 +17,7 @@ export default async function WelcomePage({ params }: { params: Promise<{ tenant
       hasItems={(usage?.items_count ?? 0) > 0}
       hasQuotes={(quotesCount ?? 0) > 0}
       canImport={hasRole(role, "editor")}
-      mode={modules.includes("broker") ? "broker" : "catalog"}
+      mode={modules.includes("broker") ? "broker" : modules.includes("catalog") ? "catalog" : "services"}
       hasWhatsapp={Boolean(tenant.whatsapp)}
     />
   );
