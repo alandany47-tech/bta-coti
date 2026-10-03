@@ -1,5 +1,7 @@
 # Despliegue: Vercel, dominio y entornos (T10)
 
+> **Correo (SMTP de Supabase con Resend) y dominio comodín: sigue `docs/PASO-A-PASO-SMTP-Y-DOMINIO.md`** (verificado el 2026-10-03). Antes de cualquier `supabase config push`, corre `supabase config diff`: sin terminal interactiva el push NO pregunta.
+
 Lo que ya está en el repo: `vercel.json` (cron semanal de correos desechables, cron diario de T17 y reset nocturno de la demo) y las variables de `.env.example`. Lo demás son pasos en tus cuentas, en este orden.
 
 ## 1. Supabase de producción (aparte del de desarrollo)

@@ -61,7 +61,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0035 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
+- Migraciones 0001 → 0036 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
   más recientes: 0025 (T20) agrega `stripe_events`, `subscriptions`, `expire_past_due()` y
   `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id`; 0027 (T23) agrega
   `set_tenant_logo`/`update_tenant_branding`/`dismiss_onboarding` — todas validan membresía ellas
@@ -185,13 +185,13 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 
 ## Entorno local
 
-- Variables en `.env.local` (ver `.env.example`). Las keys de Supabase usan formato nuevo
-  (`sb_publishable_...`, `sb_secret_...`); ambos formatos funcionan.
-- Dev server: `.claude/launch.json` (puerto 3100). Otro `next dev` viejo (p. ej. en 4000) puede
-  tener env vars obsoletas: si "Tenant no encontrado" con datos que existen, reinícialo.
-- Despliegue (Vercel, Cloudflare, Supabase prod): `docs/DEPLOY.md`.
-- QA: `npm run e2e:launch` (registro→cotización→pago→suspensión, 41 comprobaciones; `docs/QA-LANZAMIENTO.md`) y `npm run stripe:e2e`.
-  WhatsApp: todo número pasa por `normalizeWhatsapp` (10 dígitos = 52); `wa.me` sin lada manda el mensaje a otro país.
+- Variables en `.env.local` (ver `.env.example`; keys de Supabase en formato nuevo `sb_publishable_`/`sb_secret_`, ambos valen).
+- Dev server: `.claude/launch.json` (puerto 3100). Un `next dev` viejo puede tener env vars obsoletas: si "Tenant no
+  encontrado" con datos que existen, reinícialo. Despliegue (Vercel, Cloudflare, Supabase prod): `docs/DEPLOY.md`.
+- Correo y dominio comodín: `docs/PASO-A-PASO-SMTP-Y-DOMINIO.md`. `supabase config push` aplica SIN preguntar si no hay TTY:
+  antes `supabase config diff`; `config.toml` debe reflejar el Dashboard (site_url, redirecciones, confirmación, MFA).
+- QA: `npm run e2e:launch` (41 comprobaciones; `docs/QA-LANZAMIENTO.md`) y `npm run stripe:e2e`. WhatsApp: todo número pasa por
+  `normalizeWhatsapp` (10 dígitos = 52); `wa.me` sin lada manda el mensaje a otro país.
 
 ## Flujo de trabajo
 
