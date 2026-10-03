@@ -155,15 +155,16 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://127.0.0.1:3000"
+# Producción. `supabase config push` empuja ESTE archivo al proyecto enlazado: debe reflejar lo que ya hay en el
+# Dashboard (docs/DEPLOY-SMTP-Y-DOMINIO.md §0), nunca valores de localhost.
+site_url = "https://ayxco.app"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
 additional_redirect_urls = [
-  "http://localhost:*/**",
-  "http://*.localhost:*/**",
-  "https://ayx.solutions/**",
-  "https://*.ayx.solutions/**",
+  "https://ayxco.app/**",
+  "https://*.ayxco.app/**",
+  "http://localhost:3100/**",
 ]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
@@ -227,25 +228,26 @@ enable_signup = true
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
 # If enabled, users need to confirm their email address before signing in.
-enable_confirmations = false
+enable_confirmations = true
 # If enabled, users will need to reauthenticate or have logged in recently to change their password.
 secure_password_change = false
 # Controls the minimum amount of time that must pass before sending another signup confirmation or password reset email.
-max_frequency = "1s"
+max_frequency = "1m"
 # Number of characters used in the email OTP.
-otp_length = 6
+otp_length = 8
 # Number of seconds before the email OTP expires (defaults to 1 hour).
 otp_expiry = 3600
 
-# Use a production-ready SMTP server
+# SMTP de producción: Resend (docs/PASO-A-PASO-SMTP-Y-DOMINIO.md §B). Se configura en el Dashboard del proyecto
+# (la contraseña es una llave de Resend): no lo declares aquí, o `supabase config push` intentará empujarlo.
 # [auth.email.smtp]
 # enabled = true
-# host = "smtp.sendgrid.net"
-# port = 587
-# user = "apikey"
-# pass = "env(SENDGRID_API_KEY)"
-# admin_email = "admin@email.com"
-# sender_name = "Admin"
+# host = "smtp.resend.com"
+# port = 465
+# user = "resend"
+# pass = "env(RESEND_SMTP_KEY)"
+# admin_email = "hola@ayxco.app"
+# sender_name = "AYXCO"
 
 # Los enlaces llevan token_hash hacia /auth/callback (verifyOtp en servidor): el invite
 # no puede usar PKCE y su token en el fragmento (#) no llega al servidor.
@@ -317,8 +319,8 @@ max_enrolled_factors = 10
 
 # Control MFA via App Authenticator (TOTP)
 [auth.mfa.totp]
-enroll_enabled = false
-verify_enabled = false
+enroll_enabled = true
+verify_enabled = true
 
 # Configure MFA via Phone Messaging
 [auth.mfa.phone]

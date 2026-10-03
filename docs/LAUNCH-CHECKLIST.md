@@ -11,6 +11,7 @@
 - [ ] Registro de marca en IMPI (después de elegir nombre, no bloqueante).
 
 ## 2. Cuentas y accesos
+> Los dos pasos que más bloquean (SMTP de Supabase con Resend y dominio comodín) tienen guía: `docs/PASO-A-PASO-SMTP-Y-DOMINIO.md`.
 - [ ] Dominio en Cloudflare Registrar, con auto-renovación.
 - [ ] Correo del dominio (soporte@, hola@), por ejemplo con Cloudflare Email Routing (gratis) a tu Gmail.
 - [ ] Resend con el dominio verificado: SPF, DKIM y DMARC (`p=quarantine`). **También** como SMTP de Supabase Auth (el por defecto tiene un tope muy bajo por hora y la base exige confirmar el correo: sin esto el registro se atora).
