@@ -2,7 +2,9 @@ import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Sin el badge "N" de Next en dev: aparecía dentro de las capturas de marketing (public/marketing)
+  // y estorba al enseñar la app en pantalla.
+  devIndicators: false,
 };
 
 /**

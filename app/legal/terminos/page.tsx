@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { SiteHeader } from "@/components/marketing/site-header";
 import { SiteFooter } from "@/components/marketing/site-footer";
 import { BRAND } from "@/lib/brand";
@@ -32,7 +33,7 @@ export default function TerminosPage() {
             <section id="el-servicio">
               <h2 className="font-display text-[20px] font-medium text-ink">2. El servicio</h2>
               <p className="mt-1">
-                {BRAND.name} es un cotizador SaaS: cada negocio ("tenant") tiene su propio espacio para
+                {BRAND.name} es un cotizador SaaS: cada negocio (&ldquo;tenant&rdquo;) tiene su propio espacio para
                 administrar su catálogo, generar cotizaciones y compartirlas con sus clientes.
               </p>
             </section>
@@ -56,9 +57,9 @@ export default function TerminosPage() {
               <h2 className="font-display text-[20px] font-medium text-ink">5. Tus datos y los de tus clientes</h2>
               <p className="mt-1">
                 Eres dueño de la información que subes (catálogo, clientes, cotizaciones). Ver el{" "}
-                <a href="/legal/privacidad" className="text-accent underline underline-offset-2">
+                <Link href="/legal/privacidad" className="text-accent underline underline-offset-2">
                   Aviso de privacidad
-                </a>{" "}
+                </Link>{" "}
                 para cómo la tratamos.
               </p>
             </section>

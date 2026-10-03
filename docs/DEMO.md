@@ -13,8 +13,8 @@ principal: es la que abre `/demo/entrar`.
 
 - `tenants.is_demo = true`: sin cobro, sin vencimiento, excluidos de la lista de clientes y del
   contador del admin (viven en su propia sección "Demo").
-- **Fotos:** placeholders de picsum.photos (ver §4). Antes de un lanzamiento real, cambiar por
-  Unsplash/Pexels (licencia comercial) o renders propios con permiso por escrito.
+- **Fotos:** hoy son de Unsplash por categoría (commit `c01dcb2`); confirmar la licencia de cada una
+  antes de un lanzamiento real o cambiarlas por renders propios con permiso por escrito.
 
 ## 2. Dos modos
 
@@ -25,7 +25,7 @@ principal: es la que abre `/demo/entrar`.
 2. **Probar como vendedor:** `/demo/entrar` (dominio raíz) entra automáticamente como el usuario
    `editor` de `demo-broker` — sesión compartida por todos los visitantes, con `DEMO_PASSWORD`
    (mismo valor que sembró `reset_demo_data`). Redirige a `demo-broker.<dominio>/panel`. Puede
-   crear cotizaciones, clientes y editar precios.
+   editar precios y generar cotizaciones **de prueba** (ver abajo).
    - **No puede:** subir ni borrar medios (`is_demo` lo bloquea en `/api/media/sign` y
      `DELETE /api/media/[id]`). Cambiar marca, invitar usuarios y Facturación quedan bloqueados el
      día que existan (T23/T24/T21 aún no están construidos).
@@ -33,7 +33,15 @@ principal: es la que abre `/demo/entrar`.
      cuenta gratis**" (`components/demo-banner.tsx`).
    - Límite extra por IP: 20 entradas/min a `/demo/entrar` y 30 cotizaciones/hora (bucket `demo` y
      `demo_quote` en `lib/rate-limit.ts`), aparte del tope diario normal del plan.
-   - WhatsApp permitido (abre `wa.me` con la plantilla de T16).
+   - **Cotización de prueba (T27): no se guarda nada.** La sesión del editor demo la comparten todos
+     los visitantes; antes, lo que alguien escribía (nombre, teléfono) quedaba en `clients`/`quotes`
+     y el siguiente visitante lo veía hasta el reset. Ahora el cotizador de un tenant `is_demo`
+     pide solo el **nombre** del cliente; `POST /api/[tenant]/quotes` recalcula los montos en el
+     servidor y devuelve el snapshot sin llamar a `createQuote`, y el PDF se arma en el navegador
+     (`DemoQuoteResult`). `POST /api/[tenant]/clients` responde 403 en demo. No hay enlace `/q/` (no
+     existe el registro que lo respalde).
+   - WhatsApp permitido: abre `wa.me/?text=` **sin teléfono** (quien prueba elige el contacto) con la
+     plantilla de T16 sin la línea del enlace, más una línea que invita a crear cuenta.
 
 ## 3. Reset
 
@@ -70,7 +78,7 @@ principal: es la que abre `/demo/entrar`.
 | `demo-suspendida` | Taller Mecánico Rivas | Esencial · suspendido (muestra el bloqueo) | owner |
 | `demo-cancelada` | Inmobiliaria Sol Naciente | Broker · cancelado (404) | owner |
 
-Hoy el storefront y el cotizador solo pintan propiedades (Servicios y Catálogo llegan en T30 y T32), así que los tenants de servicios/productos ya tienen sus ítems cargados pero sin pantalla propia. Las fotos son placeholders de picsum.photos. La lista de cuentas vive en `supabase/seed/demo-accounts.json` (solo referencia; los datos reales los crea `reset_demo_data`, no ese archivo).
+Hoy el storefront y el cotizador solo pintan propiedades (Servicios y Catálogo llegan en T30 y T32), así que los tenants de servicios/productos ya tienen sus ítems cargados pero sin pantalla propia. La lista de cuentas vive en `supabase/seed/demo-accounts.json` (solo referencia; los datos reales los crea `reset_demo_data`, no ese archivo).
 
 ## 5. Ticket
 

@@ -26,7 +26,7 @@ export default async function BrokersPage() {
         title="Cotiza propiedades en 60 segundos"
         description="Sube tu cartera con fotos y plano, arma la cotización con enganche y mensualidades, y mándala por WhatsApp con el PDF listo."
         status="available"
-        screenshotSrc="/marketing/hero-broker-storefront.jpg"
+        screenshotSrc="/marketing/hero-broker-storefront-v2.jpg"
         screenshotAlt="Catálogo de propiedades del módulo Broker"
         planCode="broker"
         priceMonth={plan ? Number(plan.price_month) : 699}

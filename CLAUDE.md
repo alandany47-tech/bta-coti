@@ -105,6 +105,8 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   editor de `demo-broker` (la vitrina). `is_demo` bloquea subir/borrar medios; banner y modo
   `?present=1` en `components/demo-banner.tsx`. Admin → "Clonar como prospecto" copia catálogo y
   marca a un tenant nuevo en trial (`clone_demo_items`, docs/DEMO.md).
+  La cotización en demo (T27) NO se guarda: solo nombre, `POST /api/[tenant]/quotes` devuelve el
+  snapshot sin `createQuote` y `/clients` POST da 403 (`lib/demo-quote.ts`); la sesión es compartida.
 - Cron diario (T17): `/api/cron/daily` (protegido con `CRON_SECRET`) llama `expire_trials()`
   (trialing + `trial_ends_at` vencido + sin `stripe_subscription_id`, sin tocar `is_demo` →
   `suspended` con `status_reason='trial_expired'`), `reset_monthly_quote_counters()` y

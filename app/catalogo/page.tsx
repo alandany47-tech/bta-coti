@@ -26,7 +26,7 @@ export default async function CatalogoPage() {
         title="Publica tu catálogo de productos"
         description="Tus productos organizados por categoría en una página pública compartible con un link. Para tiendas y mayoristas."
         status="available"
-        screenshotSrc="/marketing/hero-catalogo-storefront.jpg"
+        screenshotSrc="/marketing/hero-catalogo-storefront-v2.jpg"
         screenshotAlt="Catálogo público de productos, ejemplo de una mueblería"
         planCode="catalogo"
         priceMonth={plan ? Number(plan.price_month) : 399}

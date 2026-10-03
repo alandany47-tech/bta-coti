@@ -52,7 +52,7 @@ export function ModuleLanding(props: Props) {
           <div>
             {props.status === "available" ? (
               <div className="overflow-hidden rounded-lg border border-line shadow-lg">
-                <Image src={props.screenshotSrc} alt={props.screenshotAlt} width={752} height={634} className="w-full" priority />
+                <Image src={props.screenshotSrc} alt={props.screenshotAlt} width={752} height={564} className="w-full" priority />
               </div>
             ) : (
               <div className="flex aspect-[4/3] items-center justify-center rounded-lg border border-line bg-sunken text-sm text-ink-2">

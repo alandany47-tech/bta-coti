@@ -22,6 +22,7 @@
 | 13 | `MONITORING.md` | Uptime, errores, alertas |
 | 14 | `DEMO.md` | Tenants demo, modo prueba, reset, clonar para prospectos |
 | 15 | `LAUNCH-CHECKLIST.md` | Todo lo que debe estar listo antes de producción y de vender |
+| 16 | `COMPETENCIA.md` | Competidores (Marea Alcalina), dónde vamos atrás y cómo ser mejores |
 
 ## Reglas para cualquier agente
 
