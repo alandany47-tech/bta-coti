@@ -18,6 +18,8 @@ export type Tenant = {
   trial_ends_at: string | null;
   notes: string | null;
   is_demo: boolean;
+  /** Dígitos con lada de país (10 a 15); público: el botón de WhatsApp de la vitrina escribe a este número. */
+  whatsapp: string | null;
   created_at: string;
 };
 

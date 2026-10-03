@@ -83,3 +83,11 @@ Hoy el storefront y el cotizador solo pintan propiedades (Servicios y Catálogo 
 ## 5. Ticket
 
 - **T26 (CC):** `is_demo`, `reset_demo_data`, `/demo/entrar`, restricciones, cron de reset, clonar demo desde el admin. ✅
+
+## 6. Catálogo de las demos (T28)
+
+`reset_demo_data` (0020) sigue sembrando los 8 tenants, pero ahora es un envoltorio: la original pasó a
+`_reset_demo_data_base` y la pública (misma firma y permisos) la llama y luego corre
+`_demo_enrich_catalog()` (0030), que agrega descripción y datos (medidas, material, tiempo estimado) por
+SKU a Muebles Nogal y Plomería Garza. Si agregas ítems a esas demos, agrégalos también a esa lista o
+saldrán sin descripción. Cada ítem tiene una sola foto (las de `_demo_image`, 0028).

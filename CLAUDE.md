@@ -61,7 +61,7 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
 - `tenants` usa allow-list de columnas (`GRANT SELECT (...)`): una columna nueva sensible no
   alcanza con RLS, hay que dejarla fuera del grant. `notes` nunca llega a nadie; `stripe_*` y
   `plan_id` sí a `authenticated` (su propio tenant, vía RLS), nunca a `anon`.
-- Migraciones 0001 → 0027 en `supabase/migrations` (detalle de cada una en su propio archivo; las
+- Migraciones 0001 → 0030 en `supabase/migrations` (detalle en cada archivo; 0029 `tenants.whatsapp`, 0030 demos; las
   más recientes: 0025 (T20) agrega `stripe_events`, `subscriptions`, `expire_past_due()` y
   `reserve_stripe_checkout`; 0026 agrega `stripe_checkout_session_id`; 0027 (T23) agrega
   `set_tenant_logo`/`update_tenant_branding`/`dismiss_onboarding` — todas validan membresía ellas
@@ -107,6 +107,9 @@ rutas o config, lee `node_modules/next/dist/docs/`. `revalidateTag(tag, perfil)`
   marca a un tenant nuevo en trial (`clone_demo_items`, docs/DEMO.md).
   La cotización en demo (T27) NO se guarda: solo nombre, `POST /api/[tenant]/quotes` devuelve el
   snapshot sin `createQuote` y `/clients` POST da 403 (`lib/demo-quote.ts`); la sesión es compartida.
+- Vitrina de catálogo (T28): `slug./` pinta `CatalogBrowser` (búsqueda/categorías) y `slug./i/<id>` la ficha.
+  "Mi cotización" vive en `localStorage` (`lib/cart-store.ts`) y sale solo como texto de WhatsApp al
+  `tenants.whatsapp` (público, 0029; se edita en Panel → Mi negocio). Nada de esto escribe en la base.
 - Cron diario (T17): `/api/cron/daily` (protegido con `CRON_SECRET`) llama `expire_trials()`
   (trialing + `trial_ends_at` vencido + sin `stripe_subscription_id`, sin tocar `is_demo` →
   `suspended` con `status_reason='trial_expired'`), `reset_monthly_quote_counters()` y

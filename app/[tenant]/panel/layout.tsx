@@ -43,6 +43,9 @@ export default async function PanelLayout({
           </Link>
           {canEdit ? (
             <>
+              <Link href="/panel/negocio" className="hover:text-foreground">
+                Mi negocio
+              </Link>
               <Link href="/panel/propiedades" className="hover:text-foreground">
                 Propiedades
               </Link>

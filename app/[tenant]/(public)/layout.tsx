@@ -5,6 +5,7 @@ import { requireOperableTenant } from "@/lib/tenant-page";
 import { rootOrigin, tenantOrigin } from "@/lib/auth/redirects";
 import { TenantMark } from "@/components/tenant-mark";
 import { BRAND } from "@/lib/brand";
+import { CartBar } from "@/components/storefront/cart-bar";
 
 export async function generateMetadata({
   params,
@@ -41,6 +42,12 @@ export default async function PublicLayout({
         </a>
       </header>
       <main className="flex flex-1 flex-col">{children}</main>
+      <CartBar
+        slug={slug}
+        businessName={tenant.name}
+        whatsapp={tenant.whatsapp}
+        catalogUrl={tenantOrigin(slug, host)}
+      />
       {tenant.status === "trialing" ? (
         <footer className="border-t border-border-subtle px-6 py-4 text-center text-xs text-muted">
           Sitio creado con {BRAND.name}

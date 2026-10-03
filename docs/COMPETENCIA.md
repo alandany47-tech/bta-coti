@@ -46,7 +46,8 @@ página compartible) sigue ⬜ y no tenemos pedidos ni pagos del lado del client
 | Cotización con cálculo financiero, PDF y link con vistas | No | Sí (Broker) |
 | Vertical inmobiliario | No | Sí |
 | Comisión por venta | 0.9–1.9 % | Ninguna |
-| Pedidos/carrito/pagos al cliente final | Sí | No (fuera de alcance por ahora) |
+| Pedidos/carrito/pagos al cliente final | Sí | "Mi cotización" por WhatsApp, sin pago (T28) |
+| Catálogo con búsqueda, categorías y ficha por producto | Sí | Sí (T28); falta el editor del negocio (T32) |
 | Dominio propio, equipo, multisucursal | Sí (planes altos) | No (T33 equipo) |
 | Contenido SEO y herramientas gratis | Fuerte | Nada |
 | Canal de agencias | Sí | No |
